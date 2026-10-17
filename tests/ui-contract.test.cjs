@@ -515,6 +515,8 @@ test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag'
   assert.match(video, /function removeSelected\(/);
   assert.match(video, /function snapTime\(/);
   assert.match(video, /function addCrossfade\(/);
+  assert.match(video, /function computeAudioWaveform\(/);
+  assert.match(video, /video-clip-waveform/);
   assert.match(video, /function animatedValue\(/);
   assert.match(video, /function importFiles\(/);
   assert.match(video, /function renderTracks\(/);
