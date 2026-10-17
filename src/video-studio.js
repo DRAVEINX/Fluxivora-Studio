@@ -36,8 +36,9 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold'].forEach(k => {
-      if (c[k] !== undefined) result[k] = c[k];
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes'].forEach(k => {
+      if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame})) : [];
+      else if (c[k] !== undefined) result[k] = c[k];
     });
     return result;
   }
@@ -160,7 +161,7 @@
       start: start == null ? trackEnd(t.id) : Math.max(0, start), duration: duration || 5,
       in: 0, out: duration || 5, speed: 1, volume: 1, opacity: 1, scale: 1, x: 0, y: 0,
       filter: 'normal', fit: 'contain', fadeIn: 0, fadeOut: 0, text: text || 'Jouw titel',
-      fontSize: 72, color: '#ffffff', bold: true, file: file || null, url: url || null,
+      fontSize: 72, color: '#ffffff', bold: true, keyframes: [], file: file || null, url: url || null,
       mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: type !== 'title'
     };
     if (type !== 'title' && url) { c.missing = false; createMedia(c); }
@@ -224,9 +225,25 @@
   function activeAt(c) {
     return state.playhead >= c.start && state.playhead < c.start + clipLength(c);
   }
+  function animatedValue(c, key, baseValue) {
+    const frames = Array.isArray(c.keyframes) ? c.keyframes.filter(f => Number.isFinite(f.time) && Number.isFinite(f[key])).slice().sort((a, b) => a.time - b.time) : [];
+    if (!frames.length) return Number(baseValue) || 0;
+    const t = Math.max(0, state.playhead - c.start);
+    if (t <= frames[0].time) return frames[0][key];
+    if (t >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
+    for (let i = 1; i < frames.length; i++) {
+      const left = frames[i - 1], right = frames[i];
+      if (t <= right.time) {
+        const span = Math.max(0.0001, right.time - left.time);
+        const alpha = (t - left.time) / span;
+        return left[key] + (right[key] - left[key]) * alpha;
+      }
+    }
+    return Number(baseValue) || 0;
+  }
   function gainFor(c) {
     const t = track(c.trackId);
-    return c.volume * (t && t.muted ? 0 : 1);
+    return animatedValue(c, 'volume', c.volume) * (t && t.muted ? 0 : 1);
   }
   function syncMedia(forceSeek) {
     for (const c of state.clips) {
@@ -265,7 +282,7 @@
     return map[value] || 'none';
   }
   function alphaFor(c) {
-    let alpha = Math.max(0, Math.min(1, c.opacity == null ? 1 : c.opacity));
+    let alpha = Math.max(0, Math.min(1, animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
     const elapsed = state.playhead - c.start, remaining = c.start + clipLength(c) - state.playhead;
     if (c.fadeIn > 0 && elapsed < c.fadeIn) alpha *= Math.max(0, elapsed / c.fadeIn);
     if (c.fadeOut > 0 && remaining < c.fadeOut) alpha *= Math.max(0, remaining / c.fadeOut);
@@ -277,7 +294,8 @@
     ctx.save();
     ctx.globalAlpha = alphaFor(c);
     ctx.filter = effectFilter(c.filter);
-    const w = W * c.scale, h = H * c.scale;
+    const animatedScale = Math.max(0.1, Math.min(3, animatedValue(c, 'scale', c.scale || 1)));
+    const w = W * animatedScale, h = H * animatedScale;
     const ratio = c.mediaEl.videoWidth / c.mediaEl.videoHeight;
     let drawW = w, drawH = h;
     if (c.fit !== 'fill') {
@@ -285,8 +303,8 @@
       else { drawH = h; drawW = h * ratio; }
       if (c.fit === 'cover') { drawW = w; drawH = h; }
     }
-    const x = (W - drawW) / 2 + c.x * W / 100;
-    const y = (H - drawH) / 2 + c.y * H / 100;
+    const x = (W - drawW) / 2 + animatedValue(c, 'x', c.x || 0) * W / 100;
+    const y = (H - drawH) / 2 + animatedValue(c, 'y', c.y || 0) * H / 100;
     ctx.drawImage(c.mediaEl, x, y, drawW, drawH);
     ctx.restore();
   }
@@ -294,13 +312,14 @@
     const W = ctx.canvas.width, H = ctx.canvas.height;
     ctx.save();
     ctx.globalAlpha = alphaFor(c);
-    const size = Math.max(18, Math.min(180, c.fontSize || 72)) * (H / 1080);
+    const animatedScale = Math.max(0.1, Math.min(3, animatedValue(c, 'scale', c.scale || 1)));
+    const size = Math.max(18, Math.min(180, c.fontSize || 72)) * (H / 1080) * animatedScale;
     ctx.font = (c.bold ? '700 ' : '400 ') + size + 'px Arial, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     ctx.fillStyle = c.color || '#ffffff';
     const lines = String(c.text || '').split('\n').slice(0, 5);
-    const x = W / 2 + (c.x || 0) * W / 100, y = H * 0.815 + (c.y || 0) * H / 100;
+    const x = W / 2 + animatedValue(c, 'x', c.x || 0) * W / 100, y = H * 0.815 + animatedValue(c, 'y', c.y || 0) * H / 100;
     lines.forEach((line, i) => ctx.fillText(line.slice(0, 250), x, y + (i - (lines.length - 1) / 2) * size * 1.16, W * .88));
     ctx.restore();
   }
@@ -434,6 +453,9 @@
     $('video-opacity').value = String(c.opacity == null ? 1 : c.opacity);
     $('video-volume').value = String(c.volume == null ? 1 : c.volume);
     $('video-scale').value = String(c.scale || 1);
+    $('video-x').value = String(c.x || 0);
+    $('video-y').value = String(c.y || 0);
+    $('video-keyframe-count').textContent = (c.keyframes || []).length + ' keyframes';
     $('video-filter').value = c.filter || 'normal';
     $('video-fit').value = c.fit || 'contain';
     $('video-fade-in').value = String(c.fadeIn || 0);
@@ -443,6 +465,7 @@
     $('video-title-color').value = c.color || '#ffffff';
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     $('video-video-controls').classList.toggle('hidden', c.type !== 'video');
+    $('video-motion-controls').classList.toggle('hidden', c.type === 'audio');
     $('video-audio-controls').classList.toggle('hidden', c.type === 'title');
     ['video-in','video-out','video-speed','video-volume'].forEach(id => { $(id).disabled = c.missing; });
   }
@@ -602,6 +625,40 @@
     $('footer-workspace').textContent = 'Motion Studio';
     refresh(); renderPreview();
   }
+  function addCrossfade() {
+    const c = selected();
+    if (!c || c.type !== 'video') { notice('Selecteer eerst een videoclips om een crossfade toe te voegen.'); return; }
+    const previous = state.clips.filter(item => item.type === 'video' && item.trackId === c.trackId && item.id !== c.id && item.start < c.start && item.start + clipLength(item) >= c.start - 0.15).sort((a, b) => b.start - a.start)[0];
+    if (!previous) { notice('Plaats eerst twee aangrenzende clips op dezelfde videotrack.'); return; }
+    const duration = Math.max(0.15, Math.min(1, clipLength(c) / 2, clipLength(previous) / 2));
+    pushHistory();
+    c.start = Math.max(previous.start, c.start - duration);
+    c.fadeIn = duration;
+    previous.fadeOut = duration;
+    refresh(); renderPreview();
+    notice('Crossfade van ' + duration.toFixed(1) + ' seconden toegevoegd.');
+  }
+  function addKeyframe() {
+    const c = selected();
+    if (!c || c.type === 'audio') { notice('Selecteer een video- of titelclip om animatiepunten toe te voegen.'); return; }
+    pushHistory();
+    const time = Math.max(0, Math.min(clipLength(c), state.playhead - c.start));
+    const frame = {
+      time, opacity: Number(c.opacity == null ? 1 : c.opacity), scale: Number(c.scale || 1),
+      x: Number(c.x || 0), y: Number(c.y || 0), volume: Number(c.volume == null ? 1 : c.volume)
+    };
+    if (!Array.isArray(c.keyframes)) c.keyframes = [];
+    const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);
+    if (existing >= 0) c.keyframes[existing] = frame; else c.keyframes.push(frame);
+    c.keyframes.sort((a, b) => a.time - b.time);
+    refresh(); renderPreview();
+    notice('Keyframe opgeslagen op ' + tc(time) + ' binnen de clip.');
+  }
+  function clearKeyframes() {
+    const c = selected();
+    if (!c || !c.keyframes || !c.keyframes.length) return;
+    pushHistory(); c.keyframes = []; refresh(); renderPreview(); notice('Keyframes verwijderd.');
+  }
   function wireProperties() {
     $('video-clip-name').addEventListener('change', () => applyProperty('video-clip-name', 'name', v => String(v).slice(0, 512)));
     $('video-clip-start').addEventListener('change', () => {
@@ -629,6 +686,8 @@
     binding('video-opacity', 'opacity', v => Math.max(0, Math.min(1, Number(v) || 0)));
     binding('video-volume', 'volume', v => Math.max(0, Math.min(2, Number(v) || 0)));
     binding('video-scale', 'scale', v => Math.max(0.1, Math.min(3, Number(v) || 1)));
+    binding('video-x', 'x', v => Math.max(-100, Math.min(100, Number(v) || 0)));
+    binding('video-y', 'y', v => Math.max(-100, Math.min(100, Number(v) || 0)));
     binding('video-filter', 'filter', String);
     binding('video-fit', 'fit', String);
     binding('video-fade-in', 'fadeIn', v => Math.max(0, Math.min(10, Number(v) || 0)));
@@ -647,6 +706,9 @@
     $('video-session-file').addEventListener('change', e => openSession(e.target.files?.[0]));
     $('video-export').addEventListener('click', exportVideo);
     $('video-add-title').addEventListener('click', addTitle);
+    $('video-add-crossfade').addEventListener('click', addCrossfade);
+    $('video-add-keyframe').addEventListener('click', addKeyframe);
+    $('video-clear-keyframes').addEventListener('click', clearKeyframes);
     $('video-add-track-video').addEventListener('click', () => addTrack('video'));
     $('video-add-track-audio').addEventListener('click', () => addTrack('audio'));
     $('video-add-track-title').addEventListener('click', () => addTrack('title'));
