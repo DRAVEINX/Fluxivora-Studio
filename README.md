@@ -1,19 +1,16 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.4 — Motion Studio multi-track videomontage.**
+**Huidige ontwikkelversie: 0.5.0-beta.5 — Motion Studio bronworkflow, effectstack en kleurtools.**
 
-### Nieuw in bèta.4
+### Nieuw in bèta.5
+- Bronmonitor naast de programmamonitor, met bron-in/out en invoegen op de playhead.
+- Afzonderlijke mediabibliotheek met zoeken, filters, bronbestanden koppelen na heropenen en metadata die blijft bestaan wanneer timelineclips worden verwijderd.
+- Niet-destructieve effectstack met schakelen, opnieuw ordenen en verwijderen.
+- Clipkleurcorrectie voor exposure, contrast, saturatie, temperatuur en tint; RGB-histogram en luma-waveform als visuele hulpmiddelen.
+- Keyframe-interpolatie met lineair, ease-in, ease-out, ease-in-out en hold.
+- De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-- Vierde creatieve werkruimte: Motion Studio, met een non-lineaire montageworkflow en een eigen Fluxivora-interface.
-- Meerdere videotracks, audiotracks en titeltracks; tracks kunnen worden toegevoegd, vergrendeld, verborgen/gedempt en verwijderd wanneer dat veilig kan.
-- Clips op de tijdlijn slepen, tussen compatibele tracks verplaatsen, trimmen met handgrepen, golfvormen voor audioclips tonen en positie, snelheid, volume, dekking en schaal aanpassen.
-- Titels op een aparte track, fades, basislooks/kleurfilters en preview-compositing over meerdere videolagen.
-- Audiobestanden importeren en waar de browser-runtime dit ondersteunt audio meepakken in de realtime WebM-export.
-- Video-montageprojecten bewaren tracks, volgorde, trim, titel- en effectmetadata; bronbestanden blijven apart en moeten na openen opnieuw worden gekoppeld.
-- Undo/redo, zoom, fit-to-timeline, snapping aan/uit, sequence-markers, I/O-trimtoetsen, 25-fps-tijdcode, 720p/1080p/4K WebM-renderkeuze en extra contracttests voor Motion Studio.
-- De bestaande Pixel Lab-, Vector Forge- en Page Studio-functies blijven in dezelfde toepassing bestaan.
-
-**Let op:** dit is een eigen professionele montageomgeving, geen exacte pixel-voor-pixel-kloon van Adobe Premiere Pro. De eerste beta.4 mist nog onderdelen zoals een volledige keyframe-editor, geavanceerde kleurcorrectie, motion graphics, proxy-media, multicam, echte offline hardware-accelerated rendering en MP4/H.264-export.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief, en geïmporteerde .cube-LUT's, proxy- en multicam-workflows en een frame-voor-frame offline render-engine met MP4/H.264-export moeten nog worden gebouwd. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
 
 **Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 
