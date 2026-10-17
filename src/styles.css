@@ -86,3 +86,5 @@
 
 .video-clip-waveform{display:block;max-width:100%;min-width:20px;border-radius:2px;opacity:.95;pointer-events:none}
 .video-clip-block.audio .video-clip-waveform{filter:drop-shadow(0 0 2px #5ddac44d)}
+
+.video-transition-controls{margin-top:14px;padding-top:12px;border-top:1px solid #252b3c}
