@@ -72,6 +72,7 @@
 - Clip-kleurinstellingen voor exposure, contrast, saturatie, temperatuur en tint, plus RGB-histogram en luma-waveform van de samengestelde programmamonitor.
 - Visuele keyframe-curve-editor met versleepbare punten voor tijd/waarde, plus lineair, ease-in, ease-out, ease-in-out en hold.
 - Gevalideerde 3D `.cube`-output-LUT, toegepast via WebGL2 op de samengestelde programmamonitor en opgeslagen in het montageproject.
+- Vooraf gegenereerde proxybestanden aan originele video's koppelen/herkoppelen; preview kan tussen proxy en origineel wisselen en export is geblokkeerd bij proxy-preview.
 
 ### Volgende fase — kleur en keyframes
 - Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
@@ -80,7 +81,7 @@
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
 
 ### Volgende fase — proxies en multicam
-- Proxy-bestanden genereren of koppelen met originele/proxy-relatie, duidelijke status, batchworkflow en veilig relinken.
+- Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.5 biedt al handmatig koppelen en proxy-preview.
 - Multicam-groepen met synchronisatie op audio/tijdcode, hoekselectie tijdens afspelen en terugschrijven als bewerkbare montage.
 - Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
 
