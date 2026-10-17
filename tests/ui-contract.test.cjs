@@ -576,3 +576,12 @@ test('Motion Studio ondersteunt sequence markers, split shortcuts en 25fps-tijdc
     assert.ok(video.includes(feature), 'Ontbrekend montageonderdeel: ' + feature);
   }
 });
+
+test('Motion Studio plaatst trackkoppen naast de correcte timeline-lanes', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /row\.append\(header, lane\)/);
+  assert.match(video, /video-track-label/);
+  assert.match(video, /video-track-buttons/);
+  assert.match(video, /Track vergrendelen/);
+  assert.match(video, /Track dempen/);
+});
