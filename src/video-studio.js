@@ -38,8 +38,10 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame})) : [];
+      else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
+      else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
       else if (c[k] !== undefined) result[k] = c[k];
     });
     return result;
@@ -164,7 +166,8 @@
       start: start == null ? trackEnd(t.id) : Math.max(0, start), duration: duration || 5,
       in: 0, out: duration || 5, speed: 1, volume: 1, opacity: 1, scale: 1, x: 0, y: 0,
       filter: 'normal', fit: 'contain', fadeIn: 0, fadeOut: 0, text: text || 'Jouw titel',
-      fontSize: 72, color: '#ffffff', bold: true, keyframes: [], file: file || null, url: url || null,
+      fontSize: 72, color: '#ffffff', bold: true, keyframes: [], keyframeEase: 'easeInOut', effects: [],
+      colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 }, file: file || null, url: url || null,
       mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: type !== 'title'
     };
     if (type !== 'title' && url) { c.missing = false; createMedia(c); }
@@ -319,11 +322,18 @@
     const t = Math.max(0, state.playhead - c.start);
     if (t <= frames[0].time) return frames[0][key];
     if (t >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
+    const easing = value => {
+      const v = Math.max(0, Math.min(1, value));
+      if (value === 'hold') return 0;
+      return v;
+    };
+    const curves = { linear: v => v, easeIn: v => v * v, easeOut: v => 1 - Math.pow(1 - v, 2), easeInOut: v => v < .5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2, hold: () => 0 };
     for (let i = 1; i < frames.length; i++) {
       const left = frames[i - 1], right = frames[i];
       if (t <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
-        const alpha = (t - left.time) / span;
+        const raw = (t - left.time) / span;
+        const alpha = (curves[right.ease] || curves.linear)(raw);
         return left[key] + (right[key] - left[key]) * alpha;
       }
     }
@@ -363,13 +373,24 @@
       }
     }
   }
-  function effectFilter(value) {
+  function effectFilter(value, clip) {
     const map = {
-      normal: 'none', cinematic: 'contrast(1.18) saturate(.82)', monochrome: 'grayscale(1)',
+      normal: '', cinematic: 'contrast(1.18) saturate(.82)', monochrome: 'grayscale(1)',
       warm: 'sepia(.28) saturate(1.22)', cool: 'hue-rotate(12deg) saturate(.9)',
       faded: 'contrast(.88) saturate(.78)', blur: 'blur(2px)'
     };
-    return map[value] || 'none';
+    const parts = [];
+    if (map[value]) parts.push(map[value]);
+    const grade = clip && clip.colorAdjustments || {};
+    const exposure = Math.max(-2, Math.min(2, Number(grade.exposure) || 0));
+    const contrast = Math.max(.5, Math.min(2, Number(grade.contrast) || 1));
+    const saturation = Math.max(0, Math.min(2, grade.saturation == null ? 1 : Number(grade.saturation)));
+    if (exposure) parts.push('brightness(' + Math.pow(2, exposure).toFixed(3) + ')');
+    if (contrast !== 1) parts.push('contrast(' + contrast.toFixed(3) + ')');
+    if (saturation !== 1) parts.push('saturate(' + saturation.toFixed(3) + ')');
+    const effectMap = { grayscale: 'grayscale(1)', sepia: 'sepia(1)', blur: 'blur(2px)', soften: 'blur(1px)', boost: 'contrast(1.15) saturate(1.2)', desaturate: 'saturate(.35)' };
+    (clip && Array.isArray(clip.effects) ? clip.effects : []).filter(e => e && e.enabled !== false).forEach(e => { if (effectMap[e.type]) parts.push(effectMap[e.type]); });
+    return parts.join(' ') || 'none';
   }
   function alphaFor(c) {
     let alpha = Math.max(0, Math.min(1, animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
@@ -383,7 +404,7 @@
     const W = ctx.canvas.width, H = ctx.canvas.height;
     ctx.save();
     ctx.globalAlpha = alphaFor(c);
-    ctx.filter = effectFilter(c.filter);
+    ctx.filter = effectFilter(c.filter, c);
     const animatedScale = Math.max(0.1, Math.min(3, animatedValue(c, 'scale', c.scale || 1)));
     const w = W * animatedScale, h = H * animatedScale;
     const ratio = c.mediaEl.videoWidth / c.mediaEl.videoHeight;
@@ -396,6 +417,15 @@
     const x = (W - drawW) / 2 + animatedValue(c, 'x', c.x || 0) * W / 100;
     const y = (H - drawH) / 2 + animatedValue(c, 'y', c.y || 0) * H / 100;
     ctx.drawImage(c.mediaEl, x, y, drawW, drawH);
+    const grade = c.colorAdjustments || {};
+    const temperature = Math.max(-100, Math.min(100, Number(grade.temperature) || 0));
+    const tint = Math.max(-100, Math.min(100, Number(grade.tint) || 0));
+    if (temperature || tint) {
+      ctx.globalCompositeOperation = 'soft-light';
+      ctx.globalAlpha = alphaFor(c) * Math.min(.42, (Math.abs(temperature) + Math.abs(tint)) / 480);
+      ctx.fillStyle = temperature > 0 ? '#ff9b52' : temperature < 0 ? '#438dff' : (tint > 0 ? '#c56cff' : '#65c77c');
+      ctx.fillRect(x, y, drawW, drawH);
+    }
     ctx.restore();
   }
   function drawTitle(ctx, c) {
@@ -426,6 +456,7 @@
     state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawTitle(ctx, c)));
     const hasVisibleContent = state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing && !(track(c.trackId) || {}).hidden) || state.clips.some(c => c.type === 'title' && activeAt(c) && !(track(c.trackId) || {}).hidden);
     $('video-empty').classList.toggle('hidden', hasVisibleContent);
+    window.dispatchEvent(new Event('fluxivora:preview-rendered'));
   }
   function updateTransport() {
     $('video-current').textContent = tc(state.playhead);
@@ -623,6 +654,7 @@
     const n = state.clips.length;
     $('video-count').textContent = n + (n === 1 ? ' clip' : ' clips');
     $('video-project-name').value = state.name;
+    window.dispatchEvent(new Event('fluxivora:motion-refresh'));
   }
   function applyProperty(id, key, cast) {
     const c = selected(); if (!c) return;
@@ -714,7 +746,7 @@
   }
   function saveSession() {
     const data = {
-      format: 'fluxivora-video-project', version: '0.5.0-beta.4', name: state.name,
+      format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
       tracks: state.tracks.map(t => ({...t})),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
@@ -779,6 +811,15 @@
         scale: Math.max(.1, Math.min(3, Number(c.scale) || 1)),
         x: Math.max(-100, Math.min(100, Number(c.x) || 0)), y: Math.max(-100, Math.min(100, Number(c.y) || 0)),
         filter: String(c.filter || 'normal'), fit: String(c.fit || 'contain'),
+        effects: Array.isArray(c.effects) ? c.effects.slice(0, 30).filter(e => e && ['grayscale','sepia','blur','soften','boost','desaturate'].includes(e.type)).map(e => ({ id: String(e.id || uid('effect')), type: e.type, enabled: e.enabled !== false })) : [],
+        colorAdjustments: {
+          exposure: Math.max(-2, Math.min(2, Number(c.colorAdjustments?.exposure) || 0)),
+          contrast: Math.max(.5, Math.min(2, c.colorAdjustments?.contrast == null ? 1 : Number(c.colorAdjustments.contrast))),
+          saturation: Math.max(0, Math.min(2, c.colorAdjustments?.saturation == null ? 1 : Number(c.colorAdjustments.saturation))),
+          temperature: Math.max(-100, Math.min(100, Number(c.colorAdjustments?.temperature) || 0)),
+          tint: Math.max(-100, Math.min(100, Number(c.colorAdjustments?.tint) || 0))
+        },
+        keyframeEase: ['linear','easeIn','easeOut','easeInOut','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut',
         fadeIn: Math.max(0, Math.min(10, Number(c.fadeIn) || 0)), fadeOut: Math.max(0, Math.min(10, Number(c.fadeOut) || 0)),
         keyframes: Array.isArray(c.keyframes) ? c.keyframes.slice(0, 200).map(f => ({
           time: Math.max(0, Math.min(86400, Number(f.time) || 0)),
@@ -786,7 +827,8 @@
           scale: Math.max(0.1, Math.min(3, Number(f.scale) || 1)),
           x: Math.max(-100, Math.min(100, Number(f.x) || 0)),
           y: Math.max(-100, Math.min(100, Number(f.y) || 0)),
-          volume: Math.max(0, Math.min(2, Number(f.volume) || 0))
+          volume: Math.max(0, Math.min(2, Number(f.volume) || 0)),
+          ease: ['linear','easeIn','easeOut','easeInOut','hold'].includes(f.ease) ? f.ease : 'linear'
         })) : [],
         text: String(c.text || '').slice(0, 1000), fontSize: Math.max(18, Math.min(180, Number(c.fontSize) || 72)),
         color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffffff', bold: c.bold !== false,
@@ -885,9 +927,10 @@
     if (!Array.isArray(c.keyframes)) c.keyframes = [];
     const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);
     if (existing >= 0) c.keyframes[existing] = frame; else c.keyframes.push(frame);
+    frame.ease = ['linear','easeIn','easeOut','easeInOut','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut';
     c.keyframes.sort((a, b) => a.time - b.time);
     refresh(); renderPreview();
-    notice('Keyframe opgeslagen op ' + tc(time) + ' binnen de clip.');
+    notice('Keyframe opgeslagen (' + frame.ease + ') op ' + tc(time) + ' binnen de clip.');
   }
   function clearKeyframes() {
     const c = selected();
@@ -992,6 +1035,7 @@
     }));
     window.addEventListener('beforeunload', () => state.clips.forEach(c => disposeMedia(c, true)));
   }
+  window.FluxivoraMotionStudio = { state, selected, track, createClip, pushHistory, refresh, renderPreview, seekTo, stopPlayback, notice, uid };
   wire();
   refresh();
 })();
