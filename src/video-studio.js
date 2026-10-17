@@ -521,13 +521,17 @@
       state.raf = 0; state.recorder = null; state.exportActive = false;
       canvasStream.getTracks().forEach(t => t.stop());
       stream.getTracks().filter(t => t.kind === 'audio').forEach(t => t.stop());
-      if (!state.exportChunks.length) return;
-      const url = URL.createObjectURL(new Blob(state.exportChunks, { type: mime }));
-      const link = document.createElement('a'); link.href = url;
-      link.download = state.name.replace(/[\\/:*?"<>|]+/g, '_') + '.webm'; link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 10000);
-      notice('Export afgerond als WebM met gemixte audiotracks waar de browser dit ondersteunt.');
-      if (ctxAudio && state.exportDestination) { try { state.masterGain.disconnect(state.exportDestination); } catch (_) {} state.exportDestination = null; }
+      if (ctxAudio && state.exportDestination) {
+        try { state.masterGain.disconnect(state.exportDestination); } catch (_) {}
+        state.exportDestination = null;
+      }
+      if (state.exportChunks.length) {
+        const url = URL.createObjectURL(new Blob(state.exportChunks, { type: mime }));
+        const link = document.createElement('a'); link.href = url;
+        link.download = state.name.replace(/[\\/:*?"<>|]+/g, '_') + '.webm'; link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+        notice('Export afgerond als WebM met gemixte audiotracks waar de browser dit ondersteunt.');
+      }
       state.exportChunks = [];
     };
     state.playhead = 0; recorder.start(250);
