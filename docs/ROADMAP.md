@@ -73,6 +73,7 @@
 - Visuele keyframe-curve-editor met versleepbare punten voor tijd/waarde, plus lineair, ease-in, ease-out, ease-in-out en hold.
 - Gevalideerde 3D `.cube`-output-LUT, toegepast via WebGL2 op de samengestelde programmamonitor en opgeslagen in het montageproject.
 - Vooraf gegenereerde proxybestanden aan originele video's koppelen/herkoppelen; preview kan tussen proxy en origineel wisselen en export is geblokkeerd bij proxy-preview.
+- Multicamgroepen maken uit meerdere videobronnen, handmatige bron-offsets bij tijdlijn 00:00 instellen en hoekwisselingen als cuts op de playhead maken; oorspronkelijke audio blijft apart.
 
 ### Volgende fase — kleur en keyframes
 - Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
@@ -82,7 +83,7 @@
 
 ### Volgende fase — proxies en multicam
 - Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.5 biedt al handmatig koppelen en proxy-preview.
-- Multicam-groepen met synchronisatie op audio/tijdcode, hoekselectie tijdens afspelen en terugschrijven als bewerkbare montage.
+- Automatische synchronisatie van multicambronnen via audiowaveform/tijdcode, live multiview met angle switching, audio-angle routing en robuuste source-offset validatie; beta.5 heeft handmatige offsets en cut-to-angle.
 - Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
 
 ### Volgende fase — volwaardige offline render/export
