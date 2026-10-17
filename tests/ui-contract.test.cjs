@@ -570,3 +570,9 @@ test('Motion Studio genereert lokale filmstrip-miniaturen voor videoclips', () =
   assert.match(video, /video-clip-filmstrip/);
   assert.match(video, /canvas\.toDataURL\('image\/jpeg'/);
 });
+
+test('Motion Studio ondersteunt sequence markers, split shortcuts en 25fps-tijdcode', () => {
+  for (const feature of ["function addMarker(", "state.markers.map", "e.key.toLowerCase() === 'm'", "e.key.toLowerCase() === 'i'", "e.key.toLowerCase() === 'o'", "const SEQUENCE_FPS = 25", "captureStream(SEQUENCE_FPS)"]) {
+    assert.ok(video.includes(feature), 'Ontbrekend montageonderdeel: ' + feature);
+  }
+});
