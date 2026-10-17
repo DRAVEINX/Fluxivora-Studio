@@ -1,3 +1,13 @@
+## 0.5.0-beta.5 — Motion Studio source workflow, grading and scopes
+
+- Added a dedicated source monitor with source in/out points and insert-at-playhead; media assets are maintained separately from timeline clips.
+- Added media-bin search/filter, source relinking after a project is reopened, and independent asset metadata in saved montage projects.
+- Added a reversible effect stack with enable/disable, reordering and removal.
+- Added clip-level exposure, contrast, saturation, temperature and tint controls, plus an RGB histogram and luma waveform derived from the program canvas.
+- Added keyframe easing modes: linear, ease in/out, ease in-out and hold.
+- Existing Pixel Lab, Vector Forge and Page Studio remain intact.
+- Still not part of this beta: imported .cube LUT application, calibrated broadcast scopes, generated proxy workflows, multicam editing, offline/frame-accurate rendering and MP4/H.264 encoding.
+
 ## 0.5.0-beta.4 — Motion Studio multi-track workflow
 
 - Motion Studio upgraded from a single video lane to editable multi-track video, audio and title tracks.
