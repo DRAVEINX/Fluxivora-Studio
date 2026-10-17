@@ -83,3 +83,6 @@
 .video-keyframe-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:5px}.video-keyframe-actions .button{min-width:0;padding:7px 6px;font-size:8px}.video-keyframe-count{display:block;margin-top:7px;color:#8e9bbb;font-size:8px}
 
 .video-track-adders #video-split-clip,.video-track-adders #video-ripple-delete{border-color:#3c4560;color:#c2cbe7}
+
+.video-clip-waveform{display:block;max-width:100%;min-width:20px;border-radius:2px;opacity:.95;pointer-events:none}
+.video-clip-block.audio .video-clip-waveform{filter:drop-shadow(0 0 2px #5ddac44d)}
