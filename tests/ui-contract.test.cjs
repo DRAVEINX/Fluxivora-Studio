@@ -309,3 +309,10 @@ test('zoom heeft Ctrl/Cmd-sneltoetsen en past canvas opnieuw aan met Ctrl/Cmd+0'
   assert.match(app, /shortcutEditingAllowed && mod && event\.key === '0'.*state\.zoom = 0/s);
   assert.match(app, /\['Aanpassen aan scherm', 'Ctrl \+ 0'\]/);
 });
+
+test('window-close handler does not block Electron closing while requesting recovery', () => {
+  const handler = app.match(/window\\.addEventListener\\('beforeunload',[\\s\\S]*?\\);/);
+  assert.ok(handler, 'beforeunload-handler ontbreekt');
+  assert.match(handler[0], /persistRecoverySnapshot\\(\\)/, 'Laatste herstelkopie wordt niet aangevraagd');
+  assert.doesNotMatch(handler[0], /preventDefault|returnValue/, 'beforeunload blokkeert het sluiten van het venster');
+});
