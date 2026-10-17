@@ -1587,7 +1587,8 @@
     else if (event.key === 'Escape') { state.selectedId = null; state.selectedBezierPointIndex = null; state.draftObject = null; renderAll(); $('modal-backdrop').classList.add('hidden'); }
   });
   window.addEventListener('keyup', (event) => { if (event.code === 'Space') state.spaceHeld = false; });
-  window.addEventListener('beforeunload', (event) => { if (state.dirty) { cancelRecoveryTimer(); persistRecoverySnapshot(); event.preventDefault(); event.returnValue = ''; } });
+  // Never cancel the native window close: request a last recovery snapshot, then let Electron exit.
+  window.addEventListener('beforeunload', () => { if (state.dirty) { cancelRecoveryTimer(); persistRecoverySnapshot(); } });
 
   // Start in the welcome view. Each workspace has a separate object collection inside one project.
   showWelcome(); updateHistoryButtons(); offerRecoveryIfAvailable();
