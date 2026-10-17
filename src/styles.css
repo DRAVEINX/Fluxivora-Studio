@@ -81,3 +81,5 @@
 @media(max-width:1100px){.video-workspace{grid-template-columns:150px minmax(300px,1fr) 190px}.video-header{align-items:flex-start;flex-direction:column}.video-project-actions{width:100%;flex-wrap:wrap}.video-track-label{width:132px}}
 
 .video-keyframe-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:5px}.video-keyframe-actions .button{min-width:0;padding:7px 6px;font-size:8px}.video-keyframe-count{display:block;margin-top:7px;color:#8e9bbb;font-size:8px}
+
+.video-track-adders #video-split-clip,.video-track-adders #video-ripple-delete{border-color:#3c4560;color:#c2cbe7}
