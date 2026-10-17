@@ -604,7 +604,7 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
 
 
 test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
-  for (const id of ['video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+  for (const id of ['video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
@@ -632,4 +632,14 @@ test('Motion Studio beta.5 ondersteunt effectstacks, kleurcorrectie, scopes en k
   assert.match(motion, /function paintScopes\(/);
   assert.match(motion, /function applyGrade\(/);
   assert.match(html, /src="motion-pro\.js"/);
+});
+
+
+test('Motion Studio bronmonitor ondersteunt afspelen, scrubben en nauwkeurige bronmarkeringen', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  for (const feature of ['function activeSourcePlayer(', 'function updateSourceTransport(', 'function toggleSourcePlayback(', "addEventListener('timeupdate'", "addEventListener('seeked'", "function setMark(", 'function setSourcePoint(']) {
+    assert.ok(motion.includes(feature), 'Ontbrekend bronmonitoronderdeel: ' + feature);
+  }
+  assert.match(html, /id="video-source-play"/);
+  assert.match(html, /id="video-source-seek"/);
 });
