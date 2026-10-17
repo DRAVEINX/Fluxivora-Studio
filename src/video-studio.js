@@ -632,7 +632,33 @@
     if (!file) return;
     try {
       const data = JSON.parse(await file.text());
-      if (data.format !== 'fluxivora-video-project' || !Array.isArray(data.clips) || data.clips.length > 1000 || !Array.isArray(data.tracks)) throw new Error('Dit is geen geldig Fluxivora-video-project.');
+      if (data.format !== 'fluxivora-video-project' || !Array.isArray(data.clips) || data.clips.length > 1000) throw new Error('Dit is geen geldig Fluxivora-video-project.');
+      // Migrate the original beta.3 single-track montage format into beta.4 tracks.
+      if (!Array.isArray(data.tracks)) {
+        data.tracks = [
+          { id: 'v2', name: 'V2', kind: 'video', hidden: false, locked: false, muted: false },
+          { id: 'v1', name: 'V1', kind: 'video', hidden: false, locked: false, muted: false },
+          { id: 'a1', name: 'A1', kind: 'audio', hidden: false, locked: false, muted: false },
+          { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
+          { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
+        ];
+        let cursor = 0;
+        data.clips = data.clips.map(old => {
+          const duration = Math.max(0, Math.min(86400, Number(old.duration) || 0));
+          const inPoint = Math.max(0, Math.min(duration, Number(old.inPoint) || 0));
+          const outPoint = Math.max(inPoint, Math.min(duration, Number(old.outPoint) || duration));
+          const migrated = {
+            id: uid(), name: String(old.fileName || old.name || 'Video').slice(0, 512), type: 'video', trackId: 'v1',
+            start: cursor, duration, in: inPoint, out: outPoint, speed: 1, volume: 1, opacity: 1,
+            scale: 1, x: 0, y: 0, filter: 'normal', fit: 'contain', fadeIn: 0, fadeOut: 0, keyframes: [],
+            text: '', fontSize: 72, color: '#ffffff', bold: true, missing: true
+          };
+          cursor += Math.max(0.1, outPoint - inPoint);
+          return migrated;
+        });
+        notice('Oud montageproject omgezet naar de multi-track tijdlijn.');
+      }
+      if (data.tracks.length > 24) throw new Error('Het montageproject bevat te veel tracks.');
       stopPlayback();
       state.clips.forEach(c => disposeMedia(c, true));
       state.history.length = 0; state.redo.length = 0;
@@ -773,7 +799,7 @@
     $('video-clip-name').addEventListener('change', () => applyProperty('video-clip-name', 'name', v => String(v).slice(0, 512)));
     $('video-clip-start').addEventListener('change', () => {
       const c = selected(); if (!c) return;
-      const v = Math.max(0, Number($('video-clip-start').value) || 0);
+      const v = snapTime(Math.max(0, Number($('video-clip-start').value) || 0), c.id);
       if (v === c.start) return;
       pushHistory(); c.start = v; refresh(); renderPreview();
     });
