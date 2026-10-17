@@ -132,6 +132,11 @@
             <input id="video-audio-files" type="file" accept="audio/*" multiple hidden />
             <input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden />
             <input id="video-relink-files" type="file" accept="video/*,audio/*" hidden />
+            <input id="video-proxy-file" type="file" accept="video/*" hidden />
+            <div class="video-proxy-controls">
+              <label><input id="video-proxy-preview" type="checkbox" disabled /> Proxy preview</label>
+              <small id="video-proxy-status">Koppel een proxy aan een videobron om deze optie te gebruiken.</small>
+            </div>
             <div class="video-bin-tools"><input id="video-bin-search" type="search" placeholder="Zoek in media…" aria-label="Zoek projectmedia" /><select id="video-bin-filter" aria-label="Filter projectmedia"><option value="all">Alle media</option><option value="video">Video</option><option value="audio">Audio</option></select></div>
             <div id="video-media" class="video-media-bin" aria-label="Mediabibliotheek"></div>
             <div id="video-media-empty" class="video-media-empty">Importeer video of audio om bronnen hier te bekijken.</div>
