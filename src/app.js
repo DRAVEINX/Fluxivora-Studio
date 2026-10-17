@@ -1627,7 +1627,7 @@
     else if (event.key === 'Escape') { state.selectedId = null; state.selectedBezierPointIndex = null; state.draftObject = null; renderAll(); $('modal-backdrop').classList.add('hidden'); }
   });
   window.addEventListener('keyup', (event) => { if (event.code === 'Space') state.spaceHeld = false; });
-  // Never cancel the native window close: request a last recovery snapshot, then let Electron exit.
+  // Prepare the last recovery snapshot before Electron completes the close handshake.
   window.fluxivora?.onPrepareClose?.(async () => {
     try {
       cancelRecoveryTimer();

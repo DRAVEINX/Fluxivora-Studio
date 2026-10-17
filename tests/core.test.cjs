@@ -7,7 +7,7 @@ const validPngDataUrl = `data:image/png;base64,${Buffer.from('png-test').toStrin
 test('maakt één project met de drie werkruimtes aan', () => {
   const p = FluxCore.createProject('pixel', 'Test');
   assert.equal(p.format, 'fluxivora-project');
-  assert.equal(p.version, '0.5.0-alpha.22');
+  assert.equal(p.version, '0.5.0-alpha.23');
   assert.equal(p.name, 'Test');
   assert.equal(p.pixel.objects.length, 0);
   assert.equal(p.vector.objects.length, 0);
@@ -23,7 +23,7 @@ test('normaliseert oudere projectbestanden en pagina’s', () => {
     layout: { pages: [{ objects: [{ type: 'text', text: 'Hallo', x: '10' }] }] }
   });
   assert.equal(p.workspace, 'layout');
-  assert.equal(p.version, '0.5.0-alpha.22');
+  assert.equal(p.version, '0.5.0-alpha.23');
   assert.equal(p.layout.pages[0].objects[0].text, 'Hallo');
   assert.equal(p.layout.pages[0].objects[0].x, 10);
   assert.throws(() => FluxCore.normaliseProject({ format: 'onbekend' }), /geen Fluxivora-projectbestand/);

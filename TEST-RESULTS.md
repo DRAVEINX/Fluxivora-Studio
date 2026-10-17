@@ -1,21 +1,17 @@
-# Testresultaten — Fluxivora Studio 0.5.0-alpha.22
+# Testresultaten — Fluxivora Studio 0.5.0-alpha.23
 
-Controles uitgevoerd op 17 oktober 2026.
+Controles bijgewerkt op 17 oktober 2026.
 
-- `npm test`: **70 tests geslaagd, 0 mislukt** in GitHub Actions-run [39057717446](https://github.com/DRAVEINX/Fluxivora-Studio/actions/runs/39057717446).
-- `npm run check`: geslaagd voor Electron main, preload, app en core.
-- `npm run check`: **geslaagd** voor Electron main, preload, app en core.
-- Nieuwe functie: Ctrl/Cmd + plus of `=` zoomt in, Ctrl/Cmd + min zoomt uit en Ctrl/Cmd + 0 past het canvas aan het beschikbare scherm aan.
-- Zoomsneltoetsen zijn uitgeschakeld wanneer een invoerveld, tekstgebied, contenteditable-gebied of keuzelijst actief is.
-- Objecten kunnen nauwkeurig worden verplaatst met pijltjestoetsen (1 px) en Shift + pijltjestoetsen (10 px), inclusief Bézier-ankers en handgrepen; vergrendelde objecten worden beschermd.
-- Ctrl/Cmd + muiswiel zoomt rond de muiscursor; normaal muiswiel-scrollen blijft beschikbaar.
-- Canvas pannen blijft beschikbaar met Spatie + linkermuisknop-slepen of middelste muisknop.
-- Windows CI- en releaseworkflows proberen de officiële npm-registry en daarna een alternatieve npm-mirror, met twee pogingen per registry en begrensde npm-retries/time-outs.
+- De automatische suite bevat **76 tests**. De code- en teststappen zijn groen in de huidige GitHub Actions-validatie; zie de [nieuwste workflow](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele buildstatus.
+- `npm run check`: geslaagd voor Electron main, preload, app en core in de validatie van de huidige bronwijzigingen.
+- De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
+- Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
+- Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
 
 ## Nog niet geverifieerd
 
-- Windows-installer: de GitHub Actions-build voor de nieuwste projectveiligheidswijzigingen werd na de geslaagde teststap gestart; controleer de actuele eindstatus en het artifact in [workflow 39057717446](https://github.com/DRAVEINX/Fluxivora-Studio/actions/runs/39057717446).
-- Windows-runtime: moet nog handmatig op een echte Windows 10/11-pc worden getest.
-- De JSON-roundtriptest controleert normalisatie en behoud van projectdetails, maar vervangt geen end-to-end test van de Windows-bestandsdialogen, daadwerkelijke schijfopslag en heropenen in de gebouwde app.
+- De installatie en runtime van de alpha.23-installer op een fysieke Windows 10/11-pc moeten nog handmatig worden getest.
+- De echte eind-tot-eindstroom — opslaan via de Windows-bestandsdialoog, afsluiten, opnieuw openen en een herstelkopie terugzetten — is nog niet onafhankelijk handmatig bevestigd.
+- De tests bewijzen niet dat elk abrupt stroomverlies of geforceerd beëindigen van Windows alle wijzigingen bewaart; de herstelkopie wordt lokaal geschreven en periodiek bijgewerkt.
 
-Een groene testsuite is geen bewijs van een volledige praktijktest op Windows.
+Een groene test-suite bevestigt de codecontroles, niet de volledige praktijktest op een Windows-pc.

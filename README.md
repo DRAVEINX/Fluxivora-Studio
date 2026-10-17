@@ -2,11 +2,19 @@
 
 **Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.22 brengt drie werkruimtes samen in één projectbestand:
+Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.23 brengt drie werkruimtes samen in één projectbestand:
 
 - **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
 - **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.
 - **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
+
+## Nieuw in 0.5.0-alpha.23
+
+- Bij het sluiten van het venster vraagt Electron de renderer eerst om de laatste lokale herstelkopie weg te schrijven. De app sluit daarna normaal; een time-out van 3,5 seconden voorkomt dat een vastgelopen renderer het sluiten onbeperkt blokkeert.
+- Projectopslag is ondergebracht in `electron/project-store.cjs`, met unieke tijdelijke bestandsnamen, veilige bestandsnaamopschoning, JSON-validatie en atomische vervanging.
+- Extra opslagtests controleren bestandsnaamvalidatie, geldige/ongeldige projectdata, gelijktijdige schrijfacties en het opruimen van tijdelijke bestanden bij fouten.
+- Een project openen of een nieuw ontwerp maken overschrijft niet langer stilzwijgend niet-opgeslagen wijzigingen.
+- De project-roundtriptests controleren behoud van inhoud uit Pixel Lab, Vector Forge en Page Studio.
 
 ## Nieuw in 0.5.0-alpha.22
 
@@ -85,11 +93,13 @@ FluxivoraStudio/
 ├── docs/ROADMAP.md
 ├── electron/main.cjs
 ├── electron/preload.cjs
+├── electron/project-store.cjs
 ├── src/index.html
 ├── src/styles.css
 ├── src/app.js
 ├── src/core.js
 ├── tests/core.test.cjs
+├── tests/project-store.test.cjs
 ├── tests/ui-contract.test.cjs
 └── package.json
 ```
@@ -114,7 +124,7 @@ Dit is geen volledige vervanging van Photoshop, Illustrator of InDesign. Geavanc
 
 ## Status van tests en installatie
 
-De laatste GitHub Actions-run op 17 oktober 2026 heeft **70 geautomatiseerde tests** en `npm run check` succesvol doorlopen: [workflow 39057717446](https://github.com/DRAVEINX/Fluxivora-Studio/actions/runs/39057717446). De Windows-installer wordt in die run gebouwd en gecontroleerd. Deze tests dekken ook de projectdata-roundtrip en de bescherming tegen het onbedoeld overschrijven van niet-opgeslagen werk. De uiteindelijke installatie en runtime moeten nog handmatig op een echte Windows-pc worden getest.
+De automatische suite bevat **76 tests**. De syntax- en teststappen zijn groen in de huidige validatie; bekijk de nieuwste [GitHub Actions-run](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele Windows-buildstatus. Een groene CI-run bevestigt niet zelfstandig dat de installer op een echte Windows 10/11-pc is geïnstalleerd en gebruikt. De nieuwe sluitprocedure en herstelkopie moeten daarom ook in de gebouwde app praktisch worden gecontroleerd.
 
 ## Licentie
 
