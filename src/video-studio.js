@@ -201,6 +201,7 @@
         refresh();
         renderPreview();
         if (type === 'audio') computeAudioWaveform(file, imported.id);
+        else captureVideoThumbnails(file, imported.id);
         probe.removeAttribute('src'); probe.load();
       };
       probe.onerror = () => { URL.revokeObjectURL(url); notice('Kan bestand niet lezen: ' + file.name); };
@@ -244,6 +245,58 @@
     else state.markers.push({ id: uid('marker'), time: Math.max(0, state.playhead), label: cleanLabel });
     state.markers.sort((a, b) => a.time - b.time);
     renderTracks(); notice('Marker toegevoegd op ' + tc(state.playhead) + '.');
+  }
+  async function captureVideoThumbnails(file, clipId) {
+    if (!file || file.size > 2 * 1024 * 1024 * 1024) return;
+    const temporaryUrl = URL.createObjectURL(file);
+    const decoder = document.createElement('video');
+    decoder.preload = 'auto'; decoder.muted = true; decoder.playsInline = true;
+    const waitFor = (target, success, failure) => new Promise((resolve, reject) => {
+      const onSuccess = () => { cleanup(); resolve(success()); };
+      const onFailure = () => { cleanup(); reject(new Error('Video thumbnail decode failed')); };
+      const cleanup = () => { target.removeEventListener('loadedmetadata', onSuccess); target.removeEventListener('seeked', onSuccess); target.removeEventListener('error', onFailure); };
+      target.addEventListener(target.readyState >= 1 && target.duration > 0 ? 'seeked' : 'loadedmetadata', onSuccess, { once: true });
+      target.addEventListener('error', onFailure, { once: true });
+    });
+    try {
+      decoder.src = temporaryUrl;
+      await new Promise((resolve, reject) => {
+        decoder.addEventListener('loadedmetadata', resolve, { once: true });
+        decoder.addEventListener('error', () => reject(new Error('Video cannot provide thumbnails')), { once: true });
+        decoder.load();
+      });
+      if (!Number.isFinite(decoder.duration) || decoder.duration <= 0) return;
+      const canvas = document.createElement('canvas'); canvas.width = 120; canvas.height = 68;
+      const ctx = canvas.getContext('2d'); if (!ctx) return;
+      const points = [...new Set([0.05, 0.25, 0.5, 0.75, 0.95].map(p => Math.min(Math.max(0, decoder.duration - 0.04), decoder.duration * p)))];
+      const thumbnails = [];
+      for (const point of points) {
+        await new Promise((resolve, reject) => {
+          const done = () => { cleanup(); resolve(); };
+          const fail = () => { cleanup(); reject(new Error('Thumbnail seek failed')); };
+          const cleanup = () => { decoder.removeEventListener('seeked', done); decoder.removeEventListener('error', fail); };
+          decoder.addEventListener('seeked', done, { once: true }); decoder.addEventListener('error', fail, { once: true });
+          try { decoder.currentTime = point; } catch (error) { cleanup(); reject(error); }
+        });
+        if (decoder.readyState < 2 || !decoder.videoWidth) continue;
+        const scale = Math.min(canvas.width / decoder.videoWidth, canvas.height / decoder.videoHeight);
+        const w = decoder.videoWidth * scale, h = decoder.videoHeight * scale;
+        ctx.fillStyle = '#080a12'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(decoder, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+        thumbnails.push(canvas.toDataURL('image/jpeg', 0.58));
+      }
+      const c = state.clips.find(item => item.id === clipId);
+      if (c && c.type === 'video') {
+        c.thumbnails = thumbnails;
+        state.media.set(c.id, { ...(state.media.get(c.id) || {}), file: c.file, url: c.url, mediaEl: c.mediaEl, audioEl: c.audioEl, audioSource: c.audioSource, audioGain: c.audioGain, waveform: c.waveform, thumbnails });
+        renderTracks();
+      }
+    } catch (_) {
+      // Some hardware/codec combinations cannot seek fast enough for thumbnails; timeline editing remains usable.
+    } finally {
+      decoder.pause(); decoder.removeAttribute('src'); decoder.load(); decoder.remove();
+      URL.revokeObjectURL(temporaryUrl);
+    }
   }
   function addTitle() {
     pushHistory();
@@ -469,6 +522,15 @@
         const left = document.createElement('span'); left.className = 'clip-trim trim-left'; left.title = 'Beginpunt trimmen';
         const right = document.createElement('span'); right.className = 'clip-trim trim-right'; right.title = 'Eindpunt trimmen';
         if (c.type !== 'title') block.append(left);
+        if (c.type === 'video' && Array.isArray(c.thumbnails) && c.thumbnails.length) {
+          const filmstrip = document.createElement('div');
+          filmstrip.className = 'video-clip-filmstrip';
+          c.thumbnails.forEach(src => {
+            const thumb = document.createElement('img'); thumb.src = src; thumb.alt = ''; thumb.draggable = false;
+            filmstrip.append(thumb);
+          });
+          block.append(filmstrip);
+        }
         block.append(title);
         if (c.type === 'audio' && Array.isArray(c.waveform) && c.waveform.length) {
           const wave = document.createElement('canvas');
