@@ -293,6 +293,7 @@
       const position = Math.min(c.out, currentSourceTime(c));
       const media = c.mediaEl, audio = c.audioEl;
       if (c.type === 'video' && media) {
+        media.playbackRate = Math.max(0.1, Math.min(4, c.speed || 1));
         const t = track(c.trackId);
         if (!active || (t && t.hidden)) { media.pause(); }
         else {
@@ -302,6 +303,7 @@
         }
       }
       if (audio) {
+        audio.playbackRate = Math.max(0.1, Math.min(4, c.speed || 1));
         const enabledTrack = track(c.trackId);
         const audioActive = active && !(enabledTrack && enabledTrack.muted) && (c.type === 'audio' || c.type === 'video');
         if (c.audioGain) c.audioGain.gain.value = audioActive ? gainFor(c) : 0;
@@ -498,7 +500,7 @@
             const delta = (ev.clientX - originX) / state.zoom;
             if (edge === 'left') {
               const next = Math.max(0, Math.min(sourceOut - 0.1, sourceIn + delta));
-              c.in = next; c.start = Math.max(0, startAt + (next - sourceIn));
+              c.in = next; c.start = Math.max(0, startAt + (next - sourceIn) / Math.max(0.1, c.speed || 1));
             } else c.out = Math.max(sourceIn + 0.1, Math.min(c.duration, sourceOut + delta));
             renderTracks(); renderPreview(); updateTransport();
           };
@@ -790,9 +792,9 @@
   }
   function addCrossfade() {
     const c = selected();
-    if (!c || c.type !== 'video') { notice('Selecteer eerst een videoclips om een crossfade toe te voegen.'); return; }
-    const previous = state.clips.filter(item => item.type === 'video' && item.trackId === c.trackId && item.id !== c.id && item.start < c.start && item.start + clipLength(item) >= c.start - 0.15).sort((a, b) => b.start - a.start)[0];
-    if (!previous) { notice('Plaats eerst twee aangrenzende clips op dezelfde videotrack.'); return; }
+    if (!c || !['video', 'audio'].includes(c.type)) { notice('Selecteer eerst een video- of audioclip om een crossfade toe te voegen.'); return; }
+    const previous = state.clips.filter(item => item.type === c.type && item.trackId === c.trackId && item.id !== c.id && item.start < c.start && item.start + clipLength(item) >= c.start - 0.15).sort((a, b) => b.start - a.start)[0];
+    if (!previous) { notice('Plaats eerst twee aangrenzende clips van hetzelfde type op dezelfde track.'); return; }
     const duration = Math.max(0.15, Math.min(1, clipLength(c) / 2, clipLength(previous) / 2));
     pushHistory();
     c.start = Math.max(previous.start, c.start - duration);
