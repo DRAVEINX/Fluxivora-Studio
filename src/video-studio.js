@@ -128,7 +128,7 @@
     } catch (error) { notice('Montage openen mislukt: ' + error.message); }
     finally { $('video-session-file').value = ''; }
   }
-  function stop() { state.playing = false; $('video-preview').pause(); refresh(); }
+  function stop() { state.playing = false; $('video-preview').pause(); if (state.recorder && state.recorder.state === 'recording') state.recorder.stop(); refresh(); }
   function playNext() {
     const index = state.clips.findIndex(c => c.id === state.selected);
     const next = state.clips.slice(index + 1).find(c => c.url && length(c) > 0);
@@ -143,8 +143,10 @@
     const type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => Recorder.isTypeSupported(t));
     if (!type) { stream.getTracks().forEach(t => t.stop()); notice('Geen WebM-codec beschikbaar.'); return; }
     const chunks = [], recorder = new Recorder(stream, { mimeType: type });
+    state.recorder = recorder;
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     recorder.onstop = () => {
+      cancelAnimationFrame(state.frame); state.frame = 0; state.recorder = null;
       stream.getTracks().forEach(t => t.stop());
       if (!chunks.length) return;
       const url = URL.createObjectURL(new Blob(chunks, { type })), link = document.createElement('a');
