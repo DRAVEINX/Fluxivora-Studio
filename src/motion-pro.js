@@ -97,7 +97,6 @@
       video.src = asset.url;
       video.hidden = false;
       video.load();
-      video.currentTime = 0;
     } else {
       video.removeAttribute('src');
       audio.src = asset.url;
@@ -147,8 +146,8 @@
 
   function setMark(which) {
     const asset = activeSource();
-    if (!asset || asset.type !== 'video') return;
-    const player = $('video-source-player');
+    if (!asset) return;
+    const player = asset.type === 'audio' ? $('video-source-audio') : $('video-source-player');
     if (which === 'in' && player.currentTime < sourceOut - 0.04) setSourcePoint('in', player.currentTime);
     if (which === 'out' && player.currentTime > sourceIn + 0.04) setSourcePoint('out', player.currentTime);
   }
