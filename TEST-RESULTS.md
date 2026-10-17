@@ -1,8 +1,8 @@
-# Testresultaten — Fluxivora Studio 0.5.0-alpha.27
+# Testresultaten — Fluxivora Studio 0.5.0-beta.1
 
 Controles bijgewerkt op 17 oktober 2026.
 
-- De suite bevat regressietests voor begrensde undo/redo, slepen, projectnaamwijzigingen, afbeeldingsinvoeging, selectiebehoud en het vermijden van lege geschiedenisstappen; de actuele alpha.27-testuitkomst staat in [GitHub Actions](https://github.com/DRAVEINX/Fluxivora-Studio/actions).
+- De beta.1-testkandidaat behoudt de geautomatiseerde regressietests voor undo/redo, slepen, projectnaamwijzigingen, afbeeldingsinvoeging, selectiebehoud en lege geschiedenisstappen; de actuele uitkomst staat in [GitHub Actions](https://github.com/DRAVEINX/Fluxivora-Studio/actions).
 - Extra Windows-regressiecontrole: opslagacties naar hetzelfde doelbestand worden geserialiseerd wanneer meerdere schrijfacties tegelijk binnenkomen.
 - De Windows-workflow voert JavaScript-syntaxcontroles, unit- en UI-contracttests, installerbouw, checksumverificatie en artifact-upload uit.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
@@ -11,8 +11,8 @@ Controles bijgewerkt op 17 oktober 2026.
 
 ## Nog niet geverifieerd
 
-- Alpha.25 en alpha.26 zijn door de gebruiker op een Windows-pc bevestigd als werkend. Alpha.27 moet na een groene CI-run ook op de pc worden geïnstalleerd en getest.
-- De echte eind-tot-eindstroom — opslaan via de Windows-bestandsdialoog, afsluiten, opnieuw openen en een herstelkopie terugzetten — is nog niet onafhankelijk handmatig bevestigd.
-- De tests bewijzen niet dat elk abrupt stroomverlies of geforceerd beëindigen van Windows alle wijzigingen bewaart; de herstelkopie wordt lokaal geschreven en periodiek bijgewerkt.
+- De gebruiker heeft bevestigd dat alpha.25, alpha.26 en alpha.27 op diens Windows-pc werken. Beta.1 moet na een groene CI-run op de pc worden getest.
+- Openstaande beta-releasecheck: sla een `.fluxivora`-project op, sluit de app, open het bestand opnieuw en controleer de inhoud; exporteer daarnaast PNG, SVG en PDF; controleer vervolgens of een bestaande herstelkopie bij herstart kan worden teruggezet.
+- De tests bewijzen niet dat elk abrupt stroomverlies of geforceerd beëindigen van Windows alle wijzigingen bewaart; de herstelkopie wordt lokaal geschreven en periodiek bijgewerkt. Beta.1 is daarom nog een testkandidaat, geen definitieve stabiele release.
 
 Een groene test-suite bevestigt de codecontroles, niet de volledige praktijktest op een Windows-pc.

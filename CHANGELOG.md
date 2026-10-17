@@ -1,5 +1,12 @@
 # Wijzigingen
 
+## 0.5.0-beta.1 — 17 oktober 2026
+
+- Eerste beta-testkandidaat met functiestop: er worden geen nieuwe features toegevoegd tijdens de beta, alleen noodzakelijke reparaties en releaseblokkades.
+- De werkende functies en stabiliteitsreparaties uit alpha.27 zijn behouden; de gebruiker heeft alpha.27 op Windows bevestigd als werkend.
+- Versienummers van pakket, core en zichtbare interface zijn bijgewerkt naar 0.5.0-beta.1; versieconsistentie wordt door de bestaande tests gecontroleerd.
+- Voordat beta.1 als stabiel kan gelden, moet de Windows-praktijktest opslaan/sluiten/heropenen, PNG/SVG/PDF-export en herstelkopieën bevestigen.
+
 ## 0.5.0-alpha.27 — 17 oktober 2026
 
 - Inspectorvelden maken pas een undo-stap wanneer projectgegevens echt veranderen; alleen focussen of aanklikken maakt geen lege stap en wist de redo-geschiedenis niet.

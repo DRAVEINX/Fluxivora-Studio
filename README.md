@@ -2,13 +2,13 @@
 
 **Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.27 brengt drie werkruimtes samen in één projectbestand:
+Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-beta.1 brengt drie werkruimtes samen in één projectbestand:
 
 - **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
 - **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.
 - **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
 
-## Nieuw in 0.5.0-alpha.27
+## Stabiliteitsbasis uit 0.5.0-alpha.27
 
 - Inspectorwijzigingen worden pas ongedaan-maakbaar als er echt iets wijzigt; alleen focussen of klikken legt geen lege stap vast en wist de redo-tak niet.
 - Helderheid, contrast en verzadiging bewaren één beginsnapshot per schuifactie. Echte live-wijzigingen markeren het project meteen als onopgeslagen.

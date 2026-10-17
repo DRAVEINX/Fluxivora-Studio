@@ -104,7 +104,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-alpha.27');
+  assert.equal(pkg.version, '0.5.0-beta.1');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
