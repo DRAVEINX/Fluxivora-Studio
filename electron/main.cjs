@@ -4,7 +4,6 @@ const path = require('node:path');
 
 const PROJECT_FILTER = [{ name: 'Fluxivora-project', extensions: ['fluxivora', 'json'] }];
 const IMAGE_FILTER = [{ name: 'Afbeeldingen', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] }];
-const MAX_PROJECT_BYTES = 180 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 60 * 1024 * 1024;
 const MAX_EXPORT_BYTES = 220 * 1024 * 1024;
 const approvedProjectPaths = new Set();
@@ -14,38 +13,8 @@ const MIME_BY_EXTENSION = {
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.gif': 'image/gif'
 };
 
-function canonicalPath(filePath) {
-  const resolved = path.resolve(filePath);
-  return process.platform === 'win32' ? resolved.toLocaleLowerCase('en-US') : resolved;
-}
+const { MAX_PROJECT_BYTES, canonicalPath, safeProjectStem, assertProjectJson, atomicWrite } = require('./project-store.cjs');
 
-function safeProjectStem(value) {
-  const cleaned = String(value || 'Mijn ontwerp').replace(/[<>:\"/\\|?*\x00-\x1f]/g, '').replace(/[. ]+$/g, '').trim().slice(0, 80);
-  return cleaned || 'Mijn ontwerp';
-}
-
-function assertProjectJson(json) {
-  if (typeof json !== 'string' || Buffer.byteLength(json, 'utf8') > MAX_PROJECT_BYTES) {
-    throw new Error('Het projectbestand is te groot of ongeldig.');
-  }
-  let project;
-  try { project = JSON.parse(json); } catch (_) { throw new Error('Het projectbestand bevat geen geldige JSON.'); }
-  if (!project || Array.isArray(project) || project.format !== 'fluxivora-project') {
-    throw new Error('Dit is geen geldig Fluxivora-projectbestand.');
-  }
-  return project;
-}
-
-async function atomicWrite(filePath, data, options = {}) {
-  const tempPath = `${filePath}.fluxivora-${process.pid}-${Date.now()}.tmp`;
-  try {
-    await fs.writeFile(tempPath, data, options);
-    await fs.rename(tempPath, filePath);
-  } catch (error) {
-    await fs.unlink(tempPath).catch(() => {});
-    throw error;
-  }
-}
 
 function createWindow() {
   const win = new BrowserWindow({
