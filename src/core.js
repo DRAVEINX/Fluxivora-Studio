@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
 
-  const VERSION = '0.5.0-beta.2';
+  const VERSION = '0.5.0-beta.3';
   const DEFAULT_WIDTH = 1200;
   const DEFAULT_HEIGHT = 800;
   const OBJECT_TYPES = new Set(['rect', 'ellipse', 'line', 'text', 'image', 'stroke', 'path', 'bezier', 'polygon']);

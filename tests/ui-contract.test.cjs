@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.2');
+  assert.equal(pkg.version, '0.5.0-beta.3');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -490,4 +490,15 @@ test('beta.2 toont uitgebreide gereedschappen in Pixel Lab, Vector Forge en Page
   assert.match(app, /function eraseObjectAtPoint\(/);
   assert.match(app, /function sampleObjectColor\(/);
   assert.match(app, /getImageData\(x, y, 1, 1\)/);
+});
+
+test('een leeg nieuw ontwerp wordt niet direct als bewerking gemarkeerd', () => {
+  assert.match(app, /Nieuw ontwerp · nog niet opgeslagen/);
+  assert.doesNotMatch(app, /markDirty\('Nieuw project · nog niet opgeslagen'\)/);
+});
+test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
+  assert.match(html, /id="startup-intro"/);
+  assert.match(html, /id="skip-intro"/);
+  assert.match(app, /function playStartupIntro\(/);
+  assert.match(app, /window\.setTimeout\(finish, 3300\)/);
 });

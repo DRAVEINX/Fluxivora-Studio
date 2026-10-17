@@ -357,7 +357,12 @@
     state.undoStack.length = 0; state.redoStack.length = 0;
     state.currentTool = 'select'; state.zoom = 0; state.inspector = 'properties';
     showEditor();
-    markDirty('Nieuw project · nog niet opgeslagen');
+    state.dirty = false;
+    cancelRecoveryTimer();
+    $('save-state').textContent = 'Nieuw ontwerp · nog niet opgeslagen';
+    $('save-button').disabled = false;
+    $('save-as-button').disabled = false;
+    updateTitle();
     renderAll();
     notify('Je nieuwe ontwerp staat klaar.', 'success');
   }
@@ -390,7 +395,6 @@
     state.zoom = 0;
     showEditor();
     renderAll();
-    markDirty('Werkruimte gewijzigd');
   }
 
   function renderWorkspaceChrome() {
@@ -1842,5 +1846,20 @@
   window.addEventListener('beforeunload', () => { if (state.dirty && !closePreparationCompleted) { cancelRecoveryTimer(); persistRecoverySnapshot(); } });
 
   // Start in the welcome view. Each workspace has a separate object collection inside one project.
-  showWelcome(); updateHistoryButtons(); offerRecoveryIfAvailable();
+
+  function playStartupIntro() {
+    const intro = $('startup-intro');
+    if (!intro) return;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      intro.classList.add('intro-exit');
+      window.setTimeout(() => intro.remove(), 750);
+    };
+    $('skip-intro')?.addEventListener('click', finish);
+    window.setTimeout(finish, 3300);
+  }
+
+  showWelcome(); updateHistoryButtons(); offerRecoveryIfAvailable(); playStartupIntro();
 })();
