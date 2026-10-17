@@ -563,3 +563,10 @@ test('bèta.3-montages worden gemigreerd in plaats van afgewezen', () => {
   assert.match(video, /Oud montageproject omgezet naar de multi-track tijdlijn/);
   assert.match(video, /let cursor = 0;/);
 });
+
+test('Motion Studio genereert lokale filmstrip-miniaturen voor videoclips', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function captureVideoThumbnails\(/);
+  assert.match(video, /video-clip-filmstrip/);
+  assert.match(video, /canvas\.toDataURL\('image\/jpeg'/);
+});
