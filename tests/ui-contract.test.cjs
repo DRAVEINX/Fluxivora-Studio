@@ -604,7 +604,7 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
 
 
 test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
-  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-proxy-file','video-proxy-preview','video-proxy-status','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-proxy-file','video-proxy-preview','video-proxy-status','video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
@@ -689,4 +689,24 @@ test('Motion Studio kan proxybestanden koppelen zonder de originele media te ver
   assert.match(motion, /function findAssetForClip\(/);
   assert.match(motion, /asset\.proxyUrl/);
   assert.match(motion, /video-proxy-preview/);
+});
+
+
+test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
+  for (const id of ['video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend multicam-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /multicamGroups/);
+  assert.match(video, /activeAngleAssetId/);
+  assert.match(video, /function splitSelectedAtPlayhead/);
+  assert.match(video, /videoPosition = angleAsset/);
+  assert.match(motion, /function createMulticamGroup\(/);
+  assert.match(motion, /function renderMulticamGroups\(/);
+  assert.match(motion, /function attachMulticamGroup\(/);
+  assert.match(motion, /function cutToMulticamAngle\(/);
+  assert.match(motion, /Bron-offset bij tijdlijn 00:00/);
+  assert.match(motion, /const angleAsset = clip\.activeAngleAssetId/);
+  assert.match(motion, /api\.splitSelectedAtPlayhead\(\{ silent: true \}\)/);
 });
