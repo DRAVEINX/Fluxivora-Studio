@@ -11,12 +11,23 @@
       { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
       { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
     ],
-    clips: [], assets: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
+    clips: [], assets: [], programLut: null, selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p', snap: true
   };
   const SEQUENCE_FPS = 25;
+  function normaliseProgramLut(lut) {
+    if (!lut || typeof lut !== 'object') return null;
+    const size = Number(lut.size);
+    if (!Number.isInteger(size) || size < 2 || size > 64 || !Array.isArray(lut.data) || lut.data.length !== size * size * size * 3 || lut.data.length > 786432) return null;
+    const domainMin = Array.isArray(lut.domainMin) && lut.domainMin.length === 3 ? lut.domainMin.map(Number) : [0, 0, 0];
+    const domainMax = Array.isArray(lut.domainMax) && lut.domainMax.length === 3 ? lut.domainMax.map(Number) : [1, 1, 1];
+    if (domainMin.some((v, i) => !Number.isFinite(v) || !Number.isFinite(domainMax[i]) || domainMax[i] <= v)) return null;
+    const values = lut.data.map(Number);
+    if (values.some(v => !Number.isFinite(v) || v < -16 || v > 16)) return null;
+    return { name: String(lut.name || 'Output LUT').slice(0, 128), size, domainMin, domainMax, data: values };
+  }
   const uid = prefix => (prefix || 'clip') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   const selected = () => state.clips.find(c => c.id === state.selected) || null;
   const track = id => state.tracks.find(t => t.id === id) || null;
@@ -47,7 +58,7 @@
     return result;
   }
   function snapshot() {
-    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), markers: state.markers.map(m => ({...m})), selected: state.selected, playhead: state.playhead };
+    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), markers: state.markers.map(m => ({...m})), programLut: state.programLut, selected: state.selected, playhead: state.playhead };
   }
   function pushHistory() {
     state.history.push(snapshot());
@@ -57,6 +68,7 @@
   }
   function hydrateSnapshot(snap) {
     state.name = snap.name;
+    state.programLut = normaliseProgramLut(snap.programLut);
     state.tracks = snap.tracks.map(t => ({...t}));
     state.clips = snap.clips.map(data => {
       const media = state.media.get(data.id) || {};
@@ -463,6 +475,7 @@
     state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawTitle(ctx, c)));
     const hasVisibleContent = state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing && !(track(c.trackId) || {}).hidden) || state.clips.some(c => c.type === 'title' && activeAt(c) && !(track(c.trackId) || {}).hidden);
     $('video-empty').classList.toggle('hidden', hasVisibleContent);
+    if (window.FluxivoraMotionStudio?.applyProgramLut) window.FluxivoraMotionStudio.applyProgramLut(canvas);
     window.dispatchEvent(new Event('fluxivora:preview-rendered'));
   }
   function updateTransport() {
@@ -754,7 +767,7 @@
   function saveSession() {
     const data = {
       format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
-      sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
+      sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut },
       tracks: state.tracks.map(t => ({...t})),
       assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true })),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
@@ -800,6 +813,8 @@
       state.clips.forEach(c => disposeMedia(c, true));
       state.history.length = 0; state.redo.length = 0;
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
+      state.programLut = normaliseProgramLut(data.sequence?.lut);
+      if (data.sequence?.lut && !state.programLut) notice('De opgeslagen 3D-LUT is ongeldig en is niet geladen.');
       state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); });
       state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true })) : [];
       if (!Array.isArray(data.assets)) {
