@@ -252,13 +252,6 @@
     const temporaryUrl = URL.createObjectURL(file);
     const decoder = document.createElement('video');
     decoder.preload = 'auto'; decoder.muted = true; decoder.playsInline = true;
-    const waitFor = (target, success, failure) => new Promise((resolve, reject) => {
-      const onSuccess = () => { cleanup(); resolve(success()); };
-      const onFailure = () => { cleanup(); reject(new Error('Video thumbnail decode failed')); };
-      const cleanup = () => { target.removeEventListener('loadedmetadata', onSuccess); target.removeEventListener('seeked', onSuccess); target.removeEventListener('error', onFailure); };
-      target.addEventListener(target.readyState >= 1 && target.duration > 0 ? 'seeked' : 'loadedmetadata', onSuccess, { once: true });
-      target.addEventListener('error', onFailure, { once: true });
-    });
     try {
       decoder.src = temporaryUrl;
       await new Promise((resolve, reject) => {
