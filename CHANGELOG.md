@@ -7,6 +7,7 @@
 - Alleen daadwerkelijk verplaatsen van een object of Bézier-anker registreert een geschiedenisstap. Een gewone klik om te selecteren maakt geen schijnstap en markeert het project niet als gewijzigd.
 - Reparatie: slepen van objecten in Vector Forge en Page Studio initialiseert nu de vorige pointerpositie correct.
 - Geautomatiseerde regressietests toegevoegd voor snapshot-roundtrips, geschiedenislimieten, vertakkingen en selecties zonder wijzigingen.
+- Windows-opslag: writes naar hetzelfde doelbestand worden geserialiseerd; de regressietest oefent twaalf concurrerende schrijfacties.
 - Zie [TEST-RESULTS.md](TEST-RESULTS.md) en de actuele [GitHub Actions-runs](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de buildstatus.
 
 ## 0.5.0-alpha.22 — 17 oktober 2026

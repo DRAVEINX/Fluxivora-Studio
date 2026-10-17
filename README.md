@@ -9,6 +9,7 @@ Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAV
 - **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
 
 ## Nieuw in 0.5.0-alpha.24
+- Gelijktijdige opslagacties naar hetzelfde bestand worden op volgorde uitgevoerd, om concurrerende Windows-bestandsvervangingen te voorkomen.
 
 - Undo/redo gebruikt een geteste geschiedenismanager met maximaal 60 snapshots per richting; een nieuwe bewerking wist de redo-tak.
 - Alleen een echte verplaatsing van een object of Bézier-anker maakt een geschiedenisstap. Alleen selecteren vervuilt de geschiedenis niet en markeert het project niet als gewijzigd.

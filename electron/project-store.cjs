@@ -5,6 +5,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
 const MAX_PROJECT_BYTES = 180 * 1024 * 1024;
+const pendingWrites = new Map();
 
 function canonicalPath(filePath) {
   const resolved = path.resolve(filePath);
@@ -39,15 +40,26 @@ function assertProjectJson(json, maxBytes = MAX_PROJECT_BYTES) {
 }
 
 async function atomicWrite(filePath, data, options = {}) {
-  // UUIDs make temporary filenames unique even if multiple autosave operations
-  // happen within the same millisecond.
-  const tempPath = `${filePath}.fluxivora-${process.pid}-${randomUUID()}.tmp`;
+  const destination = path.resolve(filePath);
+  const key = canonicalPath(destination);
+  // Unique temp names prevent collisions; this queue also prevents overlapping
+  // rename operations to the same destination on Windows.
+  const previous = pendingWrites.get(key) || Promise.resolve();
+  const operation = previous.catch(() => {}).then(async () => {
+    const tempPath = `${destination}.fluxivora-${process.pid}-${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(tempPath, data, options);
+      await fs.rename(tempPath, destination);
+    } catch (error) {
+      await fs.unlink(tempPath).catch(() => {});
+      throw error;
+    }
+  });
+  pendingWrites.set(key, operation);
   try {
-    await fs.writeFile(tempPath, data, options);
-    await fs.rename(tempPath, filePath);
-  } catch (error) {
-    await fs.unlink(tempPath).catch(() => {});
-    throw error;
+    await operation;
+  } finally {
+    if (pendingWrites.get(key) === operation) pendingWrites.delete(key);
   }
 }
 

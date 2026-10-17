@@ -35,14 +35,14 @@ test('canonicalPath normaliseert relatieve padsegmenten', () => {
   assert.equal(actual, process.platform === 'win32' ? resolved.toLocaleLowerCase('en-US') : resolved);
 });
 
-test('atomicWrite schrijft en vervangt bestanden veilig en gebruikt unieke tijdelijke namen', async () => {
+test('atomicWrite serialiseert gelijktijdige schrijfacties per doelbestand', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'fluxivora-store-'));
   try {
     const destination = path.join(directory, 'project.fluxivora');
     await atomicWrite(destination, 'eerste versie', { encoding: 'utf8' });
     assert.equal(await fs.readFile(destination, 'utf8'), 'eerste versie');
 
-    const candidates = ['versie-A', 'versie-B', 'versie-C'];
+    const candidates = Array.from({ length: 12 }, (_, index) => `versie-${index}`);
     await Promise.all(candidates.map(value => atomicWrite(destination, value, { encoding: 'utf8' })));
     assert.ok(candidates.includes(await fs.readFile(destination, 'utf8')));
     assert.deepEqual(await fs.readdir(directory), ['project.fluxivora']);
