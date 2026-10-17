@@ -9,9 +9,10 @@
 - Clipkleurcorrectie voor exposure, contrast, saturatie, temperatuur en tint; RGB-histogram en luma-waveform als visuele hulpmiddelen.
 - Visuele keyframe-curve-editor om punten te verslepen, met lineair, ease-in, ease-out, ease-in-out en hold.
 - Gevalideerde 3D `.cube`-output-LUT's die via WebGL2 op de samengestelde programmamonitor worden toegepast en bij het project worden opgeslagen.
+- Proxybestanden kunnen aan originele videobronnen worden gekoppeld; proxy-preview is optioneel en export is geblokkeerd zolang deze preview actief is.
 - De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief en de output-LUT geldt voor de samengestelde programmamonitor, niet als afzonderlijke per-clip LUT-stack. Proxy- en multicam-workflows en een frame-voor-frame offline render-engine met MP4/H.264-export moeten nog worden gebouwd. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief en de output-LUT geldt voor de samengestelde programmamonitor, niet als afzonderlijke per-clip LUT-stack. Automatische proxy-generatie, multicam-workflows en een frame-voor-frame offline render-engine met MP4/H.264-export moeten nog worden gebouwd. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
 
 **Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 
