@@ -504,7 +504,7 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
 });
 
 test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag', () => {
-  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-marker','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-split-clip','video-ripple-delete','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
+  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-marker','video-snap','video-fit-timeline','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-split-clip','video-ripple-delete','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
@@ -592,4 +592,12 @@ test('Motion Studio rendert het volledige canvas op de gekozen exportresolutie',
   assert.match(video, /ctx\.fillRect\(0, 0, canvas\.width, canvas\.height\)/);
   assert.match(video, /canvas\.width = size === '720p' \? 1280 : size === '4k' \? 3840 : 1920/);
   assert.match(video, /canvas\.height = size === '720p' \? 720 : size === '4k' \? 2160 : 1080/);
+});
+
+test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function fitTimeline\(/);
+  assert.match(video, /if \(!state\.snap\) return Math\.max\(0, value\)/);
+  assert.match(video, /video-fit-timeline/);
+  assert.match(video, /video-snap/);
 });
