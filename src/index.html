@@ -148,6 +148,11 @@
                 <div id="video-empty" class="video-empty"><div class="video-empty-icon">▶</div><strong>Jouw verhaal begint hier.</strong><span>Importeer media of voeg een titel toe.</span></div>
               </div>
               <div id="video-source-controls" class="video-source-controls hidden">
+                <div class="video-source-transport">
+                  <button id="video-source-play" type="button" class="button subtle compact" aria-label="Bron afspelen of pauzeren">▶ Bron afspelen</button>
+                  <input id="video-source-seek" type="range" min="0" max="0.01" step="0.04" value="0" aria-label="Bronpositie" />
+                  <span id="video-source-time">00:00.00</span>
+                </div>
                 <label>IN (s)<input id="video-source-in" type="number" min="0" step="0.04" value="0" /></label><button id="video-source-mark-in" class="button subtle compact" title="Markeer huidig punt als ingang">Mark In · I</button>
                 <label>OUT (s)<input id="video-source-out" type="number" min="0" step="0.04" value="0" /></label><button id="video-source-mark-out" class="button subtle compact" title="Markeer huidig punt als uitgang">Mark Out · O</button>
                 <button id="video-source-insert" class="button primary compact" disabled>＋ Invoegen op playhead</button>
