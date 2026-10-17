@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.4');
+  assert.equal(pkg.version, '0.5.0-beta.5');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -600,4 +600,35 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
   assert.match(video, /if \(!state\.snap\) return Math\.max\(0, value\)/);
   assert.match(video, /video-fit-timeline/);
   assert.match(video, /video-snap/);
+});
+
+
+test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
+  for (const id of ['video-bin-search','video-bin-filter','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /assets: state\.assets\.map/);
+  assert.match(video, /fluxivora:asset-imported/);
+  assert.match(video, /window\.FluxivoraMotionStudio =/);
+  assert.match(motion, /function renderMediaBin\(/);
+  assert.match(motion, /function selectSource\(/);
+  assert.match(motion, /function insertSource\(/);
+  assert.match(motion, /function relinkAsset\(/);
+});
+
+test('Motion Studio beta.5 ondersteunt effectstacks, kleurcorrectie, scopes en keyframe-easing', () => {
+  for (const id of ['video-effect-type','video-effect-add','video-effect-stack','video-grade-exposure','video-grade-contrast','video-grade-saturation','video-grade-temperature','video-grade-tint','video-scope-histogram','video-scope-waveform','video-keyframe-easing']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend grading-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /function effectFilter\(value, clip\)/);
+  assert.match(video, /colorAdjustments/);
+  assert.match(video, /curves = \{ linear:/);
+  assert.match(motion, /function renderEffectStack\(/);
+  assert.match(motion, /function paintScopes\(/);
+  assert.match(motion, /function applyGrade\(/);
+  assert.match(html, /src="motion-pro\.js"/);
 });
