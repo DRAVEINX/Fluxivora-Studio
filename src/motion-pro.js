@@ -486,7 +486,20 @@ void main() {
       }
       probe.removeAttribute('src'); probe.load();
     };
-    probe.onerror = () => api.notice('De proxy kon niet worden gelezen: ' + file.name);
+    probe.onerror = () => {
+      if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl);
+      asset.proxyUrl = null;
+      asset.proxyFile = null;
+      asset.proxyName = null;
+      asset.proxyMissing = false;
+      if (useProxyPreview && !state.assets.some(item => item.type === 'video' && item.proxyUrl && !item.proxyMissing)) {
+        useProxyPreview = false;
+        $('video-proxy-preview').checked = false;
+        applyProxyPreview();
+      }
+      renderMediaBin();
+      api.notice('De proxy kon niet worden gelezen: ' + file.name);
+    };
     probe.src = asset.proxyUrl;
     selectedProxyAssetId = null;
     renderMediaBin();
