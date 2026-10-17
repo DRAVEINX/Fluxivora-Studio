@@ -33,21 +33,23 @@ jobs:
       - name: Install dependencies (registry fallback and retries)
         shell: pwsh
         run: |
+          # Try the official registry first, then an alternate npm mirror.
           $registries = @(
             "https://registry.npmjs.org/",
             "https://registry.npmmirror.com/"
           )
+          $attemptsPerRegistry = 2
           $installed = $false
           foreach ($registry in $registries) {
-            for ($attempt = 1; $attempt -le 2; $attempt++) {
-              Write-Host "npm install attempt $attempt/2 using $registry"
+            for ($attempt = 1; $attempt -le $attemptsPerRegistry; $attempt++) {
+              Write-Host "npm install attempt $attempt/$attemptsPerRegistry using $registry"
               npm install --no-audit --no-fund --registry=$registry --fetch-retries=3 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --fetch-timeout=180000
               if ($LASTEXITCODE -eq 0) {
                 $installed = $true
                 break
               }
               Write-Warning "npm install failed with exit $LASTEXITCODE using $registry."
-              if ($attempt -lt 2) { Start-Sleep -Seconds (10 * $attempt) }
+              if ($attempt -lt $attemptsPerRegistry) { Start-Sleep -Seconds (10 * $attempt) }
             }
             if ($installed) { break }
           }
