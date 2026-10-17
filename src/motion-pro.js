@@ -45,6 +45,29 @@
     if (!sourceId && asset) selectSource(asset.id);
   }
 
+  function registerImportedFile(detail) {
+    const file = detail && detail.file;
+    if (!file || !['video', 'audio'].includes(detail.type)) return;
+    if (state.assets.some(asset => asset.file === file)) return;
+    const waiting = state.assets.find(asset => asset.missing && asset.type === detail.type && asset.name.toLowerCase() === String(detail.name || file.name).toLowerCase());
+    let asset = waiting;
+    if (waiting) {
+      waiting.file = file;
+      waiting.url = URL.createObjectURL(file);
+      waiting.duration = Number(detail.duration) || waiting.duration || 0;
+      waiting.missing = false;
+    } else {
+      asset = {
+        id: api.uid('asset'), name: String(detail.name || file.name).slice(0, 512),
+        type: detail.type, duration: Number(detail.duration) || 0,
+        url: URL.createObjectURL(file), file, missing: false
+      };
+      state.assets.push(asset);
+    }
+    renderMediaBin();
+    if (!sourceId) selectSource(asset.id);
+  }
+
   function selectSource(id) {
     sourceId = id;
     const asset = activeSource();
@@ -448,6 +471,7 @@
     api.refresh();
   });
   window.addEventListener('fluxivora:asset-imported', event => registerImportedClip(event.detail?.clipId));
+  window.addEventListener('fluxivora:asset-file-imported', event => registerImportedFile(event.detail));
   window.addEventListener('fluxivora:motion-refresh', () => {
     renderMediaBin();
     renderGrades();
