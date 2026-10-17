@@ -226,6 +226,7 @@
         peaks.push(peak);
       }
       item.waveform = peaks;
+      state.media.set(item.id, { ...(state.media.get(item.id) || {}), file: item.file, url: item.url, mediaEl: item.mediaEl, audioEl: item.audioEl, audioSource: item.audioSource, audioGain: item.audioGain, waveform: peaks });
       renderTracks();
     } catch (_) {
       // Waveforms are a preview enhancement; unsupported audio codecs do not block import.
