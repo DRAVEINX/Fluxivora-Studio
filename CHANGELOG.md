@@ -1,5 +1,14 @@
 # Wijzigingen
 
+## 0.5.0-alpha.24 — 17 oktober 2026
+
+- Undo/redo gebruikt de geteste core-historymanager; de geschiedenis is begrensd tot 60 stappen en snapshots zijn onafhankelijk.
+- Een nieuwe bewerking na undo wist de redo-tak; lege undo/redo-acties veranderen de geschiedenis niet.
+- Alleen daadwerkelijk verplaatsen van een object of Bézier-anker registreert een geschiedenisstap. Een gewone klik om te selecteren maakt geen schijnstap en markeert het project niet als gewijzigd.
+- Reparatie: slepen van objecten in Vector Forge en Page Studio initialiseert nu de vorige pointerpositie correct.
+- Geautomatiseerde regressietests toegevoegd voor snapshot-roundtrips, geschiedenislimieten, vertakkingen en selecties zonder wijzigingen.
+- Zie [TEST-RESULTS.md](TEST-RESULTS.md) en de actuele [GitHub Actions-runs](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de buildstatus.
+
 ## 0.5.0-alpha.22 — 17 oktober 2026
 
 - Nieuwe zoomsneltoetsen: Ctrl/Cmd + plus of gelijkteken zoomt in; Ctrl/Cmd + min zoomt uit.

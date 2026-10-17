@@ -102,7 +102,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-alpha.23');
+  assert.equal(pkg.version, '0.5.0-alpha.24');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -367,3 +367,42 @@ test('Startscherm bewaart de actieve werkruimte zolang er een project geladen is
   assert.match(app, /function updateTitle\(\)/);
   assert.match(app, /descriptions\[state\.activeWorkspace\]\.title/);
 });
+
+
+test('app gebruikt de begrensde core-historymanager voor checkpoint, undo en redo', () => {
+  assert.match(app, /Core\.recordProjectHistory\(state\.undoStack, state\.redoStack, state\.project, 60\)/);
+  assert.match(app, /Core\.undoProjectHistory\(state\.undoStack, state\.redoStack, state\.project, 60\)/);
+  assert.match(app, /Core\.redoProjectHistory\(state\.undoStack, state\.redoStack, state\.project, 60\)/);
+  assert.match(core, /function recordProjectHistory\(/);
+  assert.match(core, /function undoProjectHistory\(/);
+  assert.match(core, /function redoProjectHistory\(/);
+});
+
+test('vector- en paginaobjecten krijgen een startpointer en schrijven geschiedenis pas bij echte beweging', () => {
+  const downStart = app.indexOf('function svgPointerDown(');
+  const moveStart = app.indexOf('function svgPointerMove(', downStart);
+  const upStart = app.indexOf('function svgPointerUp(', moveStart);
+  assert.ok(downStart >= 0 && moveStart > downStart && upStart > moveStart);
+  const down = app.slice(downStart, moveStart);
+  const move = app.slice(moveStart, upStart);
+  assert.match(down, /state\.lastPointer = point/);
+  assert.doesNotMatch(down.match(/if \(state\.currentTool === 'select'\) \{[\s\S]*?renderAll\(\); return;/)?.[0] || '', /checkpoint\(\)/);
+  assert.match(move, /if \(dx === 0 && dy === 0\) return/);
+  assert.match(move, /if \(!state\.dragHistoryRecorded\) \{\s*checkpoint\(\); state\.dragHistoryRecorded = true; \}/);
+  assert.match(move, /state\.dragHasMoved = true/);
+});
+
+test('click-selectie in Pixel Lab maakt geen undo-stap en markeert niets als gewijzigd', () => {
+  const downStart = app.indexOf('function pixelPointerDown(');
+  const moveStart = app.indexOf('function pixelPointerMove(', downStart);
+  const upStart = app.indexOf('function pixelPointerUp(', moveStart);
+  assert.ok(downStart >= 0 && moveStart > downStart && upStart > moveStart);
+  const down = app.slice(downStart, moveStart);
+  const move = app.slice(moveStart, upStart);
+  const up = app.slice(upStart, app.indexOf('\n  function ', upStart + 10));
+  assert.doesNotMatch(down.match(/if \(state\.currentTool === 'select'\) \{[\s\S]*?renderAll\(\); return;/)?.[0] || '', /checkpoint\(\)/);
+  assert.match(move, /if \(dx === 0 && dy === 0\) return/);
+  assert.match(up, /const didMove = state\.dragHasMoved/);
+  assert.match(up, /if \(didMove\) markDirty\(\)/);
+});
+

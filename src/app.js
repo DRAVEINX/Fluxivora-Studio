@@ -7,7 +7,7 @@
     project: null, filePath: null, activeWorkspace: 'home', currentTool: 'select', selectedId: null,
     draftObject: null, pointerStart: null, movingObject: null, lastPointer: null,
     undoStack: [], redoStack: [], clipboardObject: null, dirty: false, zoom: 0, inspector: 'properties', modalWorkspace: 'pixel',
-    dragMode: null, drawing: false, startSnapshot: null, bezierPointIndex: null, bezierHandleType: null, selectedBezierPointIndex: null, spaceHeld: false, panDrag: null
+    dragMode: null, drawing: false, dragHistoryRecorded: false, dragHasMoved: false, startSnapshot: null, bezierPointIndex: null, bezierHandleType: null, selectedBezierPointIndex: null, spaceHeld: false, panDrag: null
   };
 
   const toolsets = {
@@ -72,16 +72,15 @@
     return { width: page.width || 794, height: page.height || 1123 };
   }
 
-  function snapshotProject() {
-    return state.project ? JSON.parse(JSON.stringify(state.project)) : null;
-  }
-
   function checkpoint() {
     if (!state.project) return;
-    state.undoStack.push(snapshotProject());
-    if (state.undoStack.length > 60) state.undoStack.shift();
-    state.redoStack.length = 0;
-    updateHistoryButtons();
+    if (Core.recordProjectHistory(state.undoStack, state.redoStack, state.project, 60)) updateHistoryButtons();
+  }
+
+  function checkpointDragMutation() {
+    if (state.dragHistoryRecorded) return;
+    checkpoint();
+    state.dragHistoryRecorded = true;
   }
 
   function updateHistoryButtons() {
@@ -822,11 +821,13 @@
       if (targetObject?.type === 'bezier' && !targetObject.locked && Number.isInteger(pointIndex) && targetObject.points?.[pointIndex]) {
         state.selectedId = targetObject.id;
         state.selectedBezierPointIndex = pointIndex;
-        checkpoint();
         state.movingObject = targetObject;
         state.bezierPointIndex = pointIndex;
         state.bezierHandleType = ['inHandle', 'outHandle'].includes(handleType) ? handleType : null;
         state.pointerStart = point;
+        state.lastPointer = point;
+        state.dragHistoryRecorded = false;
+        state.dragHasMoved = false;
         state.dragMode = state.bezierHandleType ? 'handle' : 'point';
         svg.setPointerCapture?.(event.pointerId);
         event.preventDefault();
@@ -840,8 +841,13 @@
         if (state.selectedId !== target.id) state.selectedBezierPointIndex = null;
         state.selectedId = target.id;
         if (target.locked) { state.movingObject = null; state.pointerStart = null; state.dragMode = null; renderAll(); notify('Deze laag is vergrendeld. Ontgrendel haar eerst in het lagenpaneel.'); return; }
-        checkpoint();
-        state.movingObject = target; state.pointerStart = point; state.dragMode = 'move'; svg.setPointerCapture?.(event.pointerId);
+        state.movingObject = target;
+        state.pointerStart = point;
+        state.lastPointer = point;
+        state.dragHistoryRecorded = false;
+        state.dragHasMoved = false;
+        state.dragMode = 'move';
+        svg.setPointerCapture?.(event.pointerId);
       } else { state.selectedId = null; state.selectedBezierPointIndex = null; state.movingObject = null; state.dragMode = null; }
       renderAll(); return;
     }
@@ -872,16 +878,36 @@
     const size = activeDocumentSize(), point = coordsFromPointer(event, svg, size);
     if ((state.dragMode === 'point' || state.dragMode === 'handle') && state.movingObject?.type === 'bezier' && Number.isInteger(state.bezierPointIndex)) {
       const anchor = state.movingObject.points[state.bezierPointIndex];
-      if (anchor && state.dragMode === 'point') { const dx = point.x - anchor.x, dy = point.y - anchor.y; anchor.x = point.x; anchor.y = point.y; for (const name of ['inHandle', 'outHandle']) if (anchor[name]) { anchor[name].x += dx; anchor[name].y += dy; } }
-      else if (anchor && state.bezierHandleType) anchor[state.bezierHandleType] = { x: point.x, y: point.y };
+      if (anchor && state.dragMode === 'point') {
+        const dx = point.x - anchor.x, dy = point.y - anchor.y;
+        if (dx !== 0 || dy !== 0) {
+          checkpointDragMutation();
+          anchor.x = point.x; anchor.y = point.y;
+          for (const name of ['inHandle', 'outHandle']) if (anchor[name]) { anchor[name].x += dx; anchor[name].y += dy; }
+          state.dragHasMoved = true;
+        }
+      } else if (anchor && state.bezierHandleType) {
+        const previousHandle = anchor[state.bezierHandleType];
+        if (!previousHandle || previousHandle.x !== point.x || previousHandle.y !== point.y) {
+          checkpointDragMutation();
+          anchor[state.bezierHandleType] = { x: point.x, y: point.y };
+          state.dragHasMoved = true;
+        }
+      }
       renderSvgWorkspace(workspace);
       return;
     }
     if (state.dragMode === 'move' && state.movingObject) {
-      const dx = point.x - state.lastPointer.x, dy = point.y - state.lastPointer.y;
+      const previousPoint = state.lastPointer || state.pointerStart;
+      if (!previousPoint) return;
+      const dx = point.x - previousPoint.x, dy = point.y - previousPoint.y;
+      if (dx === 0 && dy === 0) return;
+      checkpointDragMutation();
       state.movingObject.x += dx; state.movingObject.y += dy;
       if (state.movingObject.points?.length) state.movingObject.points.forEach(p => { p.x += dx; p.y += dy; for (const name of ['inHandle', 'outHandle']) if (p[name]) { p[name].x += dx; p[name].y += dy; } });
-      state.lastPointer = point; renderSvgWorkspace(workspace); return;
+      state.lastPointer = point;
+      state.dragHasMoved = true;
+      renderSvgWorkspace(workspace); return;
     }
     if (state.dragMode === 'draw' && state.draftObject) {
       if (state.draftObject.type === 'path') state.draftObject.points.push({ x: point.x, y: point.y });
@@ -901,11 +927,14 @@
       finishDrawObject(state.draftObject);
     } else if ((state.dragMode === 'move' || state.dragMode === 'point' || state.dragMode === 'handle') && state.movingObject) {
       const completedDragMode = state.dragMode;
+      const didMove = state.dragHasMoved;
       state.pointerStart = null; state.lastPointer = null; state.movingObject = null; state.dragMode = null;
       state.bezierPointIndex = null; state.bezierHandleType = null;
-      markDirty(completedDragMode === 'point' ? 'Bézier-anker aangepast' : completedDragMode === 'handle' ? 'Bézier-handgreep aangepast' : 'Niet opgeslagen'); renderAll();
+      if (didMove) markDirty(completedDragMode === 'point' ? 'Bézier-anker aangepast' : completedDragMode === 'handle' ? 'Bézier-handgreep aangepast' : 'Niet opgeslagen');
+      renderAll();
     }
     state.pointerStart = null; state.lastPointer = null; state.drawing = false; state.dragMode = null; state.bezierPointIndex = null; state.bezierHandleType = null;
+    state.dragHistoryRecorded = false; state.dragHasMoved = false;
   }
 
   function pixelPointerDown(event) {
@@ -914,7 +943,12 @@
     if (state.currentTool === 'select') {
       const target = findObjectAt(point, objects);
       state.selectedId = target?.id || null;
-      if (target) { if (target.locked) { renderAll(); notify('Deze laag is vergrendeld. Ontgrendel haar eerst in het lagenpaneel.'); return; } checkpoint(); state.movingObject = target; state.pointerStart = point; state.lastPointer = point; state.dragMode = 'move'; canvas.setPointerCapture?.(event.pointerId); }
+      if (target) {
+        if (target.locked) { renderAll(); notify('Deze laag is vergrendeld. Ontgrendel haar eerst in het lagenpaneel.'); return; }
+        state.movingObject = target; state.pointerStart = point; state.lastPointer = point; state.dragMode = 'move';
+        state.dragHistoryRecorded = false; state.dragHasMoved = false;
+        canvas.setPointerCapture?.(event.pointerId);
+      }
       renderAll(); return;
     }
     if (state.currentTool === 'text') {
@@ -933,9 +967,12 @@
     $('status-message').innerHTML = `<i class="status-led"></i> X: ${Math.round(point.x)} · Y: ${Math.round(point.y)}`;
     if (state.dragMode === 'move' && state.movingObject && state.lastPointer) {
       const dx = point.x - state.lastPointer.x, dy = point.y - state.lastPointer.y;
+      if (dx === 0 && dy === 0) return;
+      checkpointDragMutation();
       state.movingObject.x += dx; state.movingObject.y += dy;
       if (state.movingObject.points?.length) state.movingObject.points.forEach(p => { p.x += dx; p.y += dy; for (const name of ['inHandle', 'outHandle']) if (p[name]) { p[name].x += dx; p[name].y += dy; } });
-      state.lastPointer = point; renderPixel(); return;
+      state.lastPointer = point; state.dragHasMoved = true;
+      renderPixel(); return;
     }
     if (state.dragMode !== 'draw' || !state.draftObject || !state.pointerStart) return;
     if (state.draftObject.type === 'stroke') state.draftObject.points.push(point);
@@ -956,10 +993,13 @@
       else setShapeFromPoints(state.draftObject, state.pointerStart, point);
       finishDrawObject(state.draftObject);
     } else if (state.dragMode === 'move' && state.movingObject) {
+      const didMove = state.dragHasMoved;
       state.pointerStart = null; state.lastPointer = null; state.movingObject = null; state.dragMode = null;
-      markDirty(); renderAll();
+      if (didMove) markDirty();
+      renderAll();
     }
     state.pointerStart = null; state.lastPointer = null; state.drawing = false; state.dragMode = null;
+    state.dragHistoryRecorded = false; state.dragHasMoved = false;
   }
 
   function addBezierAnchor() {
@@ -1365,13 +1405,17 @@
   }
 
   function undo() {
-    if (!state.undoStack.length || !state.project) return;
-    state.redoStack.push(snapshotProject()); state.project = state.undoStack.pop(); state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
+    if (!state.project) return;
+    const previous = Core.undoProjectHistory(state.undoStack, state.redoStack, state.project, 60);
+    if (!previous) return;
+    state.project = previous; state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
     markDirty(); renderAll(); updateHistoryButtons(); notify('Laatste stap ongedaan gemaakt.');
   }
   function redo() {
-    if (!state.redoStack.length || !state.project) return;
-    state.undoStack.push(snapshotProject()); state.project = state.redoStack.pop(); state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
+    if (!state.project) return;
+    const next = Core.redoProjectHistory(state.undoStack, state.redoStack, state.project, 60);
+    if (!next) return;
+    state.project = next; state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
     markDirty(); renderAll(); updateHistoryButtons(); notify('Stap opnieuw uitgevoerd.');
   }
 

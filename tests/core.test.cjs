@@ -7,7 +7,7 @@ const validPngDataUrl = `data:image/png;base64,${Buffer.from('png-test').toStrin
 test('maakt één project met de drie werkruimtes aan', () => {
   const p = FluxCore.createProject('pixel', 'Test');
   assert.equal(p.format, 'fluxivora-project');
-  assert.equal(p.version, '0.5.0-alpha.23');
+  assert.equal(p.version, '0.5.0-alpha.24');
   assert.equal(p.name, 'Test');
   assert.equal(p.pixel.objects.length, 0);
   assert.equal(p.vector.objects.length, 0);
@@ -23,7 +23,7 @@ test('normaliseert oudere projectbestanden en pagina’s', () => {
     layout: { pages: [{ objects: [{ type: 'text', text: 'Hallo', x: '10' }] }] }
   });
   assert.equal(p.workspace, 'layout');
-  assert.equal(p.version, '0.5.0-alpha.23');
+  assert.equal(p.version, '0.5.0-alpha.24');
   assert.equal(p.layout.pages[0].objects[0].text, 'Hallo');
   assert.equal(p.layout.pages[0].objects[0].x, 10);
   assert.throws(() => FluxCore.normaliseProject({ format: 'onbekend' }), /geen Fluxivora-projectbestand/);
@@ -387,3 +387,77 @@ test('beschadigde opslagdata wordt geweigerd in plaats van stilzwijgend als proj
   assert.throws(() => FluxCore.normaliseProject(JSON.parse('{kapot')), SyntaxError);
   assert.throws(() => FluxCore.normaliseProject({ format: 'anders', pixel: {} }), /geen Fluxivora-projectbestand/);
 });
+
+
+test('undo en redo herstellen onafhankelijke snapshots en wissen redo bij een nieuwe bewerking', () => {
+  const undo = [], redo = [];
+  const project = FluxCore.createProject('vector', 'Voor');
+  project.vector.objects.push(FluxCore.makeObject('rect', 10, 20, 30, 40, { fill: '#112233' }));
+
+  assert.equal(FluxCore.recordProjectHistory(undo, redo, project, 3), true);
+  project.name = 'Na';
+  project.vector.objects[0].x = 777;
+  project.layout.pages[0].name = 'Aangepaste pagina';
+
+  const previous = FluxCore.undoProjectHistory(undo, redo, project, 3);
+  assert.equal(previous.name, 'Voor');
+  assert.equal(previous.vector.objects[0].x, 10);
+  assert.equal(previous.layout.pages[0].name, 'Pagina 1');
+  assert.equal(redo.length, 1);
+  assert.equal(redo[0].name, 'Na');
+  assert.equal(redo[0].vector.objects[0].x, 777);
+
+  const next = FluxCore.redoProjectHistory(undo, redo, previous, 3);
+  assert.equal(next.name, 'Na');
+  assert.equal(next.vector.objects[0].x, 777);
+  assert.equal(next.layout.pages[0].name, 'Aangepaste pagina');
+
+  const branchUndo = [], branchRedo = [];
+  assert.equal(FluxCore.recordProjectHistory(branchUndo, branchRedo, previous, 3), true);
+  const branchCurrent = { ...previous, name: 'Nieuwe bewerking' };
+  const back = FluxCore.undoProjectHistory(branchUndo, branchRedo, branchCurrent, 3);
+  assert.equal(back.name, 'Voor');
+  assert.equal(branchRedo.length, 1);
+  assert.equal(FluxCore.recordProjectHistory(branchUndo, branchRedo, back, 3), true);
+  assert.equal(branchRedo.length, 0);
+  assert.equal(FluxCore.redoProjectHistory(branchUndo, branchRedo, back, 3), null);
+});
+
+test('undo- en redo-geschiedenis blijft begrensd en lege acties veranderen niets', () => {
+  const undo = [], redo = [];
+  const project = FluxCore.createProject('pixel', 'Start');
+  assert.equal(FluxCore.undoProjectHistory(undo, redo, project, 3), null);
+  assert.equal(FluxCore.redoProjectHistory(undo, redo, project, 3), null);
+  assert.deepEqual(undo, []);
+  assert.deepEqual(redo, []);
+
+  for (let index = 1; index <= 5; index++) {
+    assert.equal(FluxCore.recordProjectHistory(undo, redo, project, 3), true);
+    project.name = 'Bewerking ' + index;
+  }
+  assert.equal(undo.length, 3);
+
+  let current = project;
+  const undone = [];
+  while (true) {
+    const previous = FluxCore.undoProjectHistory(undo, redo, current, 3);
+    if (!previous) break;
+    current = previous;
+    undone.push(current.name);
+  }
+  assert.deepEqual(undone, ['Bewerking 4', 'Bewerking 3', 'Bewerking 2']);
+  assert.equal(undo.length, 0);
+  assert.equal(redo.length, 3);
+  assert.equal(FluxCore.undoProjectHistory(undo, redo, current, 3), null);
+
+  const redone = [];
+  while (true) {
+    const next = FluxCore.redoProjectHistory(undo, redo, current, 3);
+    if (!next) break;
+    current = next;
+    redone.push(current.name);
+  }
+  assert.deepEqual(redone, ['Bewerking 3', 'Bewerking 4', 'Bewerking 5']);
+  assert.equal(redo.length, 0);
+});
+

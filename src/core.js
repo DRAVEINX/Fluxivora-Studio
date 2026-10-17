@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
 
-  const VERSION = '0.5.0-alpha.23';
+  const VERSION = '0.5.0-alpha.24';
   const DEFAULT_WIDTH = 1200;
   const DEFAULT_HEIGHT = 800;
   const OBJECT_TYPES = new Set(['rect', 'ellipse', 'line', 'text', 'image', 'stroke', 'path', 'bezier', 'polygon']);
@@ -27,6 +27,57 @@
       vector: { width: 1000, height: 700, objects: [] },
       layout: { width: 794, height: 1123, pageFormat: 'a4-portrait', currentPage: 0, pages: [{ width: 794, height: 1123, name: 'Pagina 1', objects: [] }] }
     };
+  }
+
+  const DEFAULT_HISTORY_LIMIT = 60;
+  const MAX_HISTORY_LIMIT = 1000;
+
+  function cloneHistorySnapshot(project) {
+    if (!project || typeof project !== 'object' || Array.isArray(project)) return null;
+    try { return JSON.parse(JSON.stringify(project)); } catch (_) { return null; }
+  }
+
+  function safeHistoryLimit(limit) {
+    return Number.isInteger(limit) && limit > 0 ? Math.min(limit, MAX_HISTORY_LIMIT) : DEFAULT_HISTORY_LIMIT;
+  }
+
+  function trimHistory(stack, limit) {
+    if (stack.length > limit) stack.splice(0, stack.length - limit);
+  }
+
+  function recordProjectHistory(undoStack, redoStack, project, limit = DEFAULT_HISTORY_LIMIT) {
+    if (!Array.isArray(undoStack) || !Array.isArray(redoStack)) return false;
+    const snapshot = cloneHistorySnapshot(project);
+    if (!snapshot) return false;
+    const cap = safeHistoryLimit(limit);
+    undoStack.push(snapshot);
+    trimHistory(undoStack, cap);
+    redoStack.length = 0;
+    return true;
+  }
+
+  function undoProjectHistory(undoStack, redoStack, currentProject, limit = DEFAULT_HISTORY_LIMIT) {
+    if (!Array.isArray(undoStack) || !Array.isArray(redoStack) || undoStack.length === 0) return null;
+    const previous = undoStack[undoStack.length - 1];
+    if (!previous || typeof previous !== 'object' || Array.isArray(previous)) return null;
+    const current = cloneHistorySnapshot(currentProject);
+    if (!current) return null;
+    undoStack.pop();
+    redoStack.push(current);
+    trimHistory(redoStack, safeHistoryLimit(limit));
+    return previous;
+  }
+
+  function redoProjectHistory(undoStack, redoStack, currentProject, limit = DEFAULT_HISTORY_LIMIT) {
+    if (!Array.isArray(undoStack) || !Array.isArray(redoStack) || redoStack.length === 0) return null;
+    const next = redoStack[redoStack.length - 1];
+    if (!next || typeof next !== 'object' || Array.isArray(next)) return null;
+    const current = cloneHistorySnapshot(currentProject);
+    if (!current) return null;
+    redoStack.pop();
+    undoStack.push(current);
+    trimHistory(undoStack, safeHistoryLimit(limit));
+    return next;
   }
 
   function normaliseProject(input) {
@@ -416,5 +467,5 @@
     return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}${body}</svg>`;
   }
 
-  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl };
+  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl, recordProjectHistory, undoProjectHistory, redoProjectHistory };
 });

@@ -2,13 +2,17 @@
 
 **Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.23 brengt drie werkruimtes samen in één projectbestand:
+Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.24 brengt drie werkruimtes samen in één projectbestand:
 
 - **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
 - **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.
 - **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
 
-## Nieuw in 0.5.0-alpha.23
+## Nieuw in 0.5.0-alpha.24
+
+- Undo/redo gebruikt een geteste geschiedenismanager met maximaal 60 snapshots per richting; een nieuwe bewerking wist de redo-tak.
+- Alleen een echte verplaatsing van een object of Bézier-anker maakt een geschiedenisstap. Alleen selecteren vervuilt de geschiedenis niet en markeert het project niet als gewijzigd.
+- Reparatie in Vector Forge en Page Studio: slepen initialiseert nu de vorige pointerpositie, zodat objectverplaatsing geen lege pointerreferentie gebruikt.
 
 - Bij het sluiten van het venster vraagt Electron de renderer eerst om de laatste lokale herstelkopie weg te schrijven. De app sluit daarna normaal; een time-out van 3,5 seconden voorkomt dat een vastgelopen renderer het sluiten onbeperkt blokkeert.
 - Projectopslag is ondergebracht in `electron/project-store.cjs`, met unieke tijdelijke bestandsnamen, veilige bestandsnaamopschoning, JSON-validatie en atomische vervanging.
@@ -124,7 +128,7 @@ Dit is geen volledige vervanging van Photoshop, Illustrator of InDesign. Geavanc
 
 ## Status van tests en installatie
 
-De automatische suite bevat **77 tests**. De syntax- en teststappen zijn groen in de huidige validatie; bekijk de nieuwste [GitHub Actions-run](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele Windows-buildstatus. Een groene CI-run bevestigt niet zelfstandig dat de installer op een echte Windows 10/11-pc is geïnstalleerd en gebruikt. De nieuwe sluitprocedure en herstelkopie moeten daarom ook in de gebouwde app praktisch worden gecontroleerd.
+De alpha.24-testsuite bevat extra regressietests voor begrensde undo/redo-geschiedenis en slepen/selecteren zonder neveneffecten. De actuele testuitkomst en Windows-build staan in de nieuwste [GitHub Actions-runs](https://github.com/DRAVEINX/Fluxivora-Studio/actions). Een groene CI-run bevestigt niet zelfstandig dat de installer op een echte Windows 10/11-pc is geïnstalleerd en gebruikt. De sluitprocedure, herstelkopie en objectverplaatsing moeten daarom ook in de gebouwde app praktisch worden gecontroleerd.
 
 ## Licentie
 
