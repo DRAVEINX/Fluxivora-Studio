@@ -6,8 +6,9 @@
 - Added clip-level exposure, contrast, saturation, temperature and tint controls; RGB histogram and luma waveform are indicative rather than calibrated scopes.
 - Added a visual keyframe curve editor where existing points can be dragged in time/value, alongside linear, ease-in, ease-out, ease-in-out and hold interpolation.
 - Added validated 3D .cube output-LUT import and WebGL2 application to the composed program monitor. LUT metadata/data is saved in the montage project.
+- Added linking/relinking of pre-generated video proxy files and an optional proxy-preview mode; export is blocked in proxy mode to prevent accidental low-resolution output.
 - Existing Pixel Lab, Vector Forge and Page Studio remain intact.
-- Still not part of this beta: per-clip LUT/effect automation, managed proxy generation, multicam editing, offline/frame-accurate rendering and MP4/H.264 + AAC encoding. Export remains real-time WebM and depends on Electron's available codecs.
+- Still not part of this beta: per-clip LUT/effect automation, automatic proxy generation/batch management, multicam editing, offline/frame-accurate rendering and MP4/H.264 + AAC encoding. Export remains real-time WebM and depends on Electron's available codecs.
 
 ## 0.5.0-beta.4 — Motion Studio multi-track workflow
 
