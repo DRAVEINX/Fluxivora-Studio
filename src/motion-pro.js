@@ -14,6 +14,204 @@
     soften: 'Zachte focus', boost: 'Contrast + kleur', desaturate: 'Gedempt kleur'
   };
 
+  let lutRenderer = null;
+  let lutTextureRef = null;
+  let lutUnsupportedNotified = false;
+
+  function compileGlShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const error = gl.getShaderInfoLog(shader) || 'WebGL2 shader compilation failed';
+      gl.deleteShader(shader);
+      throw new Error(error);
+    }
+    return shader;
+  }
+
+  function ensureLutRenderer() {
+    if (lutRenderer) return lutRenderer;
+    const output = document.createElement('canvas');
+    const gl = output.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true, premultipliedAlpha: false });
+    if (!gl) return null;
+    try {
+      const vertex = compileGlShader(gl, gl.VERTEX_SHADER, `#version 300 es
+in vec2 aPosition;
+out vec2 vUv;
+void main() {
+  vUv = aPosition * 0.5 + 0.5;
+  gl_Position = vec4(aPosition, 0.0, 1.0);
+}`);
+      const fragment = compileGlShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uImage;
+uniform sampler3D uLut;
+uniform vec3 uDomainMin;
+uniform vec3 uDomainMax;
+uniform float uSize;
+out vec4 outColor;
+void main() {
+  vec4 source = texture(uImage, vUv);
+  vec3 normalized = clamp((source.rgb - uDomainMin) / (uDomainMax - uDomainMin), 0.0, 1.0);
+  vec3 coordinate = (normalized * (uSize - 1.0) + 0.5) / uSize;
+  vec3 mapped = texture(uLut, coordinate).rgb;
+  outColor = vec4(mapped, source.a);
+}`);
+      const program = gl.createProgram();
+      gl.attachShader(program, vertex); gl.attachShader(program, fragment);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'WebGL2 LUT link failed');
+      gl.deleteShader(vertex); gl.deleteShader(fragment);
+      gl.useProgram(program);
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+      const location = gl.getAttribLocation(program, 'aPosition');
+      gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+      const imageTexture = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, imageTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(gl.getUniformLocation(program, 'uImage'), 0);
+      const cubeTexture = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_3D, cubeTexture);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(gl.getUniformLocation(program, 'uLut'), 1);
+      lutRenderer = {
+        output, gl, program, imageTexture, cubeTexture,
+        domainMin: gl.getUniformLocation(program, 'uDomainMin'),
+        domainMax: gl.getUniformLocation(program, 'uDomainMax'),
+        size: gl.getUniformLocation(program, 'uSize')
+      };
+      return lutRenderer;
+    } catch (error) {
+      try { gl.getExtension('WEBGL_lose_context')?.loseContext(); } catch (_) {}
+      return null;
+    }
+  }
+
+  function uploadLut(renderer, lut) {
+    if (lutTextureRef === lut) return;
+    const gl = renderer.gl;
+    const rgba = new Uint8Array(lut.size * lut.size * lut.size * 4);
+    for (let i = 0, j = 0; i < lut.data.length; i += 3, j += 4) {
+      rgba[j] = Math.round(Math.max(0, Math.min(1, lut.data[i])) * 255);
+      rgba[j + 1] = Math.round(Math.max(0, Math.min(1, lut.data[i + 1])) * 255);
+      rgba[j + 2] = Math.round(Math.max(0, Math.min(1, lut.data[i + 2])) * 255);
+      rgba[j + 3] = 255;
+    }
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_3D, renderer.cubeTexture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, lut.size, lut.size, lut.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+    gl.uniform3fv(renderer.domainMin, lut.domainMin);
+    gl.uniform3fv(renderer.domainMax, lut.domainMax);
+    gl.uniform1f(renderer.size, lut.size);
+    lutTextureRef = lut;
+  }
+
+  function applyProgramLut(canvas) {
+    const lut = state.programLut;
+    if (!lut || !canvas || !canvas.width || !canvas.height) return;
+    const renderer = ensureLutRenderer();
+    if (!renderer) {
+      if (!lutUnsupportedNotified) {
+        api.notice('Deze computer ondersteunt de benodigde WebGL2-LUT-verwerking niet. De LUT blijft in het project bewaard maar wordt niet toegepast.');
+        lutUnsupportedNotified = true;
+      }
+      return;
+    }
+    const { gl, output } = renderer;
+    if (output.width !== canvas.width || output.height !== canvas.height) {
+      output.width = canvas.width;
+      output.height = canvas.height;
+    }
+    gl.viewport(0, 0, output.width, output.height);
+    gl.useProgram(renderer.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.getParameter(gl.ARRAY_BUFFER_BINDING));
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.imageTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    uploadLut(renderer, lut);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(output, 0, 0, canvas.width, canvas.height);
+  }
+
+  async function parseCubeLut(file) {
+    if (!file || file.size > 12 * 1024 * 1024) throw new Error('Een .cube-bestand moet kleiner zijn dan 12 MB.');
+    const text = await file.text();
+    let name = file.name.replace(/\.cube$/i, '').slice(0, 128) || 'Output LUT';
+    let size = 0;
+    let domainMin = [0, 0, 0], domainMax = [1, 1, 1];
+    const values = [];
+    for (const original of text.split(/\r?\n/)) {
+      const line = original.replace(/#.*$/, '').trim();
+      if (!line) continue;
+      const title = line.match(/^TITLE\s+(.*)$/i);
+      if (title) { name = title[1].trim().replace(/^["']|["']$/g, '').slice(0, 128) || name; continue; }
+      const sizeMatch = line.match(/^LUT_3D_SIZE\s+(\d+)$/i);
+      if (sizeMatch) { size = Number(sizeMatch[1]); continue; }
+      if (/^LUT_1D_SIZE\b/i.test(line)) throw new Error('Dit bestand bevat een 1D-LUT; Motion Studio verwacht een 3D .cube-LUT.');
+      const minMatch = line.match(/^DOMAIN_MIN\s+(.+)$/i);
+      if (minMatch) { domainMin = parseTriple(minMatch[1], 'DOMAIN_MIN'); continue; }
+      const maxMatch = line.match(/^DOMAIN_MAX\s+(.+)$/i);
+      if (maxMatch) { domainMax = parseTriple(maxMatch[1], 'DOMAIN_MAX'); continue; }
+      if (/^(LUT_3D_INPUT_RANGE|LUT_1D_INPUT_RANGE)\b/i.test(line)) continue;
+      const parts = line.split(/[\s,]+/).map(Number);
+      if (parts.length === 3 && parts.every(Number.isFinite)) values.push(...parts);
+      else if (/^[+-]?(?:\d|\.)/.test(line)) throw new Error('Ongeldige .cube-regel: ' + line.slice(0, 80));
+    }
+    if (!Number.isInteger(size) || size < 2 || size > 64) throw new Error('De 3D-LUT-grootte moet tussen 2 en 64 liggen.');
+    if (domainMin.some((value, i) => !Number.isFinite(value) || !Number.isFinite(domainMax[i]) || domainMax[i] <= value)) throw new Error('Het .cube-bestand bevat een ongeldig inputbereik.');
+    if (values.length !== size * size * size * 3) throw new Error('De .cube-data bevat niet het verwachte aantal kleurwaarden.');
+    if (values.some(value => !Number.isFinite(value) || value < -16 || value > 16)) throw new Error('De .cube-data bevat ongeldige kleurwaarden.');
+    return { name, size, domainMin, domainMax, data: values };
+  }
+
+  function parseTriple(value, label) {
+    const triple = value.trim().split(/[\s,]+/).map(Number);
+    if (triple.length !== 3 || triple.some(v => !Number.isFinite(v))) throw new Error('Ongeldige ' + label + ' in .cube-bestand.');
+    return triple;
+  }
+
+  function renderLutControls() {
+    const lut = state.programLut;
+    $('video-lut-status').textContent = lut ? 'ACTIEF' : 'Geen LUT';
+    $('video-lut-name').textContent = lut ? lut.name + ' · ' + lut.size + '³ 3D-LUT' : 'Geen output-LUT actief.';
+    $('video-lut-clear').disabled = !lut;
+  }
+
+  async function importProgramLut(file) {
+    if (!file) return;
+    try {
+      const lut = await parseCubeLut(file);
+      if (!ensureLutRenderer()) throw new Error('WebGL2 is niet beschikbaar op dit systeem; de LUT is niet geladen.');
+      api.pushHistory();
+      state.programLut = lut;
+      lutTextureRef = null;
+      renderLutControls();
+      api.refresh();
+      api.renderPreview();
+      api.notice('3D-LUT geladen: ' + lut.name);
+    } catch (error) {
+      api.notice('LUT importeren mislukt: ' + error.message);
+    } finally {
+      $('video-lut-file').value = '';
+    }
+  }
+
   function activeSource() {
     return state.assets.find(asset => asset.id === sourceId) || null;
   }
