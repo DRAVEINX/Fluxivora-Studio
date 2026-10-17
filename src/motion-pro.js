@@ -417,6 +417,78 @@ void main() {
     api.notice('Bron ingevoegd op de playhead.');
   }
 
+  let selectedProxyAssetId = null;
+  let useProxyPreview = false;
+
+  function findAssetForClip(clip) {
+    return state.assets.find(asset => asset.file && clip.file && asset.file === clip.file) ||
+      state.assets.find(asset => asset.type === clip.type && asset.name.toLocaleLowerCase() === String(clip.name || '').toLocaleLowerCase()) || null;
+  }
+
+  function updateProxyControls() {
+    const assetsWithProxy = state.assets.filter(asset => asset.type === 'video' && asset.proxyUrl && !asset.proxyMissing);
+    const checkbox = $('video-proxy-preview');
+    checkbox.disabled = assetsWithProxy.length === 0;
+    checkbox.checked = useProxyPreview;
+    $('video-proxy-status').textContent = assetsWithProxy.length
+      ? assetsWithProxy.length + (assetsWithProxy.length === 1 ? ' proxy gekoppeld' : ' proxies gekoppeld') + (useProxyPreview ? ' · voorbeeld gebruikt proxy-media' : ' · voorbeeld gebruikt originelen')
+      : (state.assets.some(asset => asset.proxyName) ? 'Koppel proxybestanden opnieuw na het openen van dit project.' : 'Koppel een proxy aan een videobron om deze optie te gebruiken.');
+  }
+
+  function applyProxyPreview() {
+    let linked = 0;
+    for (const clip of state.clips) {
+      if (clip.type !== 'video' || !clip.mediaEl || clip.missing) continue;
+      const asset = findAssetForClip(clip);
+      const proxy = useProxyPreview && asset && asset.proxyUrl && !asset.proxyMissing ? asset.proxyUrl : null;
+      if (proxy) linked++;
+      const target = proxy || clip.url;
+      if (!target || clip.mediaEl.dataset.fluxivoraActiveSource === target) continue;
+      const media = clip.mediaEl;
+      const currentTime = Number(media.currentTime) || 0;
+      const wasPlaying = !media.paused;
+      media.pause();
+      media.src = target;
+      media.dataset.fluxivoraActiveSource = target;
+      media.load();
+      media.addEventListener('loadedmetadata', () => {
+        try { media.currentTime = Math.max(0, Math.min(Number.isFinite(media.duration) ? media.duration : currentTime, currentTime)); } catch (_) {}
+        if (wasPlaying && state.playing) media.play().catch(() => {});
+      }, { once: true });
+    }
+    updateProxyControls();
+    return linked;
+  }
+
+  async function linkProxyFile(file) {
+    const asset = state.assets.find(item => item.id === selectedProxyAssetId);
+    if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
+      api.notice('Kies een videobestand als proxy.');
+      return;
+    }
+    if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl);
+    asset.proxyFile = file;
+    asset.proxyUrl = URL.createObjectURL(file);
+    asset.proxyName = file.name;
+    asset.proxyMissing = false;
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.onloadedmetadata = () => {
+      asset.proxyDuration = Number.isFinite(probe.duration) ? probe.duration : 0;
+      if (asset.duration && asset.proxyDuration && Math.abs(asset.duration - asset.proxyDuration) > Math.max(1, asset.duration * 0.03)) {
+        api.notice('Let op: de proxyduur verschilt van de originele bron. Controleer de synchronisatie.');
+      }
+      probe.removeAttribute('src'); probe.load();
+    };
+    probe.onerror = () => api.notice('De proxy kon niet worden gelezen: ' + file.name);
+    probe.src = asset.proxyUrl;
+    selectedProxyAssetId = null;
+    renderMediaBin();
+    if (useProxyPreview) applyProxyPreview();
+    api.notice('Proxy gekoppeld: ' + file.name);
+    $('video-proxy-file').value = '';
+  }
+
   function renderMediaBin() {
     const bin = $('video-media');
     if (!bin) return;
@@ -451,8 +523,21 @@ void main() {
       choose.textContent = asset.missing || !asset.url ? 'Bron koppelen' : 'Open in bronmonitor';
       choose.addEventListener('click', () => asset.missing || !asset.url ? relinkAsset(asset.id) : selectSource(asset.id));
       card.append(icon, details, choose);
+      if (asset.type === 'video') {
+        const proxy = document.createElement('button');
+        proxy.type = 'button';
+        proxy.className = 'video-media-proxy';
+        proxy.textContent = asset.proxyUrl && !asset.proxyMissing ? 'Proxy gekoppeld · aanpassen' : asset.proxyName ? 'Proxy opnieuw koppelen' : 'Koppel proxybestand';
+        proxy.title = asset.proxyName || 'Koppel een vooraf gegenereerd, lager-resolutie videobestand aan deze originele bron';
+        proxy.addEventListener('click', () => {
+          selectedProxyAssetId = asset.id;
+          $('video-proxy-file').click();
+        });
+        card.append(proxy);
+      }
       bin.append(card);
     });
+    updateProxyControls();
   }
 
   function formatDuration(value) {
@@ -834,6 +919,7 @@ void main() {
 
   wireCurveEditor();
   api.applyProgramLut = applyProgramLut;
+  api.hasProxyPreview = () => useProxyPreview;
   $('video-lut-load').addEventListener('click', () => $('video-lut-file').click());
   $('video-lut-file').addEventListener('change', event => importProgramLut(event.target.files?.[0]));
   $('video-lut-clear').addEventListener('click', () => {
@@ -868,6 +954,23 @@ void main() {
   });
   $('video-bin-search').addEventListener('input', renderMediaBin);
   $('video-bin-filter').addEventListener('change', renderMediaBin);
+  $('video-proxy-file').addEventListener('change', event => {
+    linkProxyFile(event.target.files?.[0]);
+    event.target.value = '';
+  });
+  $('video-proxy-preview').addEventListener('change', event => {
+    useProxyPreview = event.target.checked;
+    if (useProxyPreview && !state.assets.some(asset => asset.type === 'video' && asset.proxyUrl && !asset.proxyMissing)) {
+      useProxyPreview = false;
+      event.target.checked = false;
+      api.notice('Koppel eerst een proxybestand aan een videobron.');
+      return;
+    }
+    applyProxyPreview();
+    renderMediaBin();
+    if (useProxyPreview) api.notice('Proxy preview staat aan. Schakel deze uit voor export met originele media.');
+    else api.notice('Originele videobronnen worden gebruikt in de preview.');
+  });
   $('video-relink-files').addEventListener('change', event => {
     applyRelink(event.target.files?.[0]);
     event.target.value = '';
@@ -897,6 +1000,9 @@ void main() {
   });
   window.addEventListener('fluxivora:asset-imported', event => registerImportedClip(event.detail?.clipId));
   window.addEventListener('fluxivora:session-opened', () => {
+    useProxyPreview = false;
+    selectedProxyAssetId = null;
+    $('video-proxy-preview').checked = false;
     $('video-source-player').pause();
     $('video-source-audio').pause();
     $('video-source-player').removeAttribute('src');
@@ -909,6 +1015,7 @@ void main() {
   });
   window.addEventListener('fluxivora:asset-file-imported', event => registerImportedFile(event.detail));
   window.addEventListener('fluxivora:motion-refresh', () => {
+    applyProxyPreview();
     renderMediaBin();
     renderLutControls();
     renderGrades();
@@ -918,6 +1025,7 @@ void main() {
   });
   window.addEventListener('fluxivora:preview-rendered', () => { paintScopes(); renderCurveEditor(false); });
   if (!Array.isArray(state.assets)) state.assets = [];
+  window.addEventListener('beforeunload', () => state.assets.forEach(asset => { if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl); }));
   // Older beta.4 sessions have no independent bin metadata; infer it from available clips.
   state.clips.filter(clip => clip.type !== 'title' && clip.file).forEach(clip => registerImportedClip(clip.id));
   renderMediaBin();
