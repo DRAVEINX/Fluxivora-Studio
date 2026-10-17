@@ -388,7 +388,8 @@ test('vector- en paginaobjecten krijgen een startpointer en schrijven geschieden
   assert.match(down, /state\.lastPointer = point/);
   assert.doesNotMatch(down.match(/if \(state\.currentTool === 'select'\) \{[\s\S]*?renderAll\(\); return;/)?.[0] || '', /checkpoint\(\)/);
   assert.match(move, /if \(dx === 0 && dy === 0\) return/);
-  assert.match(move, /if \(!state\.dragHistoryRecorded\) \{\s*checkpoint\(\); state\.dragHistoryRecorded = true; \}/);
+  assert.match(move, /checkpointDragMutation\(\)/);
+  assert.match(app, /function checkpointDragMutation\(\) \{\s*if \(state\.dragHistoryRecorded\) return;\s*checkpoint\(\);\s*state\.dragHistoryRecorded = true;/);
   assert.match(move, /state\.dragHasMoved = true/);
 });
 
