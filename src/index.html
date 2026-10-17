@@ -181,6 +181,12 @@
           </section>
           <aside class="video-inspector">
             <div class="video-panel-heading"><div><small>CLIP CONTROLS</small><h3>Eigenschappen</h3></div></div>
+            <div class="video-output-lut">
+              <div class="video-output-lut-heading"><strong>OUTPUT LUT · 3D CUBE</strong><span id="video-lut-status">Geen LUT</span></div>
+              <div class="video-output-lut-actions"><button id="video-lut-load" type="button" class="button subtle compact">Importeer .cube</button><button id="video-lut-clear" type="button" class="button subtle compact" disabled>Verwijderen</button></div>
+              <input id="video-lut-file" type="file" accept=".cube,text/plain" hidden />
+              <small id="video-lut-name">Geen output-LUT actief.</small>
+            </div>
             <div id="video-inspector-empty" class="video-inspector-empty"><span>◈</span><strong>Geen clip geselecteerd</strong><p>Selecteer een clip op de tijdlijn om trim-, bewegings-, effect- en audio-instellingen te wijzigen.</p></div>
             <div id="video-inspector-fields" class="video-inspector-fields hidden">
               <div class="video-selected-banner"><span class="video-selected-icon">◈</span><div><strong id="video-selected-name">Clip</strong><small>Geselecteerde clip</small></div></div>
