@@ -604,7 +604,7 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
 
 
 test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
-  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-proxy-file','video-proxy-preview','video-proxy-status','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
@@ -672,4 +672,21 @@ test('Motion Studio ondersteunt gevalideerde 3D .cube-output-LUTs', () => {
   assert.match(motion, /gl\.texImage3D\(/);
   assert.match(motion, /function applyProgramLut\(/);
   assert.match(motion, /api\.applyProgramLut = applyProgramLut/);
+});
+
+
+test('Motion Studio kan proxybestanden koppelen zonder de originele media te vervangen', () => {
+  for (const id of ['video-proxy-file','video-proxy-preview','video-proxy-status']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend proxy-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /assetId/);
+  assert.match(video, /proxyName: a\.proxyName/);
+  assert.match(video, /hasProxyPreview/);
+  assert.match(motion, /function applyProxyPreview\(/);
+  assert.match(motion, /async function linkProxyFile\(/);
+  assert.match(motion, /function findAssetForClip\(/);
+  assert.match(motion, /asset\.proxyUrl/);
+  assert.match(motion, /video-proxy-preview/);
 });
