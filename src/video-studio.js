@@ -18,7 +18,7 @@
   const uid = prefix => (prefix || 'clip') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   const selected = () => state.clips.find(c => c.id === state.selected) || null;
   const track = id => state.tracks.find(t => t.id === id) || null;
-  const clipLength = c => Math.max(0, Number(c.out || 0) - Number(c.in || 0));
+  const clipLength = c => Math.max(0, Number(c.out || 0) - Number(c.in || 0)) / Math.max(0.1, Math.min(4, Number(c.speed) || 1));
   const timelineEnd = () => state.clips.reduce((m, c) => Math.max(m, c.start + clipLength(c)), 0);
   const tc = value => {
     const n = Math.max(0, Number(value) || 0);
@@ -273,10 +273,11 @@
   }
   function drawVideoClip(ctx, c) {
     if (!c.mediaEl || c.mediaEl.readyState < 2 || c.mediaEl.videoWidth === 0) return;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
     ctx.save();
     ctx.globalAlpha = alphaFor(c);
     ctx.filter = effectFilter(c.filter);
-    const w = 1920 * c.scale, h = 1080 * c.scale;
+    const w = W * c.scale, h = H * c.scale;
     const ratio = c.mediaEl.videoWidth / c.mediaEl.videoHeight;
     let drawW = w, drawH = h;
     if (c.fit !== 'fill') {
@@ -284,22 +285,23 @@
       else { drawH = h; drawW = h * ratio; }
       if (c.fit === 'cover') { drawW = w; drawH = h; }
     }
-    const x = (1920 - drawW) / 2 + c.x * 19.2;
-    const y = (1080 - drawH) / 2 + c.y * 10.8;
+    const x = (W - drawW) / 2 + c.x * W / 100;
+    const y = (H - drawH) / 2 + c.y * H / 100;
     ctx.drawImage(c.mediaEl, x, y, drawW, drawH);
     ctx.restore();
   }
   function drawTitle(ctx, c) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
     ctx.save();
     ctx.globalAlpha = alphaFor(c);
-    const size = Math.max(18, Math.min(180, c.fontSize || 72));
+    const size = Math.max(18, Math.min(180, c.fontSize || 72)) * (H / 1080);
     ctx.font = (c.bold ? '700 ' : '400 ') + size + 'px Arial, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     ctx.fillStyle = c.color || '#ffffff';
     const lines = String(c.text || '').split('\n').slice(0, 5);
-    const x = 960 + (c.x || 0) * 19.2, y = 880 + (c.y || 0) * 10.8;
-    lines.forEach((line, i) => ctx.fillText(line.slice(0, 250), x, y + (i - (lines.length - 1) / 2) * size * 1.16, 1700));
+    const x = W / 2 + (c.x || 0) * W / 100, y = H * 0.815 + (c.y || 0) * H / 100;
+    lines.forEach((line, i) => ctx.fillText(line.slice(0, 250), x, y + (i - (lines.length - 1) / 2) * size * 1.16, W * .88));
     ctx.restore();
   }
   function renderPreview() {
@@ -597,28 +599,37 @@
   function wireProperties() {
     $('video-clip-name').addEventListener('change', () => applyProperty('video-clip-name', 'name', v => String(v).slice(0, 512)));
     $('video-clip-start').addEventListener('change', () => {
-      const c = selected(); if (!c) return; const v = Math.max(0, Number($('video-clip-start').value) || 0);
-      if (v === c.start) return; pushHistory(); c.start = v; refresh(); renderPreview();
+      const c = selected(); if (!c) return;
+      const v = Math.max(0, Number($('video-clip-start').value) || 0);
+      if (v === c.start) return;
+      pushHistory(); c.start = v; refresh(); renderPreview();
     });
     $('video-in').addEventListener('change', () => {
-      const c = selected(); if (!c || c.missing) return; const v = Math.max(0, Math.min(c.out - .1, Number($('video-in').value) || 0));
-      if (v === c.in) return; pushHistory(); c.start += v - c.in; c.in = v; refresh(); renderPreview();
+      const c = selected(); if (!c || c.missing) return;
+      const v = Math.max(0, Math.min(c.out - 0.1, Number($('video-in').value) || 0));
+      if (v === c.in) return;
+      pushHistory(); c.start += v - c.in; c.in = v; refresh(); renderPreview();
     });
     $('video-out').addEventListener('change', () => {
-      const c = selected(); if (!c || c.missing) return; const v = Math.max(c.in + .1, Math.min(c.duration, Number($('video-out').value) || c.duration));
-      if (v === c.out) return; pushHistory(); c.out = v; refresh(); renderPreview();
+      const c = selected(); if (!c || c.missing) return;
+      const v = Math.max(c.in + 0.1, Math.min(c.duration, Number($('video-out').value) || c.duration));
+      if (v === c.out) return;
+      pushHistory(); c.out = v; refresh(); renderPreview();
     });
-    $('video-speed').addEventListener('change', () => applyProperty('video-speed', 'speed', v => Math.max(.1, Math.min(4, Number(v) || 1))));
-    $('video-opacity').addEventListener('change', () => applyProperty('video-opacity', 'opacity', v => Math.max(0, Math.min(1, Number(v) || 0)));
-    $('video-volume').addEventListener('change', () => applyProperty('video-volume', 'volume', v => Math.max(0, Math.min(2, Number(v) || 0)));
-    $('video-scale').addEventListener('change', () => applyProperty('video-scale', 'scale', v => Math.max(.1, Math.min(3, Number(v) || 1)));
-    $('video-filter').addEventListener('change', () => applyProperty('video-filter', 'filter', String));
-    $('video-fit').addEventListener('change', () => applyProperty('video-fit', 'fit', String));
-    $('video-fade-in').addEventListener('change', () => applyProperty('video-fade-in', 'fadeIn', v => Math.max(0, Math.min(10, Number(v) || 0)));
-    $('video-fade-out').addEventListener('change', () => applyProperty('video-fade-out', 'fadeOut', v => Math.max(0, Math.min(10, Number(v) || 0)));
-    $('video-title-text').addEventListener('change', () => applyProperty('video-title-text', 'text', v => String(v).slice(0, 1000)));
-    $('video-title-size').addEventListener('change', () => applyProperty('video-title-size', 'fontSize', v => Math.max(18, Math.min(180, Number(v) || 72)));
-    $('video-title-color').addEventListener('change', () => applyProperty('video-title-color', 'color', String));
+    const binding = (id, key, cast) => {
+      $(id).addEventListener('change', () => applyProperty(id, key, cast));
+    };
+    binding('video-speed', 'speed', v => Math.max(0.1, Math.min(4, Number(v) || 1)));
+    binding('video-opacity', 'opacity', v => Math.max(0, Math.min(1, Number(v) || 0)));
+    binding('video-volume', 'volume', v => Math.max(0, Math.min(2, Number(v) || 0)));
+    binding('video-scale', 'scale', v => Math.max(0.1, Math.min(3, Number(v) || 1)));
+    binding('video-filter', 'filter', String);
+    binding('video-fit', 'fit', String);
+    binding('video-fade-in', 'fadeIn', v => Math.max(0, Math.min(10, Number(v) || 0)));
+    binding('video-fade-out', 'fadeOut', v => Math.max(0, Math.min(10, Number(v) || 0)));
+    binding('video-title-text', 'text', v => String(v).slice(0, 1000));
+    binding('video-title-size', 'fontSize', v => Math.max(18, Math.min(180, Number(v) || 72)));
+    binding('video-title-color', 'color', String);
   }
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
