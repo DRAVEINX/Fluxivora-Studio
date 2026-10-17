@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (0.5.0-alpha.3, huidige ontwikkelfase)
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.22)
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -21,7 +21,8 @@
 - Herhaalbare Windows CI inclusief installer-artifact.
 - Driehoek- en stervormen als vectorpolygonen in Pixel Lab, Vector Forge en Page Studio, met vulkleur, lijn, lagen en SVG-export.
 - Limieten voor project-, afbeeldings- en exportbestanden; projectbestanden worden gevalideerd en via atomische opslag weggeschreven.
-- Volgende prioriteit: canvas pannen, autosave-herstel praktijktesten, laag-/documentgeschiedenis en robuuster ongedaan maken/opnieuw.
+- Afgerond in alpha.22: canvas pannen, toetsenbordzoom, nauwkeurige objectverplaatsing en behoud van Bézier-ankers/-handgrepen tijdens transformaties.
+- Volgende prioriteit: Windows-installer op een schone Windows 10/11-machine installeren en starten; save/reopen- en herstelstromen praktisch testen; daarna undo/redo-dekking voor alle bewerkingen uitbreiden.
 
 ## Fase 3 — solide grafische basis
 
