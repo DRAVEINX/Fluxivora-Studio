@@ -433,12 +433,12 @@ void main() {
     $('video-multicam-create').disabled = selectedVideos.length < 2;
   }
 
-  function renderMulticamInspector() {
+  function renderMulticamInspector(preferDropdownSelection = false) {
     const clip = api.selected();
     const groupSelect = $('video-multicam-group');
     const angleSelect = $('video-multicam-angle');
     const previousGroup = groupSelect.value;
-    const chosenGroup = clip?.multicamGroupId || previousGroup || (state.multicamGroups[0]?.id || '');
+    const chosenGroup = (preferDropdownSelection ? previousGroup : (clip?.multicamGroupId || previousGroup)) || (state.multicamGroups[0]?.id || '');
     groupSelect.replaceChildren();
     const none = document.createElement('option');
     none.value = ''; none.textContent = 'Geen multicamgroep';
@@ -544,8 +544,9 @@ void main() {
     state.multicamGroups.push(group);
     multicamAngleSelection.clear();
     api.refresh();
-    $('video-multicam-group').value = group.id;
     renderMulticamGroups();
+    $('video-multicam-group').value = group.id;
+    renderMulticamInspector(true);
     api.notice('Multicamgroep gemaakt. Stel per hoek de bron-offset in om de synchronisatie te bepalen.');
   }
 
@@ -1175,7 +1176,7 @@ void main() {
   $('video-bin-search').addEventListener('input', renderMediaBin);
   $('video-bin-filter').addEventListener('change', renderMediaBin);
   $('video-multicam-create').addEventListener('click', createMulticamGroup);
-  $('video-multicam-group').addEventListener('change', renderMulticamInspector);
+  $('video-multicam-group').addEventListener('change', () => renderMulticamInspector(true));
   $('video-multicam-attach').addEventListener('click', attachMulticamGroup);
   $('video-multicam-cut').addEventListener('click', cutToMulticamAngle);
   $('video-proxy-file').addEventListener('change', event => {
