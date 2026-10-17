@@ -586,3 +586,10 @@ test('Motion Studio plaatst trackkoppen naast de correcte timeline-lanes', () =>
   assert.match(video, /Track vergrendelen/);
   assert.match(video, /Track dempen/);
 });
+
+test('Motion Studio rendert het volledige canvas op de gekozen exportresolutie', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /ctx\.fillRect\(0, 0, canvas\.width, canvas\.height\)/);
+  assert.match(video, /canvas\.width = size === '720p' \? 1280 : size === '4k' \? 3840 : 1920/);
+  assert.match(video, /canvas\.height = size === '720p' \? 720 : size === '4k' \? 2160 : 1080/);
+});
