@@ -337,3 +337,9 @@ test('saveProject reports cancellation or failure and confirms success only afte
   assert.match(source, /return true/);
   assert.match(source, /catch \(err\)[\s\S]*?return false/);
 });
+
+test('nieuw ontwerp overschrijft geen niet-opgeslagen project zonder eerst op te slaan', () => {
+  assert.match(app, /const workspace = state\.modalWorkspace;\s*if \(state\.project && state\.dirty\)/);
+  assert.match(app, /title: 'Niet-opgeslagen wijzigingen'[\s\S]*?confirmText: 'Opslaan en nieuw ontwerp'/);
+  assert.match(app, /const saved = await saveProject\(\);\s*if \(!saved\) return false;\s*createProject\(workspace, name\);/);
+});
