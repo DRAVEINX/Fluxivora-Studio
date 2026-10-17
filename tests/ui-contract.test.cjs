@@ -79,7 +79,8 @@ test('herstelkopieën gebruiken atomische opslag met unieke tijdelijke bestanden
   const store = fs.readFileSync(path.join(root, 'electron', 'project-store.cjs'), 'utf8');
   assert.match(store, /const \\{ randomUUID \\} = require\\('node:crypto'\\)/);
   assert.match(store, /const tempPath = .*randomUUID\\(\\).*\\.tmp/);
-  assert.match(main, /ipcMain\\.handle\\('recovery:write'[\\s\\S]*?await atomicWrite\\(filePath, record, \\{ encoding: 'utf8', mode: 0o600 \\}\\)/);
+  const recoveryHandler = main.slice(main.indexOf("ipcMain.handle('recovery:write'"));
+  assert.ok(recoveryHandler.includes("await atomicWrite(filePath, record, { encoding: 'utf8', mode: 0o600 })"), 'herstelkopie moet via de atomische opslaghelper worden geschreven');
   assert.match(store, /await fs\\.unlink\\(tempPath\\)\\.catch\\(\\(\\) => \\{\\}\\)/);
 });
 
