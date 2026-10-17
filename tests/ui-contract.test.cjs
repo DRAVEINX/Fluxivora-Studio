@@ -604,13 +604,14 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
 
 
 test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
-  for (const id of ['video-bin-search','video-bin-filter','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+  for (const id of ['video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   assert.match(video, /assets: state\.assets\.map/);
   assert.match(video, /fluxivora:asset-imported/);
+  assert.match(video, /fluxivora:asset-file-imported/);
   assert.match(video, /window\.FluxivoraMotionStudio =/);
   assert.match(motion, /function renderMediaBin\(/);
   assert.match(motion, /function selectSource\(/);
