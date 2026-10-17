@@ -243,7 +243,7 @@
   }
   function gainFor(c) {
     const t = track(c.trackId);
-    return animatedValue(c, 'volume', c.volume) * (t && t.muted ? 0 : 1);
+    return animatedValue(c, 'volume', c.volume) * alphaFor(c) * (t && t.muted ? 0 : 1);
   }
   function syncMedia(forceSeek) {
     for (const c of state.clips) {
@@ -332,9 +332,10 @@
     ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, 1920, 1080);
     const videoTracks = state.tracks.filter(t => t.kind === 'video' && !t.hidden);
     // Composite lower tracks first, then upper tracks.
-    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c)).forEach(c => drawVideoClip(ctx, c)));
-    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).forEach(c => drawTitle(ctx, c)));
-    $('video-empty').classList.toggle('hidden', state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing) || state.clips.some(c => c.type === 'title' && activeAt(c)));
+    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawVideoClip(ctx, c)));
+    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawTitle(ctx, c)));
+    const hasVisibleContent = state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing && !(track(c.trackId) || {}).hidden) || state.clips.some(c => c.type === 'title' && activeAt(c) && !(track(c.trackId) || {}).hidden);
+    $('video-empty').classList.toggle('hidden', hasVisibleContent);
   }
   function updateTransport() {
     $('video-current').textContent = tc(state.playhead);
@@ -436,8 +437,14 @@
       row.append(lane);
       tracks.append(row);
     });
-    const playhead = $('video-playhead-line'); playhead.style.left = (132 + state.playhead * state.zoom) + 'px'; playhead.style.height = (tracks.scrollHeight + 40) + 'px';
+    updatePlayheadLine();
     $('video-track-count').textContent = state.tracks.length + ' tracks';
+  }
+  function updatePlayheadLine() {
+    const tracks = $('video-tracks'), playhead = $('video-playhead-line');
+    if (!tracks || !playhead) return;
+    playhead.style.left = (132 + state.playhead * state.zoom) + 'px';
+    playhead.style.height = (tracks.scrollHeight + 40) + 'px';
   }
   function populateInspector() {
     const c = selected();
@@ -509,7 +516,7 @@
     state.playhead = Math.min(timelineEnd(), state.playhead + delta);
     syncMedia(false);
     renderPreview();
-    if (now - state.lastUi > 100) { updateTransport(); renderTracks(); state.lastUi = now; }
+    if (now - state.lastUi > 100) { updateTransport(); updatePlayheadLine(); state.lastUi = now; }
     if (state.playhead >= timelineEnd() && timelineEnd() > 0) { stopPlayback(); return; }
     state.raf = requestAnimationFrame(tick);
   }
