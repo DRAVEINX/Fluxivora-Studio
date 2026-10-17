@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const state = {
+    markers: [],
     tracks: [
       { id: 'v2', name: 'V2', kind: 'video', hidden: false, locked: false, muted: false },
       { id: 'v1', name: 'V1', kind: 'video', hidden: false, locked: false, muted: false },
@@ -43,7 +44,7 @@
     return result;
   }
   function snapshot() {
-    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), selected: state.selected, playhead: state.playhead };
+    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), markers: state.markers.map(m => ({...m})), selected: state.selected, playhead: state.playhead };
   }
   function pushHistory() {
     state.history.push(snapshot());
@@ -58,6 +59,7 @@
       const media = state.media.get(data.id) || {};
       return { ...data, ...media, file: media.file || null, url: media.url || null, mediaEl: media.mediaEl || null, audioEl: media.audioEl || null, audioGain: media.audioGain || null, audioSource: media.audioSource || null, missing: !media.url && data.type !== 'title' };
     });
+    state.markers = (snap.markers || []).map(m => ({...m}));
     state.selected = snap.selected;
     state.playhead = snap.playhead;
     $('video-project-name').value = state.name;
@@ -232,6 +234,17 @@
       // Waveforms are a preview enhancement; unsupported audio codecs do not block import.
     }
   }
+  function addMarker() {
+    const label = window.prompt('Geef de marker een naam:', 'Marker ' + (state.markers.length + 1));
+    if (label === null) return;
+    pushHistory();
+    const cleanLabel = String(label).trim().slice(0, 80) || ('Marker ' + (state.markers.length + 1));
+    const existing = state.markers.find(m => Math.abs(m.time - state.playhead) < 0.08);
+    if (existing) { existing.label = cleanLabel; }
+    else state.markers.push({ id: uid('marker'), time: Math.max(0, state.playhead), label: cleanLabel });
+    state.markers.sort((a, b) => a.time - b.time);
+    renderTracks(); notice('Marker toegevoegd op ' + tc(state.playhead) + '.');
+  }
   function addTitle() {
     pushHistory();
     const t = state.tracks.find(x => x.id === state.activeTrack && x.kind === 'title') || state.tracks.find(x => x.kind === 'title');
@@ -391,6 +404,19 @@
       tick.addEventListener('click', () => seekTo(t));
       ruler.append(tick);
     }
+    state.markers.forEach(marker => {
+      const flag = document.createElement('button');
+      flag.type = 'button'; flag.className = 'video-marker';
+      flag.style.left = (marker.time * state.zoom) + 'px';
+      flag.title = marker.label + ' · ' + tc(marker.time);
+      flag.setAttribute('aria-label', 'Ga naar marker ' + marker.label);
+      flag.addEventListener('click', e => { e.stopPropagation(); seekTo(marker.time); });
+      flag.addEventListener('contextmenu', e => {
+        e.preventDefault(); pushHistory(); state.markers = state.markers.filter(m => m.id !== marker.id); renderTracks();
+      });
+      const label = document.createElement('span'); label.textContent = marker.label;
+      flag.append(label); ruler.append(flag);
+    });
     state.tracks.forEach(t => {
       const row = document.createElement('div'); row.className = 'video-track-row' + (t.id === state.activeTrack ? ' active-track' : '');
       const header = document.createElement('div'); header.className = 'video-track-label';
@@ -618,7 +644,7 @@
   function saveSession() {
     const data = {
       format: 'fluxivora-video-project', version: '0.5.0-beta.4', name: state.name,
-      sequence: { width: 1920, height: 1080, fps: 30, zoom: state.zoom },
+      sequence: { width: 1920, height: 1080, fps: 30, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
       tracks: state.tracks.map(t => ({...t})),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
     };
@@ -663,6 +689,7 @@
       state.clips.forEach(c => disposeMedia(c, true));
       state.history.length = 0; state.redo.length = 0;
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
+      state.markers = Array.isArray(data.sequence?.markers) ? data.sequence.markers.slice(0, 500).map(m => ({ id: String(m.id || uid('marker')), time: Math.max(0, Math.min(86400, Number(m.time) || 0)), label: String(m.label || 'Marker').slice(0, 80) })).sort((a, b) => a.time - b.time) : [];
       state.tracks = data.tracks.slice(0, 24).map(t => ({
         id: String(t.id || uid('track')), name: String(t.name || 'Track').slice(0, 12),
         kind: ['video','audio','title'].includes(t.kind) ? t.kind : 'video',
@@ -842,6 +869,7 @@
     $('video-session-file').addEventListener('change', e => openSession(e.target.files?.[0]));
     $('video-export').addEventListener('click', exportVideo);
     $('video-add-title').addEventListener('click', addTitle);
+    $('video-add-marker').addEventListener('click', addMarker);
     $('video-split-clip').addEventListener('click', splitSelectedAtPlayhead);
     $('video-ripple-delete').addEventListener('click', () => removeSelected(true));
     $('video-add-crossfade').addEventListener('click', addCrossfade);
@@ -865,6 +893,8 @@
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); splitSelectedAtPlayhead(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); saveSession(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); $('video-session-file').click(); }
+      else if (!typing && !$('video-screen').classList.contains('hidden') && e.key === 'ArrowLeft') { e.preventDefault(); seekTo(state.playhead - 0.04); }
+      else if (!typing && !$('video-screen').classList.contains('hidden') && e.key === 'ArrowRight') { e.preventDefault(); seekTo(state.playhead + 0.04); }
       else if (e.key === 'Delete' && !typing && !$('video-screen').classList.contains('hidden')) { removeSelected(e.altKey); }
     });
     document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.addEventListener('click', () => {
