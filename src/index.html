@@ -137,6 +137,12 @@
               <label><input id="video-proxy-preview" type="checkbox" disabled /> Proxy preview</label>
               <small id="video-proxy-status">Koppel een proxy aan een videobron om deze optie te gebruiken.</small>
             </div>
+            <div class="video-multicam-bin">
+              <div class="video-multicam-heading"><strong>MULTICAM ANGLES</strong><small id="video-multicam-selection-count">0 hoeken gekozen</small></div>
+              <p>Selecteer minstens twee video's in de mediabibliotheek om een handmatig gesynchroniseerde hoekgroep te maken.</p>
+              <button id="video-multicam-create" type="button" class="button subtle compact" disabled>＋ Maak multicamgroep</button>
+              <div id="video-multicam-groups"></div>
+            </div>
             <div class="video-bin-tools"><input id="video-bin-search" type="search" placeholder="Zoek in media…" aria-label="Zoek projectmedia" /><select id="video-bin-filter" aria-label="Filter projectmedia"><option value="all">Alle media</option><option value="video">Video</option><option value="audio">Audio</option></select></div>
             <div id="video-media" class="video-media-bin" aria-label="Mediabibliotheek"></div>
             <div id="video-media-empty" class="video-media-empty">Importeer video of audio om bronnen hier te bekijken.</div>
@@ -212,6 +218,13 @@
                   <canvas id="video-curve-canvas" width="600" height="150" tabindex="0" role="img" aria-label="Keyframe curve editor. Sleep een punt om tijd en waarde aan te passen."></canvas>
                   <p>Sleep een punt om de tijd en waarde te veranderen. Voeg eerst een keyframe toe op de playhead.</p>
                 </div>
+              </div>
+              <div class="video-property-section video-multicam-inspector"><h4>MULTICAM · ANGLE CUT</h4>
+                <label class="video-field">CAMERAGROEP <select id="video-multicam-group"><option value="">Geen multicamgroep</option></select></label>
+                <button id="video-multicam-attach" type="button" class="button subtle compact">Koppel groep aan geselecteerde clip</button>
+                <label class="video-field">ACTIEVE HOEK VOOR VOLGENDE CUT <select id="video-multicam-angle" disabled><option value="">Geen hoek beschikbaar</option></select></label>
+                <button id="video-multicam-cut" type="button" class="button primary compact" disabled>Snijd naar hoek op playhead</button>
+                <p>Hoekwissels splitsen de geselecteerde videoclip bij de playhead. Audiotrack blijft behouden. Synchronisatie gebeurt via instelbare bron-offsets.</p>
               </div>
               <div class="video-property-section video-audio-controls"><h4>AUDIO</h4>
                 <label class="video-field video-range-field">VOLUME <input id="video-volume" type="range" min="0" max="2" step="0.05" /></label>
