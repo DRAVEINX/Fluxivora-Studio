@@ -371,10 +371,14 @@
       const media = c.mediaEl, audio = c.audioEl;
       if (c.type === 'video' && media) {
         media.playbackRate = Math.max(0.1, Math.min(4, c.speed || 1));
+        const angleAsset = c.activeAngleAssetId && state.assets.find(asset => asset.id === c.activeAngleAssetId && asset.url && !asset.missing);
+        const videoPosition = angleAsset && Number.isFinite(Number(c.activeAngleIn))
+          ? Math.max(0, Number(c.activeAngleIn) + Math.max(0, state.playhead - c.start) * Math.max(0.1, Math.min(4, c.speed || 1)))
+          : position;
         const t = track(c.trackId);
         if (!active || (t && t.hidden)) { media.pause(); }
         else {
-          if (media.readyState >= 1 && (forceSeek || Math.abs(media.currentTime - position) > 0.28)) { try { media.currentTime = position; } catch (_) {} }
+          if (media.readyState >= 1 && (forceSeek || Math.abs(media.currentTime - videoPosition) > 0.28)) { try { media.currentTime = videoPosition; } catch (_) {} }
           if (state.playing && media.paused && media.readyState >= 2) media.play().catch(() => {});
           if (!state.playing) media.pause();
         }
