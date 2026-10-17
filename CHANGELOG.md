@@ -1,5 +1,13 @@
 # Wijzigingen
 
+## 0.5.0-alpha.27 — 17 oktober 2026
+
+- Inspectorvelden maken pas een undo-stap wanneer projectgegevens echt veranderen; alleen focussen of aanklikken maakt geen lege stap en wist de redo-geschiedenis niet.
+- Wijzigingen aan helderheid, contrast en verzadiging bewaren één beginsnapshot per schuifactie en markeren echte aanpassingen direct als onopgeslagen.
+- Gelijkblijvende documentafmetingen en foto-resetacties maken geen overbodige geschiedenisstap.
+- Kern- en UI-regressietests toegevoegd voor no-op bewerkingen, redo-behoud en fotofiltergeschiedenis.
+- Alpha.26 is door de gebruiker op Windows bevestigd als werkend; alpha.27 moet zijn eigen CI-build en praktijktest doorlopen.
+
 ## 0.5.0-alpha.26 — 17 oktober 2026
 
 - Undo/redo houdt het geselecteerde object actief als het object in de herstelde projecttoestand nog bestaat; zo kan de gebruiker direct verder bewerken.

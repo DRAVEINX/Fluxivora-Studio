@@ -104,7 +104,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-alpha.26');
+  assert.equal(pkg.version, '0.5.0-alpha.27');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -447,4 +447,21 @@ test('undo en redo behouden een nog bestaand geselecteerd object', () => {
     assert.match(handler, /state\.selectedBezierPointIndex = null/);
     assert.match(handler, /state\.bezierHandleType = null/);
   }
+});
+
+
+test('inspector start een wijzigingstransactie maar legt alleen echte edits vast', () => {
+  assert.ok(app.includes('const editingStarted = new Map();'));
+  assert.ok(app.includes('function beginEditorEdit(id)'));
+  assert.ok(app.includes('function commitEditorEdit(id, fallbackSnapshot = null)'));
+  assert.ok(app.includes('Core.recordProjectHistoryIfChanged(state.undoStack, state.redoStack, transaction.snapshot, state.project, 60)'));
+  assert.ok(app.includes('if (JSON.stringify(state.project) === before) return false;'));
+  assert.ok(app.includes("field.addEventListener('blur', () => editingStarted.delete(id))"));
+});
+
+test('photo-adjustmentsliders bewaren undo en markeren echte live-wijzigingen als onopgeslagen', () => {
+  assert.ok(app.includes('if (state.project.pixel[key] === nextValue) return;'));
+  assert.ok(app.includes('commitEditorEdit(id, beforeProject);'));
+  assert.ok(app.includes("$('reset-adjustments-button').addEventListener('click', () => {"));
+  assert.ok(app.includes('if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100) return;'));
 });

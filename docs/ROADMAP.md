@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.26)
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.27)
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -29,8 +29,9 @@
 - Aanvulling in alpha.24: opslagacties naar hetzelfde doelbestand worden geserialiseerd om een Windows-`EPERM`-race bij gelijktijdige vervanging te voorkomen.
 - Afgerond in alpha.25: projectnaamwijzigingen zijn ongedaan te maken en een ongewijzigde naam maakt geen lege geschiedenisstap.
 - Alpha.25 is door de gebruiker bevestigd als werkend op de eigen Windows-pc.
-- Toegevoegd in alpha.26: undo/redo behoudt de objectselectie wanneer het geselecteerde object nog bestaat; verouderde Bézier-selectiestatus wordt gereset.
-- Volgende prioriteit: undo/redo voor meer bewerkingspaden en filterinstellingen valideren; test vervolgens alpha.26 in de Windows-runtime.
+- Toegevoegd in alpha.26: undo/redo behoudt de objectselectie wanneer het geselecteerde object nog bestaat; verouderde Bézier-selectiestatus wordt gereset. De gebruiker heeft alpha.26 op Windows bevestigd als werkend.
+- Toegevoegd in alpha.27-broncode: inspector- en fotofilterwijzigingen maken pas een geschiedenisstap bij echte wijzigingen; no-op focus wist de redo-tak niet en filteraanpassingen markeren herstelbare wijzigingen direct als onopgeslagen.
+- Alpha.27 is bedoeld als laatste stabilisatie-alpha. Daarna volgt alleen beta.1 wanneer CI en de Windows-praktijktest groen zijn; bij blokkerende fouten komt er uitsluitend een gerichte reparatie-alpha.
 
 ## Fase 3 — solide grafische basis
 

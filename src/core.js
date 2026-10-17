@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
 
-  const VERSION = '0.5.0-alpha.26';
+  const VERSION = '0.5.0-alpha.27';
   const DEFAULT_WIDTH = 1200;
   const DEFAULT_HEIGHT = 800;
   const OBJECT_TYPES = new Set(['rect', 'ellipse', 'line', 'text', 'image', 'stroke', 'path', 'bezier', 'polygon']);
@@ -54,6 +54,14 @@
     trimHistory(undoStack, cap);
     redoStack.length = 0;
     return true;
+  }
+
+  function recordProjectHistoryIfChanged(undoStack, redoStack, beforeProject, currentProject, limit = DEFAULT_HISTORY_LIMIT) {
+    if (!Array.isArray(undoStack) || !Array.isArray(redoStack)) return false;
+    const before = cloneHistorySnapshot(beforeProject);
+    const current = cloneHistorySnapshot(currentProject);
+    if (!before || !current || JSON.stringify(before) === JSON.stringify(current)) return false;
+    return recordProjectHistory(undoStack, redoStack, before, limit);
   }
 
   function undoProjectHistory(undoStack, redoStack, currentProject, limit = DEFAULT_HISTORY_LIMIT) {
@@ -472,5 +480,5 @@
     return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}${body}</svg>`;
   }
 
-  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl, recordProjectHistory, undoProjectHistory, redoProjectHistory, resolveSelectionId };
+  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl, recordProjectHistory, recordProjectHistoryIfChanged, undoProjectHistory, redoProjectHistory, resolveSelectionId };
 });

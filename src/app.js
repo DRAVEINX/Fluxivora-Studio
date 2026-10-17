@@ -77,6 +77,27 @@
     if (Core.recordProjectHistory(state.undoStack, state.redoStack, state.project, 60)) updateHistoryButtons();
   }
 
+  function beginEditorEdit(id) {
+    if (!state.project || editingStarted.has(id)) return;
+    try {
+      editingStarted.set(id, { snapshot: JSON.parse(JSON.stringify(state.project)), committed: false });
+    } catch (_) {}
+  }
+
+  function commitEditorEdit(id, fallbackSnapshot = null) {
+    if (!state.project) return false;
+    let transaction = editingStarted.get(id);
+    if (!transaction && fallbackSnapshot) {
+      transaction = { snapshot: fallbackSnapshot, committed: false };
+      editingStarted.set(id, transaction);
+    }
+    if (!transaction || transaction.committed) return false;
+    if (!Core.recordProjectHistoryIfChanged(state.undoStack, state.redoStack, transaction.snapshot, state.project, 60)) return false;
+    transaction.committed = true;
+    updateHistoryButtons();
+    return true;
+  }
+
   function checkpointDragMutation() {
     if (state.dragHistoryRecorded) return;
     checkpoint();
@@ -1431,6 +1452,12 @@
 
   function resetDocument() {
     if (!state.project) return;
+    const alreadyDefault = state.activeWorkspace === 'pixel'
+      ? state.project.pixel.width === 1200 && state.project.pixel.height === 800 && state.project.pixel.brightness === 100 && state.project.pixel.contrast === 100 && state.project.pixel.saturation === 100
+      : state.activeWorkspace === 'vector'
+        ? state.project.vector.width === 1000 && state.project.vector.height === 700
+        : state.project.layout.width === 794 && state.project.layout.height === 1123 && state.project.layout.pages[state.project.layout.currentPage].width === 794 && state.project.layout.pages[state.project.layout.currentPage].height === 1123;
+    if (alreadyDefault) return;
     checkpoint();
     if (state.activeWorkspace === 'pixel') Object.assign(state.project.pixel, { width: 1200, height: 800, brightness: 100, contrast: 100, saturation: 100 });
     if (state.activeWorkspace === 'vector') Object.assign(state.project.vector, { width: 1000, height: 700 });
@@ -1445,6 +1472,9 @@
     if (!state.project) return;
     const w = Math.max(100, Math.min(6000, Number($('document-width').value) || 1200));
     const h = Math.max(100, Math.min(6000, Number($('document-height').value) || 800));
+    const current = state.activeWorkspace === 'pixel' ? state.project.pixel : state.activeWorkspace === 'vector' ? state.project.vector : state.project.layout.pages[state.project.layout.currentPage];
+    const layoutMetadataMatches = state.activeWorkspace !== 'layout' || (state.project.layout.width === w && state.project.layout.height === h);
+    if (current.width === w && current.height === h && layoutMetadataMatches) return;
     checkpoint();
     if (state.activeWorkspace === 'pixel') { state.project.pixel.width = w; state.project.pixel.height = h; }
     else if (state.activeWorkspace === 'vector') { state.project.vector.width = w; state.project.vector.height = h; }
@@ -1490,9 +1520,11 @@
     notify('Object uitgelijnd met het canvas.', 'success');
   }
 
-  function updateSelectedFromField(field) {
-    if (!state.project || !state.selectedId) return;
-    const obj = activeObjects().find(o => o.id === state.selectedId); if (!obj) return;
+  function updateSelectedFromField(field, editId) {
+    if (!state.project || !state.selectedId) return false;
+    const obj = activeObjects().find(o => o.id === state.selectedId); if (!obj) return false;
+    const beforeProject = JSON.parse(JSON.stringify(state.project));
+    const before = JSON.stringify(beforeProject);
     if (field === 'text') obj.text = $('object-text').value;
     if (field === 'position') { obj.x = Math.max(-100000, Math.min(10000000, Number($('object-x').value) || 0)); obj.y = Math.max(-100000, Math.min(10000000, Number($('object-y').value) || 0)); }
     if (field === 'size') {
@@ -1509,12 +1541,15 @@
     if (field === 'strokeWidth') obj.strokeWidth = Math.max(0, Number($('stroke-width').value) || 0);
     if (field === 'fontSize') obj.fontSize = Math.max(6, Math.min(400, Number($('font-size').value) || 32));
     if (field === 'opacity') obj.opacity = Number($('opacity-slider').value) / 100;
+    if (JSON.stringify(state.project) === before) return false;
+    if (editId) commitEditorEdit(editId, beforeProject);
     if (field === 'text') {
       renderPixel(); renderSvgWorkspace('vector'); renderSvgWorkspace('layout'); renderLayers();
       markDirty();
     } else {
       renderAll(); markDirty();
     }
+    return true;
   }
 
   function showHelp() {
@@ -1561,34 +1596,48 @@
   $('document-width').addEventListener('change', changeDocumentSize); $('document-height').addEventListener('change', changeDocumentSize);
   $('delete-object-button').addEventListener('click', deleteSelected); $('delete-layer-button').addEventListener('click', deleteSelected); $('duplicate-object-button').addEventListener('click', duplicateSelected); $('layer-up-button').addEventListener('click', () => moveSelectedLayer(1)); $('layer-down-button').addEventListener('click', () => moveSelectedLayer(-1));
   const editingFields = ['object-text', 'object-x', 'object-y', 'object-width', 'object-height', 'object-rotation', 'fill-color', 'stroke-color', 'stroke-width', 'font-size', 'opacity-slider', 'brightness-slider', 'contrast-slider', 'saturation-slider'];
-  const editingStarted = new Set();
+  const editingStarted = new Map();
   editingFields.forEach(id => {
     const field = $(id);
-    const startEdit = () => { if (!editingStarted.has(id)) { checkpoint(); editingStarted.add(id); } };
+    const startEdit = () => beginEditorEdit(id);
     field.addEventListener('focus', startEdit);
     field.addEventListener('pointerdown', startEdit);
     field.addEventListener('blur', () => editingStarted.delete(id));
   });
-  $('object-text').addEventListener('input', () => updateSelectedFromField('text'));
-  for (const id of ['object-x', 'object-y']) $(id).addEventListener('change', () => updateSelectedFromField('position'));
-  for (const id of ['object-width', 'object-height']) $(id).addEventListener('change', () => updateSelectedFromField('size'));
-  $('object-rotation').addEventListener('change', () => updateSelectedFromField('rotation'));
-  $('fill-color').addEventListener('input', () => updateSelectedFromField('fill'));
-  $('stroke-color').addEventListener('input', () => updateSelectedFromField('stroke'));
-  $('stroke-width').addEventListener('change', () => updateSelectedFromField('strokeWidth'));
-  $('font-size').addEventListener('change', () => updateSelectedFromField('fontSize'));
-  $('opacity-slider').addEventListener('input', () => updateSelectedFromField('opacity'));
-  $('reset-adjustments-button').addEventListener('click', () => { checkpoint(); Object.assign(state.project.pixel, { brightness: 100, contrast: 100, saturation: 100 }); markDirty(); renderAll(); });
+  $('object-text').addEventListener('input', () => updateSelectedFromField('text', 'object-text'));
+  for (const id of ['object-x', 'object-y']) $(id).addEventListener('change', () => updateSelectedFromField('position', id));
+  for (const id of ['object-width', 'object-height']) $(id).addEventListener('change', () => updateSelectedFromField('size', id));
+  $('object-rotation').addEventListener('change', () => updateSelectedFromField('rotation', 'object-rotation'));
+  $('fill-color').addEventListener('input', () => updateSelectedFromField('fill', 'fill-color'));
+  $('stroke-color').addEventListener('input', () => updateSelectedFromField('stroke', 'stroke-color'));
+  $('stroke-width').addEventListener('change', () => updateSelectedFromField('strokeWidth', 'stroke-width'));
+  $('font-size').addEventListener('change', () => updateSelectedFromField('fontSize', 'font-size'));
+  $('opacity-slider').addEventListener('input', () => updateSelectedFromField('opacity', 'opacity-slider'));
+  $('reset-adjustments-button').addEventListener('click', () => {
+    if (!state.project) return;
+    const doc = state.project.pixel;
+    if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100) return;
+    checkpoint();
+    Object.assign(doc, { brightness: 100, contrast: 100, saturation: 100 });
+    markDirty(); renderAll();
+  });
   $('crop-apply-button').addEventListener('click', applyPixelCrop);
   for (const [id, alignment] of [['align-left-button', 'left'], ['align-center-x-button', 'center-x'], ['align-right-button', 'right'], ['align-top-button', 'top'], ['align-center-y-button', 'center-y'], ['align-bottom-button', 'bottom']]) $(id).addEventListener('click', () => alignSelectedToCanvas(alignment));
   $('add-bezier-point-button').addEventListener('click', addBezierAnchor);
   $('delete-bezier-point-button').addEventListener('click', deleteBezierAnchor);
   for (const key of ['brightness', 'contrast', 'saturation']) {
-    $(`${key}-slider`).addEventListener('input', () => {
+    const id = `${key}-slider`;
+    $(id).addEventListener('input', () => {
       if (!state.project) return;
-      state.project.pixel[key] = Number($(`${key}-slider`).value); $(`${key}-value`).textContent = `${state.project.pixel[key]}%`; renderPixel();
+      const nextValue = Number($(id).value);
+      if (state.project.pixel[key] === nextValue) return;
+      const beforeProject = JSON.parse(JSON.stringify(state.project));
+      state.project.pixel[key] = nextValue;
+      commitEditorEdit(id, beforeProject);
+      $(`${key}-value`).textContent = `${nextValue}%`;
+      renderPixel();
+      markDirty();
     });
-    $(`${key}-slider`).addEventListener('change', () => { markDirty(); });
   }
   document.querySelectorAll('.inspector-tab').forEach(btn => btn.addEventListener('click', () => { state.inspector = btn.dataset.inspector; renderInspector(); }));
   $('previous-page-button').addEventListener('click', () => switchPage(-1)); $('next-page-button').addEventListener('click', () => switchPage(1)); $('add-page-button').addEventListener('click', addPage); $('duplicate-page-button').addEventListener('click', duplicatePage); $('delete-page-button').addEventListener('click', deletePage);

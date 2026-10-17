@@ -7,7 +7,7 @@ const validPngDataUrl = `data:image/png;base64,${Buffer.from('png-test').toStrin
 test('maakt één project met de drie werkruimtes aan', () => {
   const p = FluxCore.createProject('pixel', 'Test');
   assert.equal(p.format, 'fluxivora-project');
-  assert.equal(p.version, '0.5.0-alpha.26');
+  assert.equal(p.version, '0.5.0-alpha.27');
   assert.equal(p.name, 'Test');
   assert.equal(p.pixel.objects.length, 0);
   assert.equal(p.vector.objects.length, 0);
@@ -23,7 +23,7 @@ test('normaliseert oudere projectbestanden en pagina’s', () => {
     layout: { pages: [{ objects: [{ type: 'text', text: 'Hallo', x: '10' }] }] }
   });
   assert.equal(p.workspace, 'layout');
-  assert.equal(p.version, '0.5.0-alpha.26');
+  assert.equal(p.version, '0.5.0-alpha.27');
   assert.equal(p.layout.pages[0].objects[0].text, 'Hallo');
   assert.equal(p.layout.pages[0].objects[0].x, 10);
   assert.throws(() => FluxCore.normaliseProject({ format: 'onbekend' }), /geen Fluxivora-projectbestand/);
@@ -471,4 +471,25 @@ test('behoudt een bestaande objectselectie na undo en redo en wist verouderde se
   assert.equal(FluxCore.resolveSelectionId([], 'selected-shape'), null);
   assert.equal(FluxCore.resolveSelectionId(null, 'selected-shape'), null);
   assert.equal(FluxCore.resolveSelectionId(objects, null), null);
+});
+
+
+test('geschiedenis legt alleen echte inspectorwijzigingen vast en bewaart redo bij no-op', () => {
+  const undo = [];
+  const redo = [FluxCore.createProject('pixel', 'Redo bewaren')];
+  const before = FluxCore.createProject('pixel', 'Voor');
+  const unchanged = JSON.parse(JSON.stringify(before));
+
+  assert.equal(FluxCore.recordProjectHistoryIfChanged(undo, redo, before, unchanged, 60), false);
+  assert.deepEqual(undo, []);
+  assert.equal(redo.length, 1, 'een no-op mag de redo-tak niet wissen');
+
+  const changed = JSON.parse(JSON.stringify(before));
+  changed.pixel.brightness = 145;
+  assert.equal(FluxCore.recordProjectHistoryIfChanged(undo, redo, before, changed, 60), true);
+  assert.deepEqual(undo, [before]);
+  assert.deepEqual(redo, []);
+
+  before.name = 'Gewijzigde bron';
+  assert.equal(undo[0].name, 'Voor', 'geschiedenissnapshot moet onafhankelijk blijven van het bronobject');
 });
