@@ -14,7 +14,7 @@
     clips: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
-    recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p'
+    recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p', snap: true
   };
   const SEQUENCE_FPS = 25;
   const uid = prefix => (prefix || 'clip') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
@@ -436,6 +436,17 @@
     $('video-export').disabled = !state.clips.length || state.clips.some(c => c.missing);
     $('video-zoom').value = String(state.zoom);
     $('video-zoom-label').textContent = state.zoom + ' px/s';
+    $('video-snap').classList.toggle('active', state.snap);
+  }
+  function fitTimeline() {
+    const scroll = $('video-timeline-scroll');
+    const available = Math.max(160, scroll.clientWidth - 160);
+    const end = Math.max(20, timelineEnd() + 2);
+    state.zoom = Math.max(16, Math.min(100, Math.floor(available / end)));
+    $('video-zoom').value = String(state.zoom);
+    $('video-zoom-label').textContent = state.zoom + ' px/s';
+    renderTracks();
+    scroll.scrollLeft = 0;
   }
   function renderTracks() {
     const tracks = $('video-tracks'), ruler = $('video-ruler');
@@ -843,6 +854,7 @@
     notice(ripple ? 'Clip verwijderd; volgende clips op deze track zijn naar links geschoven.' : 'Clip uit de montage verwijderd.');
   }
   function snapTime(value, excludingId) {
+    if (!state.snap) return Math.max(0, value);
     const candidates = [state.playhead];
     state.clips.filter(c => c.id !== excludingId).forEach(c => { candidates.push(c.start, c.start + clipLength(c)); });
     const nearest = candidates.reduce((best, point) => Math.abs(point - value) < Math.abs(best - value) ? point : best, value);
@@ -942,6 +954,8 @@
     $('video-stop').addEventListener('click', () => { stopPlayback(); seekTo(0); });
     $('video-seek').addEventListener('input', e => seekTo(Number(e.target.value)));
     $('video-zoom').addEventListener('input', e => { state.zoom = Number(e.target.value); renderTracks(); });
+    $('video-fit-timeline').addEventListener('click', fitTimeline);
+    $('video-snap').addEventListener('click', () => { state.snap = !state.snap; updateTransport(); renderTracks(); });
     $('video-project-name').addEventListener('change', () => { state.name = $('video-project-name').value.trim().slice(0, 100) || 'Mijn videoproject'; $('video-project-name').value = state.name; });
     $('video-undo').addEventListener('click', undo); $('video-redo').addEventListener('click', redo);
     wireProperties();
