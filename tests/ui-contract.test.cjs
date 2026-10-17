@@ -504,12 +504,15 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
 });
 
 test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag', () => {
-  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
+  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   assert.match(video, /function addTrack\(/);
   assert.match(video, /function addTitle\(/);
+  assert.match(video, /function addKeyframe\(/);
+  assert.match(video, /function addCrossfade\(/);
+  assert.match(video, /function animatedValue\(/);
   assert.match(video, /function importFiles\(/);
   assert.match(video, /function renderTracks\(/);
   assert.match(video, /function renderPreview\(/);
@@ -538,4 +541,13 @@ test('Motion Studio heeft snelheidsregeling, key-effecten, fades en keyboard und
   }
   assert.match(video, /function alphaFor\(/);
   assert.match(video, /function effectFilter\(/);
+});
+
+test('keyframe-animatie en crossfade bewaren hun projectmetadata', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /keyframes: Array\.isArray\(c\.keyframes\)/);
+  assert.match(video, /c\.fadeIn = duration/);
+  assert.match(video, /previous\.fadeOut = duration/);
+  assert.match(video, /animatedValue\(c, 'opacity'/);
+  assert.match(video, /animatedValue\(c, 'scale'/);
 });
