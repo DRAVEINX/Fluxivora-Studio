@@ -66,15 +66,16 @@
 ## Motion Studio — professionele montage-uitbouw (beta.5 en volgende fases)
 
 ### Afgerond in beta.5
-- Afzonderlijke bronmonitor en programmamonitor, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
+- Afzonderlijke bronmonitor en programmamonitor, bronweergave met afspelen/scrubben, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
 - Mediabronnen blijven als metadata in het montageproject staan wanneer een timelineclip wordt verwijderd; het bronbestand wordt niet in het project-JSON ingebed en moet na heropenen gekoppeld worden.
 - Reversibele effectstack met in-/uitschakelen, volgorde aanpassen en verwijderen.
 - Clip-kleurinstellingen voor exposure, contrast, saturatie, temperatuur en tint, plus RGB-histogram en luma-waveform van de samengestelde programmamonitor.
-- Keyframe-interpolatie: lineair, ease-in, ease-out, ease-in-out en hold.
+- Visuele keyframe-curve-editor met versleepbare punten voor tijd/waarde, plus lineair, ease-in, ease-out, ease-in-out en hold.
+- Gevalideerde 3D `.cube`-output-LUT, toegepast via WebGL2 op de samengestelde programmamonitor en opgeslagen in het montageproject.
 
 ### Volgende fase — kleur en keyframes
-- Echte Bézier-curve-editor met handles, snelheids-/waarde-curves en keyframes voor alle animabele eigenschappen.
-- Import en validatie van .cube-LUT's, LUT-intensiteit per clip en gecontroleerde preview-rendering.
+- Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
+- Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.5-LUT is een sequence/output-LUT.
 - Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.5-scopes zijn indicatief en niet gekalibreerd.
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
 
