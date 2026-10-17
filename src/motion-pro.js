@@ -471,6 +471,17 @@
     api.refresh();
   });
   window.addEventListener('fluxivora:asset-imported', event => registerImportedClip(event.detail?.clipId));
+  window.addEventListener('fluxivora:session-opened', () => {
+    $('video-source-player').pause();
+    $('video-source-audio').pause();
+    $('video-source-player').removeAttribute('src');
+    $('video-source-audio').removeAttribute('src');
+    $('video-source-player').load();
+    $('video-source-audio').load();
+    sourceId = null;
+    setMonitorMode('program');
+    renderMediaBin();
+  });
   window.addEventListener('fluxivora:asset-file-imported', event => registerImportedFile(event.detail));
   window.addEventListener('fluxivora:motion-refresh', () => {
     renderMediaBin();
