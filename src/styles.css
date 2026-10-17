@@ -180,3 +180,25 @@
 .video-proxy-controls small{display:block;margin-top:5px;font-size:8px;line-height:1.5;color:#7d89a7}
 .video-media-proxy{grid-column:1/-1;background:#181d2e;border:1px solid #383354;border-radius:6px;color:#aaa1ee;padding:6px;font-size:8px;font-weight:700;text-align:left}
 .video-media-proxy:hover{border-color:#766ad4;background:#22213a;color:#ebe6ff}
+
+/* Multicam angle selection, manual sync offsets and cut-to-angle workflow */
+.video-multicam-bin{margin:10px 0 12px;border:1px solid #342f52;background:linear-gradient(145deg,#171529,#111622);border-radius:8px;padding:9px}
+.video-multicam-heading{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:5px}
+.video-multicam-heading strong{font-size:8px;letter-spacing:.1em;color:#b3a8ff}
+.video-multicam-heading small{font-size:8px;color:#8c95b2}
+.video-multicam-bin>p{font-size:8px;line-height:1.55;color:#7e89a8;margin:0 0 8px}
+.video-multicam-bin>.button{width:100%;font-size:8px;padding:7px}
+.video-media-angle-select{grid-column:1/-1;display:flex;align-items:center;gap:6px;border:1px solid #302b4c;border-radius:5px;background:#17152a;color:#a9a0e7;padding:5px 7px;font-size:8px;cursor:pointer}
+.video-media-angle-select input{margin:0;accent-color:#9688ff}
+.video-multicam-group-card{margin-top:7px;padding:7px;border:1px solid #292f46;border-radius:7px;background:#101522}
+.video-multicam-group-card-heading{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.video-multicam-group-card-heading strong{font-size:9px;color:#d8d5fb;overflow-wrap:anywhere}
+.video-multicam-group-card-heading button{background:#242139;border:1px solid #40395f;border-radius:5px;color:#d59daa;font-size:13px;padding:1px 7px}
+.video-multicam-group-card>small{display:block;margin:5px 0;color:#737e9c;font-size:7px;letter-spacing:.04em}
+.video-multicam-offset-row{display:grid;grid-template-columns:minmax(0,1fr) 70px;align-items:center;gap:6px;padding:4px 0;border-top:1px solid #252b3f}
+.video-multicam-offset-row span{font-size:8px;color:#929cb7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.video-multicam-offset-row input{width:100%;min-width:0;background:#0c111c;border:1px solid #303750;border-radius:5px;color:#dce2f8;padding:5px;font-size:8px}
+.video-multicam-inspector .button{width:100%;font-size:8px;padding:7px 8px;margin:6px 0}
+.video-multicam-inspector select{width:100%;background:#151a29;border:1px solid #2b3247;border-radius:6px;color:#dbe0f5;padding:7px;font-size:9px}
+.video-multicam-inspector p{font-size:8px;line-height:1.55;color:#75809e;margin:7px 0 0}
+.video-multicam-inspector button:disabled{opacity:.35;cursor:default}
