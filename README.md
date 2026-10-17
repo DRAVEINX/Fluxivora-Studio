@@ -6,7 +6,7 @@
 
 - Vierde creatieve werkruimte: Motion Studio, met een non-lineaire montageworkflow en een eigen Fluxivora-interface.
 - Meerdere videotracks, audiotracks en titeltracks; tracks kunnen worden toegevoegd, vergrendeld, verborgen/gedempt en verwijderd wanneer dat veilig kan.
-- Clips op de tijdlijn slepen, tussen compatibele tracks verplaatsen, trimmen met handgrepen en positie, snelheid, volume, dekking en schaal aanpassen.
+- Clips op de tijdlijn slepen, tussen compatibele tracks verplaatsen, trimmen met handgrepen, golfvormen voor audioclips tonen en positie, snelheid, volume, dekking en schaal aanpassen.
 - Titels op een aparte track, fades, basislooks/kleurfilters en preview-compositing over meerdere videolagen.
 - Audiobestanden importeren en waar de browser-runtime dit ondersteunt audio meepakken in de realtime WebM-export.
 - Video-montageprojecten bewaren tracks, volgorde, trim, titel- en effectmetadata; bronbestanden blijven apart en moeten na openen opnieuw worden gekoppeld.
