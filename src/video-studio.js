@@ -179,7 +179,6 @@
   function importFiles(fileList, kind) {
     const files = [...(fileList || [])];
     if (!files.length) return;
-    pushHistory();
     for (const file of files) {
       const type = kind === 'audio' ? 'audio' : 'video';
       if (type === 'video' && !file.type.startsWith('video/')) { notice('Kies een geldig videobestand.'); continue; }
@@ -190,23 +189,30 @@
       probe.preload = 'metadata';
       probe.onloadedmetadata = () => {
         const duration = Number.isFinite(probe.duration) ? probe.duration : 0;
-        let imported;
+        let imported = null;
         if (missing) {
+          pushHistory();
           missing.url = url; missing.file = file; missing.duration = duration;
           missing.in = Math.max(0, Math.min(missing.in || 0, duration));
           missing.out = Math.max(missing.in, Math.min(missing.out || duration, duration));
           missing.missing = false;
           createMedia(missing);
           imported = missing;
+        } else if (!$('video-import-to-timeline').checked) {
+          window.dispatchEvent(new CustomEvent('fluxivora:asset-file-imported', { detail: { file, name: file.name, type, duration } }));
+          URL.revokeObjectURL(url);
         } else {
+          pushHistory();
           const preferred = type === 'audio' ? state.tracks.find(t => t.kind === 'audio') : state.tracks.find(t => t.kind === 'video' && t.id === state.activeTrack) || state.tracks.find(t => t.kind === 'video' && t.name === 'V1') || state.tracks.find(t => t.kind === 'video');
           imported = createClip({type, name: file.name, file, url, duration, trackId: preferred.id});
         }
-        refresh();
-        renderPreview();
-        if (type === 'audio') computeAudioWaveform(file, imported.id);
-        else captureVideoThumbnails(file, imported.id);
-        window.dispatchEvent(new CustomEvent('fluxivora:asset-imported', { detail: { clipId: imported.id } }));
+        if (imported) {
+          refresh();
+          renderPreview();
+          if (type === 'audio') computeAudioWaveform(file, imported.id);
+          else captureVideoThumbnails(file, imported.id);
+          window.dispatchEvent(new CustomEvent('fluxivora:asset-imported', { detail: { clipId: imported.id } }));
+        }
         probe.removeAttribute('src'); probe.load();
       };
       probe.onerror = () => { URL.revokeObjectURL(url); notice('Kan bestand niet lezen: ' + file.name); };
