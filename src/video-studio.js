@@ -11,7 +11,7 @@
       { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
       { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
     ],
-    clips: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
+    clips: [], assets: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p', snap: true
@@ -206,6 +206,7 @@
         renderPreview();
         if (type === 'audio') computeAudioWaveform(file, imported.id);
         else captureVideoThumbnails(file, imported.id);
+        window.dispatchEvent(new CustomEvent('fluxivora:asset-imported', { detail: { clipId: imported.id } }));
         probe.removeAttribute('src'); probe.load();
       };
       probe.onerror = () => { URL.revokeObjectURL(url); notice('Kan bestand niet lezen: ' + file.name); };
@@ -749,6 +750,7 @@
       format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
       tracks: state.tracks.map(t => ({...t})),
+      assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true })),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -792,6 +794,7 @@
       state.clips.forEach(c => disposeMedia(c, true));
       state.history.length = 0; state.redo.length = 0;
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
+      state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true })) : [];
       state.markers = Array.isArray(data.sequence?.markers) ? data.sequence.markers.slice(0, 500).map(m => ({ id: String(m.id || uid('marker')), time: Math.max(0, Math.min(86400, Number(m.time) || 0)), label: String(m.label || 'Marker').slice(0, 80) })).sort((a, b) => a.time - b.time) : [];
       state.tracks = data.tracks.slice(0, 24).map(t => ({
         id: String(t.id || uid('track')), name: String(t.name || 'Track').slice(0, 12),
@@ -1033,7 +1036,7 @@
       if (b.dataset.workspace === 'video') show();
       else { $('video-screen').classList.add('hidden'); document.body.classList.remove('video-mode'); stopPlayback(); }
     }));
-    window.addEventListener('beforeunload', () => state.clips.forEach(c => disposeMedia(c, true)));
+    window.addEventListener('beforeunload', () => { state.clips.forEach(c => disposeMedia(c, true)); state.assets.forEach(a => { if (a.url) URL.revokeObjectURL(a.url); }); });
   }
   window.FluxivoraMotionStudio = { state, selected, track, createClip, pushHistory, refresh, renderPreview, seekTo, stopPlayback, notice, uid };
   wire();
