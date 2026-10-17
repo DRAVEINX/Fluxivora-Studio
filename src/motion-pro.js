@@ -533,10 +533,11 @@ void main() {
   function createMulticamGroup() {
     const angleAssetIds = [...multicamAngleSelection].filter(id => state.assets.some(asset => asset.id === id && asset.type === 'video'));
     if (angleAssetIds.length < 2) { api.notice('Kies minstens twee videobronnen als multicam-hoeken.'); return; }
+    if (angleAssetIds.length > 32) { api.notice('Een multicamgroep ondersteunt maximaal 32 hoeken. Verminder de selectie.'); return; }
     if (state.multicamGroups.length >= 200) { api.notice('Er zijn maximaal 200 multicamgroepen toegestaan per project.'); return; }
     api.pushHistory();
     const group = {
-      id: api.uid('multicam'), name: 'Multicam ' + (state.multicamGroups.length + 1),
+      id: api.uid('multicam'), name: (() => { let n = 1; while (state.multicamGroups.some(item => item.name === 'Multicam ' + n)) n++; return 'Multicam ' + n; })(),
       angleAssetIds: angleAssetIds.slice(0, 32),
       offsets: Object.fromEntries(angleAssetIds.slice(0, 32).map(id => [id, 0])),
       syncMode: 'manual-offset'
@@ -1235,8 +1236,10 @@ void main() {
     $('video-source-player').load();
     $('video-source-audio').load();
     sourceId = null;
+    multicamAngleSelection.clear();
     setMonitorMode('program');
     renderMediaBin();
+    renderMulticamGroups();
   });
   window.addEventListener('fluxivora:asset-file-imported', event => registerImportedFile(event.detail));
   window.addEventListener('fluxivora:motion-refresh', () => {
