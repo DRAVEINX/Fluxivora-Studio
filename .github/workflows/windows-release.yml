@@ -1,0 +1,89 @@
+name: Fluxivora Studio — Windows release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+
+      - name: Verify tag matches package version
+        shell: pwsh
+        run: |
+          $packageVersion = node -p "require('./package.json').version"
+          $tagVersion = "${{ github.ref_name }}" -replace '^v', ''
+          if ($packageVersion -ne $tagVersion) {
+            throw "Git-tag ($tagVersion) komt niet overeen met package.json ($packageVersion)."
+          }
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies (registry fallback and retries)
+        shell: pwsh
+        run: |
+          $registries = @(
+            "https://registry.npmjs.org/",
+            "https://registry.npmmirror.com/"
+          )
+          $installed = $false
+          foreach ($registry in $registries) {
+            for ($attempt = 1; $attempt -le 2; $attempt++) {
+              Write-Host "npm install attempt $attempt/2 using $registry"
+              npm install --no-audit --no-fund --registry=$registry --fetch-retries=3 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --fetch-timeout=180000
+              if ($LASTEXITCODE -eq 0) {
+                $installed = $true
+                break
+              }
+              Write-Warning "npm install failed with exit $LASTEXITCODE using $registry."
+              if ($attempt -lt 2) { Start-Sleep -Seconds (10 * $attempt) }
+            }
+            if ($installed) { break }
+          }
+          if (-not $installed) {
+            throw "npm install failed on both configured registries. Review DNS, proxy/firewall access, and npm errors above."
+          }
+
+      - name: Check JavaScript syntax
+        run: npm run check
+
+      - name: Run unit and UI contract tests
+        run: npm test
+
+      - name: Build Windows installer
+        run: npm run dist:win
+
+      - name: Verify installer and create checksum manifest
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path "release" -Filter "*.exe" -File)
+          if ($installers.Count -lt 1) { throw "Geen Windows-installer gevonden in release/." }
+          foreach ($installer in $installers) {
+            if ($installer.Length -le 0) { throw "Installer is leeg: $($installer.Name)" }
+          }
+          $checksums = foreach ($installer in $installers) {
+            $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($installer.Name)"
+          }
+          Set-Content -Path "release/SHA256SUMS.txt" -Value $checksums -Encoding ascii
+
+      - name: Publish installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Fluxivora Studio ${{ github.ref_name }}
+          files: |
+            release/*.exe
+            release/SHA256SUMS.txt
+          generate_release_notes: true
+          prerelease: true
