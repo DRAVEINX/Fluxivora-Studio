@@ -7,6 +7,8 @@ const IMAGE_FILTER = [{ name: 'Afbeeldingen', extensions: ['png', 'jpg', 'jpeg',
 const MAX_IMAGE_BYTES = 60 * 1024 * 1024;
 const MAX_EXPORT_BYTES = 220 * 1024 * 1024;
 const approvedProjectPaths = new Set();
+const closeStates = new WeakMap();
+const CLOSE_PREPARATION_TIMEOUT_MS = 3500;
 
 const MIME_BY_EXTENSION = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -33,6 +35,34 @@ function createWindow() {
     }
   });
 
+  const closeState = { allowed: false, pending: false, timeout: null };
+  closeStates.set(win, closeState);
+  win.on('close', (event) => {
+    if (closeState.allowed || win.isDestroyed()) return;
+    event.preventDefault();
+    if (closeState.pending) return;
+    closeState.pending = true;
+    try {
+      win.webContents.send('app:prepare-close');
+    } catch (_) {
+      closeState.allowed = true;
+      closeState.pending = false;
+      win.close();
+      return;
+    }
+    // Always let the user close the app, even if the renderer hangs or crashes.
+    closeState.timeout = setTimeout(() => {
+      closeState.timeout = null;
+      closeState.allowed = true;
+      closeState.pending = false;
+      if (!win.isDestroyed()) win.close();
+    }, CLOSE_PREPARATION_TIMEOUT_MS);
+  });
+  win.on('closed', () => {
+    if (closeState.timeout) clearTimeout(closeState.timeout);
+    closeStates.delete(win);
+  });
+
   win.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) shell.openExternal(url);
@@ -40,6 +70,18 @@ function createWindow() {
   });
   return win;
 }
+
+ipcMain.on('app:close-prepared', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed()) return;
+  const closeState = closeStates.get(win);
+  if (!closeState || !closeState.pending || closeState.allowed) return;
+  if (closeState.timeout) clearTimeout(closeState.timeout);
+  closeState.timeout = null;
+  closeState.pending = false;
+  closeState.allowed = true;
+  win.close();
+});
 
 app.whenReady().then(() => {
   createWindow();
