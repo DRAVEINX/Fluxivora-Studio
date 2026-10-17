@@ -46,6 +46,7 @@
       <button class="rail-button" data-workspace="pixel" title="Pixel Lab" aria-label="Pixel Lab"><span class="rail-icon">▧</span><span>Foto</span></button>
       <button class="rail-button" data-workspace="vector" title="Vector Forge" aria-label="Vector Forge"><span class="rail-icon">◇</span><span>Vector</span></button>
       <button class="rail-button" data-workspace="layout" title="Page Studio" aria-label="Page Studio"><span class="rail-icon">▤</span><span>Pagina</span></button>
+      <button class="rail-button" data-workspace="video" title="Motion Studio" aria-label="Motion Studio"><span class="rail-icon">▶</span><span>Video</span></button>
       <div class="rail-spacer"></div>
       <button id="help-button" class="rail-button" title="Sneltoetsen en uitleg" aria-label="Help"><span class="rail-icon">?</span><span>Help</span></button>
       <div class="avatar-chip">F</div>
@@ -105,6 +106,27 @@
           </aside>
         </div>
       </section>
+
+      <section id="video-screen" class="video-screen hidden" aria-label="Motion Studio video-editor">
+        <header class="video-header"><div class="video-brand"><span class="video-brand-icon">▶</span><div><h2>Motion Studio</h2><p>Video montage · lokaal op je pc</p></div></div>
+          <div class="video-actions"><label>PROJECTNAAM<input id="video-project-name" value="Mijn videoproject" maxlength="100" /></label><button id="video-open-session" class="button subtle compact">Montage openen</button><button id="video-save-session" class="button subtle compact">Montage opslaan</button><button id="video-export" class="button primary compact" disabled>Export WebM</button></div>
+        </header>
+        <div class="video-layout"><aside class="video-library"><div class="video-section-heading"><div><small>PROJECT</small><h3>Media</h3></div><span id="video-count">0 clips</span></div>
+          <button id="video-import" class="button outline video-import-button">＋ Video's toevoegen</button><input id="video-files" type="file" accept="video/*" multiple hidden /><input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden /><div id="video-media"></div>
+          <p class="video-note">Videobestanden blijven lokaal. Na het heropenen van een montage koppel je de bronbestanden opnieuw.</p></aside>
+          <section class="video-center"><div class="video-preview-panel"><div class="video-section-heading"><div><small>PROGRAM MONITOR</small><h3>Voorbeeld</h3></div><span class="video-status">● Lokaal</span></div>
+            <div class="video-monitor"><video id="video-preview" playsinline preload="metadata" aria-label="Videovoorbeeld"></video><div id="video-empty" class="video-empty"><strong>Jouw verhaal begint hier.</strong><span>Importeer video's om te monteren.</span></div></div>
+            <div class="video-controls"><button id="video-stop" aria-label="Stop">■</button><button id="video-play" class="video-play" aria-label="Afspelen">▶</button><span id="video-current">00:00:00</span><span>/</span><span id="video-duration">00:00:00</span><input id="video-seek" type="range" min="0" max="0.01" step="0.01" value="0" aria-label="Tijdlijnpositie" /></div></div>
+          <div class="video-timeline-panel"><div class="video-section-heading"><div><small>SEQUENCE 01</small><h3>Tijdlijn</h3></div><span>Sleep clips om de volgorde te wijzigen</span></div>
+            <div class="video-ruler"><span>00:00</span><span>00:15</span><span>00:30</span><span>00:45</span><span>01:00</span></div>
+            <div class="video-track"><b>V1</b><div id="video-timeline" class="video-timeline"></div></div><div class="video-track audio"><b>A1</b><div>Audiotracks volgen in een volgende fase.</div></div><div class="video-meta">Realtime preview · WebM-export momenteel zonder audio</div></div>
+          </section>
+          <aside class="video-inspector"><div class="video-section-heading"><div><small>CLIP CONTROLS</small><h3>Eigenschappen</h3></div></div><p id="video-selected">Selecteer een clip</p>
+            <label>In-punt (seconden)<input id="video-in" type="number" min="0" step=".05" disabled /></label><label>Uit-punt (seconden)<input id="video-out" type="number" min="0" step=".05" disabled /></label>
+            <div class="video-order"><button id="video-left" class="button subtle compact" disabled>← Eerder</button><button id="video-right" class="button subtle compact" disabled>Later →</button></div><button id="video-remove" class="button danger compact" disabled>Clip verwijderen</button>
+            <p class="video-note">Eerste videofase: import, preview, trimmen, clipvolgorde, montage-opslag en video-only-export. Audio, titels, overgangen, effecten en kleurcorrectie zijn nog niet toegevoegd.</p></aside>
+        </div>
+      </section>
     </main>
     <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.3</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
@@ -114,5 +136,6 @@
   <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-card"><button id="modal-close" class="modal-close" aria-label="Sluiten">×</button><div class="modal-kicker">FLUXIVORA STUDIO</div><h2 id="modal-title">Nieuw ontwerp</h2><p id="modal-description" class="modal-description">Kies een werkruimte en start met creëren.</p><div id="modal-body"></div><div class="modal-actions"><button id="modal-cancel" class="button subtle">Annuleren</button><button id="modal-confirm" class="button primary">Doorgaan</button></div></div></div>
   <script src="core.js"></script>
   <script src="app.js"></script>
+  <script src="video-studio.js"></script>
 </body>
 </html>
