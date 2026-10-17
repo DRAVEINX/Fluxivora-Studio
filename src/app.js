@@ -385,6 +385,7 @@
   }
 
   function activateWorkspace(workspace, { keepTool = false } = {}) {
+    if (workspace === 'video') return;
     if (!['pixel', 'vector', 'layout'].includes(workspace)) return showWelcome();
     if (!state.project) return showNewProjectModal(workspace);
     state.project.workspace = workspace;
@@ -1801,6 +1802,7 @@
 
   window.addEventListener('resize', () => { if (state.project) { state.zoom = 0; applyCanvasScale(); } });
   window.addEventListener('keydown', (event) => {
+    if (!$('video-screen').classList.contains('hidden')) return;
     const mod = event.ctrlKey || event.metaKey;
     const activeElement = document.activeElement;
     const tag = activeElement?.tagName || '';
