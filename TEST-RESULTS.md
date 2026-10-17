@@ -1,8 +1,8 @@
-# Testresultaten — Fluxivora Studio 0.5.0-alpha.24
+# Testresultaten — Fluxivora Studio 0.5.0-alpha.25
 
 Controles bijgewerkt op 17 oktober 2026.
 
-- De suite is uitgebreid met history-manager- en drag-regressietests; de actuele testuitkomst wordt bevestigd door de [GitHub Actions-runs](https://github.com/DRAVEINX/Fluxivora-Studio/actions).
+- De suite bevat regressietests voor bounded undo/redo, drag-gedrag, projectnaamwijzigingen en afbeeldingsinvoeging; de actuele testuitkomst staat in [GitHub Actions](https://github.com/DRAVEINX/Fluxivora-Studio/actions).
 - Extra Windows-regressiecontrole: opslagacties naar hetzelfde doelbestand worden geserialiseerd wanneer meerdere schrijfacties tegelijk binnenkomen.
 - `npm run check`: de alpha.24-run controleert Electron main, preload, app en core.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.

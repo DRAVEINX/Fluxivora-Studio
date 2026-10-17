@@ -104,7 +104,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-alpha.24');
+  assert.equal(pkg.version, '0.5.0-alpha.25');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -407,5 +407,29 @@ test('click-selectie in Pixel Lab maakt geen undo-stap en markeert niets als gew
   assert.match(move, /if \(dx === 0 && dy === 0\) return/);
   assert.match(up, /const didMove = state\.dragHasMoved/);
   assert.match(up, /if \(didMove\) markDirty\(\)/);
+});
+
+
+test('projectnaam wijzigen is ongedaan te maken en een ongewijzigde naam maakt geen geschiedenisstap', () => {
+  const start = app.indexOf("$('project-name').addEventListener('change'");
+  const end = app.indexOf('\n  });', start);
+  assert.ok(start >= 0 && end > start, 'Projectnaam-handler ontbreekt');
+  const handler = app.slice(start, end);
+  assert.match(handler, /const nextName = .*project-name.*value\.trim\(\)/);
+  assert.match(handler, /if \(nextName === state\.project\.name\) return/);
+  assert.match(handler, /checkpoint\(\);\s*state\.project\.name = nextName/);
+});
+
+test('afbeeldingen invoegen in Vector Forge en Page Studio krijgt een undo-checkpoint', () => {
+  const start = app.indexOf('async function importImage()');
+  const end = app.indexOf('\n  async function openProjectFile()', start);
+  assert.ok(start >= 0 && end > start, 'importImage-handler ontbreekt');
+  const handler = app.slice(start, end);
+  const insertion = handler.indexOf("const obj = Core.makeObject('image'");
+  assert.ok(insertion > 0, 'Afbeeldingsobject wordt niet aangemaakt');
+  const checkpointIndex = handler.lastIndexOf('checkpoint();', insertion);
+  const pushIndex = handler.indexOf('activeObjects().push(obj)', insertion);
+  assert.ok(checkpointIndex >= 0 && checkpointIndex < insertion, 'Geen geschiedenischeckpoint vóór afbeeldingsinvoeging');
+  assert.ok(pushIndex > insertion, 'Afbeelding wordt niet in de actieve werkruimte ingevoegd');
 });
 

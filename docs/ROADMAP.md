@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.24)
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.25)
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -27,7 +27,8 @@
 - Afgerond in alpha.24: undo/redo-historyhelpers getest en begrensd tot 60 snapshots; nieuwe bewerkingen wissen de redo-tak.
 - Afgerond in alpha.24: een gewone selectieklik maakt geen geschiedenisstap; verplaatsen in Vector Forge/Page Studio initialiseert de pointerpositie en slaat geschiedenis pas bij echte beweging op.
 - Aanvulling in alpha.24: opslagacties naar hetzelfde doelbestand worden geserialiseerd om een Windows-`EPERM`-race bij gelijktijdige vervanging te voorkomen.
-- Volgende prioriteit: de alpha.24-installer op een schone Windows 10/11-machine installeren en starten; bestandsdialogen, herstel na onverwachte afsluiting en undo/redo in de echte UI praktisch testen.
+- Afgerond in alpha.25: projectnaamwijzigingen zijn ongedaan te maken en een ongewijzigde naam maakt geen lege geschiedenisstap.
+- Volgende prioriteit: de alpha.25-installer op een schone Windows 10/11-machine installeren en starten; undo/redo voor filters, eigenschappen en afbeeldingsinvoeging praktisch testen.
 
 ## Fase 3 — solide grafische basis
 

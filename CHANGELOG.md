@@ -1,5 +1,13 @@
 # Wijzigingen
 
+## 0.5.0-alpha.25 — 17 oktober 2026
+
+- Projectnamen wijzigen is nu correct undo/redo-ondersteund: de vorige toestand wordt vóór de naamswijziging vastgelegd.
+- Een bevestiging zonder gewijzigde projectnaam voegt geen lege geschiedenisstap toe.
+- Regressietests toegevoegd voor het ongedaan maken van projectnaamwijzigingen en het invoegen van afbeeldingen met een undo-checkpoint.
+- Alpha.24 bleef de laatst door de gebruiker bevestigde werkende basis; alpha.25 moet opnieuw door de Windows-build en praktijktest.
+
+
 ## 0.5.0-alpha.24 — 17 oktober 2026
 
 - Undo/redo gebruikt de geteste core-historymanager; de geschiedenis is begrensd tot 60 stappen en snapshots zijn onafhankelijk.

@@ -1585,7 +1585,14 @@
   $('apply-page-format-button').addEventListener('click', applyPageFormat);
   $('add-layer-button').addEventListener('click', () => setTool(state.activeWorkspace === 'pixel' ? 'brush' : state.activeWorkspace === 'vector' ? 'rect' : 'text'));
   $('help-button').addEventListener('click', showHelp); $('menu-button').addEventListener('click', handleMenu); $('stage-menu-button').addEventListener('click', () => showModal({ title: 'Canvasopties', description: 'Stel het zichtbare canvas opnieuw in of pas de documentafmetingen aan in Eigenschappen.', confirmText: 'Oké', cancelText: 'Sluiten', body: (body) => { const p = document.createElement('p'); p.className = 'muted-note'; p.textContent = 'De knop “Aanpassen aan scherm” zoomt uit of in totdat de volledige pagina zichtbaar is. De afmetingen in Eigenschappen wijzigen de documentruimte.'; body.append(p); } }));
-  $('project-name').addEventListener('change', () => { if (!state.project) return; state.project.name = $('project-name').value.trim() || 'Naamloos ontwerp'; markDirty('Naam gewijzigd'); });
+    $('project-name').addEventListener('change', () => {
+    if (!state.project) return;
+    const nextName = $('project-name').value.trim() || 'Naamloos ontwerp';
+    if (nextName === state.project.name) return;
+    checkpoint();
+    state.project.name = nextName;
+    markDirty('Naam gewijzigd');
+  });
   $('pixel-canvas').addEventListener('pointerdown', pixelPointerDown); $('pixel-canvas').addEventListener('pointermove', pixelPointerMove); $('pixel-canvas').addEventListener('pointerup', pixelPointerUp); $('pixel-canvas').addEventListener('pointercancel', pixelPointerUp);
   for (const [id, workspace] of [['vector-canvas', 'vector'], ['layout-canvas', 'layout']]) {
     const svg = $(id);
