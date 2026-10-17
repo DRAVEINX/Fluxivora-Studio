@@ -1,12 +1,13 @@
 ## 0.5.0-beta.5 — Motion Studio source workflow, grading and scopes
 
-- Added a dedicated source monitor with source in/out points and insert-at-playhead; media assets are maintained separately from timeline clips.
-- Added media-bin search/filter, source relinking after a project is reopened, and independent asset metadata in saved montage projects.
+- Added a separate source monitor with playback, scrubbing, source in/out marks and insert-at-playhead alongside the program monitor.
+- Added a searchable media bin with video/audio filters, source relinking after reopening projects, and asset metadata that remains separate from timeline clips.
 - Added a reversible effect stack with enable/disable, reordering and removal.
-- Added clip-level exposure, contrast, saturation, temperature and tint controls, plus an RGB histogram and luma waveform derived from the program canvas.
-- Added keyframe easing modes: linear, ease in/out, ease in-out and hold.
+- Added clip-level exposure, contrast, saturation, temperature and tint controls; RGB histogram and luma waveform are indicative rather than calibrated scopes.
+- Added a visual keyframe curve editor where existing points can be dragged in time/value, alongside linear, ease-in, ease-out, ease-in-out and hold interpolation.
+- Added validated 3D .cube output-LUT import and WebGL2 application to the composed program monitor. LUT metadata/data is saved in the montage project.
 - Existing Pixel Lab, Vector Forge and Page Studio remain intact.
-- Still not part of this beta: imported .cube LUT application, calibrated broadcast scopes, generated proxy workflows, multicam editing, offline/frame-accurate rendering and MP4/H.264 encoding.
+- Still not part of this beta: per-clip LUT/effect automation, managed proxy generation, multicam editing, offline/frame-accurate rendering and MP4/H.264 + AAC encoding. Export remains real-time WebM and depends on Electron's available codecs.
 
 ## 0.5.0-beta.4 — Motion Studio multi-track workflow
 
