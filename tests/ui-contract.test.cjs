@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.3');
+  assert.equal(pkg.version, '0.5.0-beta.4');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -503,14 +503,39 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
   assert.match(app, /window\.setTimeout\(finish, 3300\)/);
 });
 
-test('Motion Studio heeft video-import, preview, tijdlijn, trimmen en exportbediening', () => {
-  for (const id of ['video-screen','video-files','video-preview','video-timeline','video-in','video-out','video-save-session','video-open-session','video-export']) {
+test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag', () => {
+  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function addTrack\(/);
+  assert.match(video, /function addTitle\(/);
   assert.match(video, /function importFiles\(/);
-  assert.match(video, /function trim\(/);
+  assert.match(video, /function renderTracks\(/);
+  assert.match(video, /function renderPreview\(/);
   assert.match(video, /function exportVideo\(/);
+  assert.match(video, /createMediaStreamDestination\(/);
+  assert.match(video, /function undo\(/);
   assert.match(video, /fluxivora-video-project/);
   assert.match(html, /src="video-studio.js"/);
+});
+
+test('Motion Studio projecteert meerdere video-, audio- en titeltracks afzonderlijk', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /kind: 'video'/);
+  assert.match(video, /kind: 'audio'/);
+  assert.match(video, /kind: 'title'/);
+  assert.match(video, /videoTracks\.slice\(\)\.reverse\(\)/);
+  assert.match(video, /compatibleTrack\(/);
+  assert.match(video, /function saveSession\(/);
+  assert.match(video, /async function openSession\(/);
+});
+
+test('Motion Studio heeft snelheidsregeling, key-effecten, fades en keyboard undo', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const feature of ['fadeIn','fadeOut','speed','opacity','scale','filter','video-undo','video-redo','e.shiftKey ? redo() : undo()']) {
+    assert.ok(video.includes(feature), 'Ontbrekend video-editingonderdeel: ' + feature);
+  }
+  assert.match(video, /function alphaFor\(/);
+  assert.match(video, /function effectFilter\(/);
 });
