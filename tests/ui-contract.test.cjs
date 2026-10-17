@@ -556,3 +556,10 @@ test('keyframe-animatie en crossfade bewaren hun projectmetadata', () => {
   assert.match(video, /animatedValue\(c, 'opacity'/);
   assert.match(video, /animatedValue\(c, 'scale'/);
 });
+
+test('bèta.3-montages worden gemigreerd in plaats van afgewezen', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /Migrate the original beta\.3 single-track montage format/);
+  assert.match(video, /Oud montageproject omgezet naar de multi-track tijdlijn/);
+  assert.match(video, /let cursor = 0;/);
+});
