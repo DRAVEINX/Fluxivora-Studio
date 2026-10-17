@@ -604,7 +604,7 @@ test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', 
 
 
 test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
-  for (const id of ['video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
@@ -655,4 +655,21 @@ test('Motion Studio heeft een visuele, versleepbare keyframe-curve-editor', () =
   assert.match(motion, /canvas\.addEventListener\('pointermove'/);
   assert.match(motion, /curveEase = \{/);
   assert.match(motion, /function curveValueAt\(/);
+});
+
+
+test('Motion Studio ondersteunt gevalideerde 3D .cube-output-LUTs', () => {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend LUT-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /function normaliseProgramLut\(/);
+  assert.match(video, /lut: state\.programLut/);
+  assert.match(video, /applyProgramLut\(canvas\)/);
+  assert.match(motion, /async function parseCubeLut\(/);
+  assert.match(motion, /LUT_3D_SIZE/);
+  assert.match(motion, /gl\.texImage3D\(/);
+  assert.match(motion, /function applyProgramLut\(/);
+  assert.match(motion, /api\.applyProgramLut = applyProgramLut/);
 });
