@@ -12,8 +12,10 @@ function canonicalPath(filePath) {
 }
 
 function safeProjectStem(value) {
-  const cleaned = String(value || 'Mijn ontwerp')
-    .replace(/[<>:\\\"/\\\\|?*\\x00-\\x1f]/g, '')
+  const invalidCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+  const cleaned = [...String(value || 'Mijn ontwerp')]
+    .filter(character => !invalidCharacters.has(character) && character.charCodeAt(0) >= 0x20)
+    .join('')
     .replace(/[. ]+$/g, '')
     .trim()
     .slice(0, 80);
