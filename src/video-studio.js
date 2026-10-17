@@ -11,7 +11,7 @@
       { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
       { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
     ],
-    clips: [], assets: [], programLut: null, selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
+    clips: [], assets: [], programLut: null, multicamGroups: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p', snap: true
@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -58,7 +58,7 @@
     return result;
   }
   function snapshot() {
-    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), markers: state.markers.map(m => ({...m})), programLut: state.programLut, selected: state.selected, playhead: state.playhead };
+    return { name: state.name, tracks: state.tracks.map(t => ({...t})), clips: state.clips.map(metaClip), markers: state.markers.map(m => ({...m})), programLut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})), selected: state.selected, playhead: state.playhead };
   }
   function pushHistory() {
     state.history.push(snapshot());
@@ -69,6 +69,7 @@
   function hydrateSnapshot(snap) {
     state.name = snap.name;
     state.programLut = normaliseProgramLut(snap.programLut);
+    state.multicamGroups = Array.isArray(snap.multicamGroups) ? snap.multicamGroups.map(g => ({...g, angleAssetIds:[...(g.angleAssetIds || [])], offsets:{...(g.offsets || {})}})) : [];
     state.tracks = snap.tracks.map(t => ({...t}));
     state.clips = snap.clips.map(data => {
       const media = state.media.get(data.id) || {};
@@ -771,7 +772,7 @@
   function saveSession() {
     const data = {
       format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
-      sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut },
+      sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})) },
       tracks: state.tracks.map(t => ({...t})),
       assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
@@ -819,6 +820,7 @@
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
       state.programLut = normaliseProgramLut(data.sequence?.lut);
       if (data.sequence?.lut && !state.programLut) notice('De opgeslagen 3D-LUT is ongeldig en is niet geladen.');
+      state.multicamGroups = Array.isArray(data.sequence?.multicamGroups) ? data.sequence.multicamGroups.slice(0, 200).filter(g => g && Array.isArray(g.angleAssetIds)).map(g => ({ id: String(g.id || uid('multicam')), name: String(g.name || 'Multicamgroep').slice(0,128), angleAssetIds: [...new Set(g.angleAssetIds.filter(id => typeof id === 'string').map(id=>id.slice(0,256)))].slice(0,32), offsets: Object.fromEntries(Object.entries(g.offsets || {}).filter(([id, value]) => typeof id === 'string' && Number.isFinite(Number(value))).slice(0,32).map(([id,value]) => [id,Math.max(-86400,Math.min(86400,Number(value)))])) })) : [];
       state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl); });
       state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true, proxyName: a.proxyName ? String(a.proxyName).slice(0, 512) : null, proxyFile: null, proxyUrl: null, proxyDuration: 0, proxyMissing: !!a.proxyName })) : [];
       if (!Array.isArray(data.assets)) {
@@ -840,6 +842,9 @@
       state.clips = data.clips.map(c => ({
         id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null,
         type: ['video','audio','title'].includes(c.type) ? c.type : 'video',
+        multicamGroupId: typeof c.multicamGroupId === 'string' ? c.multicamGroupId.slice(0,256) : null,
+        activeAngleAssetId: typeof c.activeAngleAssetId === 'string' ? c.activeAngleAssetId.slice(0,256) : null,
+        activeAngleIn: Number.isFinite(Number(c.activeAngleIn)) ? Math.max(0,Math.min(86400,Number(c.activeAngleIn))) : null,
         trackId: String(c.trackId || state.tracks[0].id),
         start: Math.max(0, Math.min(86400, Number(c.start) || 0)),
         duration: Math.max(0, Math.min(86400, Number(c.duration) || 0)),
@@ -917,7 +922,8 @@
     state.clips.push(right);
     state.selected = right.id; state.playhead = right.start;
     refresh(); renderPreview();
-    notice('Clip gesplitst op de playhead.');
+    if (!arguments[0]?.silent) notice('Clip gesplitst op de playhead.');
+    return right;
   }
   function removeSelected(ripple = false) {
     const c = selected(); if (!c) return;
@@ -1074,7 +1080,7 @@
     }));
     window.addEventListener('beforeunload', () => { state.clips.forEach(c => disposeMedia(c, true)); state.assets.forEach(a => { if (a.url) URL.revokeObjectURL(a.url); }); });
   }
-  window.FluxivoraMotionStudio = { state, selected, track, createClip, createMedia, pushHistory, refresh, renderPreview, seekTo, stopPlayback, notice, uid };
+  window.FluxivoraMotionStudio = { state, selected, track, createClip, createMedia, pushHistory, refresh, renderPreview, seekTo, stopPlayback, splitSelectedAtPlayhead, notice, uid };
   wire();
   refresh();
 })();
