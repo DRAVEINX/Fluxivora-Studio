@@ -1,3 +1,12 @@
+## 0.5.0-beta.4 — Motion Studio multi-track workflow
+
+- Motion Studio upgraded from a single video lane to editable multi-track video, audio and title tracks.
+- Added timeline ruler, zoom, playhead, clip drag/reorder, compatible-track drop targets and edge trim handles.
+- Added title overlays, opacity/scale/fit and playback speed, clip volume, fades, look filters, track mute/hide/lock and undo/redo.
+- Added a canvas-based layered preview, Web Audio mix graph and quality-selectable real-time WebM export with audio when supported by Electron.
+- Montage files persist track/clip metadata and require source media to be relinked; source files are never embedded in the project JSON.
+- Existing three creative workspaces stay available; the build script now syntax-checks Motion Studio directly.
+
 # Wijzigingen
 
 ## 0.5.0-beta.1 — 17 oktober 2026
