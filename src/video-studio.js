@@ -715,6 +715,10 @@
     state.raf = requestAnimationFrame(tick);
   }
   function exportVideo() {
+    if (window.FluxivoraMotionStudio?.hasProxyPreview?.()) {
+      notice('Zet Proxy preview uit voordat je exporteert. Dan wordt de originele bronkwaliteit gebruikt.');
+      return;
+    }
     const Recorder = window.MediaRecorder;
     if (!Recorder || !HTMLCanvasElement.prototype.captureStream) { notice('WebM-export wordt niet ondersteund door deze Electron-versie.'); return; }
     if (!state.clips.length || state.clips.some(c => c.missing && c.type !== 'title')) { notice('Koppel alle ontbrekende bronbestanden voordat je exporteert.'); return; }
