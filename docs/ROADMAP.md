@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.4 (testkandidaat))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.5 (testkandidaat))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -63,6 +63,32 @@
 - GPU-versnelde filters waar stabiel, grote documenten, performance-profielen en crashherstel.
 - Toegankelijkheid, schaalbare UI, licht/donker thema, NL/EN en geautomatiseerde regressietests.
 
+## Motion Studio — professionele montage-uitbouw (beta.5 en volgende fases)
+
+### Afgerond in beta.5
+- Afzonderlijke bronmonitor en programmamonitor, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
+- Mediabronnen blijven als metadata in het montageproject staan wanneer een timelineclip wordt verwijderd; het bronbestand wordt niet in het project-JSON ingebed en moet na heropenen gekoppeld worden.
+- Reversibele effectstack met in-/uitschakelen, volgorde aanpassen en verwijderen.
+- Clip-kleurinstellingen voor exposure, contrast, saturatie, temperatuur en tint, plus RGB-histogram en luma-waveform van de samengestelde programmamonitor.
+- Keyframe-interpolatie: lineair, ease-in, ease-out, ease-in-out en hold.
+
+### Volgende fase — kleur en keyframes
+- Echte Bézier-curve-editor met handles, snelheids-/waarde-curves en keyframes voor alle animabele eigenschappen.
+- Import en validatie van .cube-LUT's, LUT-intensiteit per clip en gecontroleerde preview-rendering.
+- Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.5-scopes zijn indicatief en niet gekalibreerd.
+- Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
+
+### Volgende fase — proxies en multicam
+- Proxy-bestanden genereren of koppelen met originele/proxy-relatie, duidelijke status, batchworkflow en veilig relinken.
+- Multicam-groepen met synchronisatie op audio/tijdcode, hoekselectie tijdens afspelen en terugschrijven als bewerkbare montage.
+- Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
+
+### Volgende fase — volwaardige offline render/export
+- Aparte render-engine/worker die sequenties frame voor frame rendert onafhankelijk van realtime playback.
+- Betrouwbare encoderintegratie voor MP4/H.264 met AAC, exportpresets, bitrate, framerate, schaal, kleurbehoud, voortgang, annuleren en nette foutherstel.
+- Regressieclips voor A/V-sync, fade-overgangen, keyframes, kleur, audio-mix, audio-clipping, en renderen na project-heropening.
+- Hardware-acceleratie alleen gebruiken na capability-detectie en fallback-tests; nooit aannemen dat elke Windows-machine dezelfde encoder ondersteunt.
+
 ## Release-gates vóór een publieke 1.0
 
 1. Volledige unit- en integratietest van import, save/reopen, undo/redo en export.
@@ -82,7 +108,7 @@
 - Acceptatie blijft afhankelijk van groene syntax-, unit- en UI-contracttests én een praktische Windows-test van tekenen, opslaan/heropenen en PNG/SVG/PDF-export.
 
 
-## 0.5.0-beta.4 — Motion Studio professional NLE foundation
+## 0.5.0-beta.5 — Motion Studio professional NLE foundation
 
 - Separate Motion Studio workspace with a sequence monitor, editable multi-track timeline and clip inspector.
 - Video, audio and title tracks. Add tracks, drag clips to compatible tracks, move clips in time, trim with edge handles, lock tracks, hide video tracks and mute audio tracks.
