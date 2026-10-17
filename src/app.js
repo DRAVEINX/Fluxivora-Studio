@@ -273,7 +273,23 @@
       },
       onConfirm: (body) => {
         const name = (body.querySelector('#new-project-name')?.value || '').trim() || 'Mijn eerste ontwerp';
-        createProject(state.modalWorkspace, name);
+        const workspace = state.modalWorkspace;
+        if (state.project && state.dirty) {
+          showModal({
+            title: 'Niet-opgeslagen wijzigingen',
+            description: 'Sla je huidige project eerst op voordat je een nieuw ontwerp begint. Zo raak je geen werk kwijt.',
+            confirmText: 'Opslaan en nieuw ontwerp',
+            cancelText: 'Annuleren',
+            onConfirm: async () => {
+              const saved = await saveProject();
+              if (!saved) return false;
+              createProject(workspace, name);
+              return true;
+            }
+          });
+          return false;
+        }
+        createProject(workspace, name);
         return true;
       }
     });
