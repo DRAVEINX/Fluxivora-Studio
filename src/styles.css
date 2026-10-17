@@ -88,3 +88,7 @@
 .video-clip-block.audio .video-clip-waveform{filter:drop-shadow(0 0 2px #5ddac44d)}
 
 .video-transition-controls{margin-top:14px;padding-top:12px;border-top:1px solid #252b3c}
+
+.video-clip-filmstrip{position:absolute;top:3px;left:7px;right:7px;height:15px;display:flex;gap:2px;overflow:hidden;border-radius:2px;opacity:.92;pointer-events:none}
+.video-clip-filmstrip img{display:block;flex:1 1 0;width:0;height:15px;min-width:0;object-fit:cover;background:#111725}
+.video-clip-block.video .video-clip-filmstrip+strong{margin-top:15px}
