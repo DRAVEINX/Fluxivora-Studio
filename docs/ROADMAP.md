@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.2 (testkandidaat))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.4 (testkandidaat))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -80,3 +80,13 @@
 - Polygon-geometrie wordt gevalideerd en bewaard bij projectopslag/heropenen en meegenomen in SVG-export.
 - De straal van afgeronde rechthoeken wordt bewaard in .fluxivora-projecten en SVG-export.
 - Acceptatie blijft afhankelijk van groene syntax-, unit- en UI-contracttests én een praktische Windows-test van tekenen, opslaan/heropenen en PNG/SVG/PDF-export.
+
+
+## 0.5.0-beta.4 — Motion Studio professional NLE foundation
+
+- Separate Motion Studio workspace with a sequence monitor, editable multi-track timeline and clip inspector.
+- Video, audio and title tracks. Add tracks, drag clips to compatible tracks, move clips in time, trim with edge handles, lock tracks, hide video tracks and mute audio tracks.
+- Clip controls for source in/out, timeline position, playback speed, opacity, scale, fit mode, volume, fades and a first set of look filters.
+- Canvas-based multi-layer preview with title rendering; Web Audio mixing and real-time WebM capture where supported by the installed Electron runtime.
+- Projects store track layout and edit metadata locally; source video/audio files remain external and must be relinked when reopening a project.
+- Version still uses a real-time recorder and WebM browser codecs. A complete professional parity target needs subsequent work on frame-accurate decode/encode, keyframe curves, color scopes/LUTs, transitions beyond fades, title/motion graphics, proxies, multicam, media conforming, autosave/recovery and a broader export codec pipeline.
