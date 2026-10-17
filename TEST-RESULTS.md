@@ -2,7 +2,8 @@
 
 Controles uitgevoerd op 17 oktober 2026.
 
-- `npm test`: **63 tests geslaagd, 0 mislukt**.
+- `npm test`: **70 tests geslaagd, 0 mislukt** in GitHub Actions-run [39057717446](https://github.com/DRAVEINX/Fluxivora-Studio/actions/runs/39057717446).
+- `npm run check`: geslaagd voor Electron main, preload, app en core.
 - `npm run check`: **geslaagd** voor Electron main, preload, app en core.
 - Nieuwe functie: Ctrl/Cmd + plus of `=` zoomt in, Ctrl/Cmd + min zoomt uit en Ctrl/Cmd + 0 past het canvas aan het beschikbare scherm aan.
 - Zoomsneltoetsen zijn uitgeschakeld wanneer een invoerveld, tekstgebied, contenteditable-gebied of keuzelijst actief is.
@@ -13,9 +14,8 @@ Controles uitgevoerd op 17 oktober 2026.
 
 ## Nog niet geverifieerd
 
-- Windows-installer: **niet gebouwd** in deze omgeving.
-- Windows-runtime: niet getest op een echte Windows-pc.
-- GitHub Actions: niet uitgevoerd vanuit deze omgeving.
-- Een eerdere lokale npm-registrycontrole faalde met `EAI_AGAIN` bij `registry.npmjs.org`. Dat wijst op een DNS/netwerkprobleem in die uitvoeromgeving en bewijst niet dat GitHub Actions hetzelfde probleem zal hebben.
+- Windows-installer: de GitHub Actions-build voor de nieuwste projectveiligheidswijzigingen werd na de geslaagde teststap gestart; controleer de actuele eindstatus en het artifact in [workflow 39057717446](https://github.com/DRAVEINX/Fluxivora-Studio/actions/runs/39057717446).
+- Windows-runtime: moet nog handmatig op een echte Windows 10/11-pc worden getest.
+- De JSON-roundtriptest controleert normalisatie en behoud van projectdetails, maar vervangt geen end-to-end test van de Windows-bestandsdialogen, daadwerkelijke schijfopslag en heropenen in de gebouwde app.
 
-Een groene lokale testsuite bevestigt niet dat de Windows-installer al bestaat of dat de app op een echte Windows-pc is gevalideerd.
+Een groene testsuite is geen bewijs van een volledige praktijktest op Windows.

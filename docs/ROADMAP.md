@@ -22,7 +22,9 @@
 - Driehoek- en stervormen als vectorpolygonen in Pixel Lab, Vector Forge en Page Studio, met vulkleur, lijn, lagen en SVG-export.
 - Limieten voor project-, afbeeldings- en exportbestanden; projectbestanden worden gevalideerd en via atomische opslag weggeschreven.
 - Afgerond in alpha.22: canvas pannen, toetsenbordzoom, nauwkeurige objectverplaatsing en behoud van Bézier-ankers/-handgrepen tijdens transformaties.
-- Volgende prioriteit: Windows-installer op een schone Windows 10/11-machine installeren en starten; save/reopen- en herstelstromen praktisch testen; daarna undo/redo-dekking voor alle bewerkingen uitbreiden.
+- Toegevoegd: bij openen van een ander project of starten van een nieuw ontwerp wordt eerst gevraagd het huidige niet-opgeslagen project op te slaan; annuleren voorkomt overschrijven.
+- Toegevoegd: geautomatiseerde JSON-roundtriptest voor pixel-, vector- en pagina-inhoud, meerdere pagina’s, afbeeldingen, lagenvlaggen, rotatie en Bézier-handgrepen.
+- Volgende prioriteit: de nieuwste Windows-installer op een schone Windows 10/11-machine installeren en starten; de echte bestandsdialogen en herstel na een onverwachte afsluiting praktisch testen; daarna undo/redo-dekking voor alle bewerkingen uitbreiden.
 
 ## Fase 3 — solide grafische basis
 
