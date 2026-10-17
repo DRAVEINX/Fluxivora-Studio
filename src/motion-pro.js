@@ -727,6 +727,21 @@ void main() {
       choose.addEventListener('click', () => asset.missing || !asset.url ? relinkAsset(asset.id) : selectSource(asset.id));
       card.append(icon, details, choose);
       if (asset.type === 'video') {
+        const angleLabel = document.createElement('label');
+        angleLabel.className = 'video-media-angle-select';
+        const angleCheck = document.createElement('input');
+        angleCheck.type = 'checkbox';
+        angleCheck.checked = multicamAngleSelection.has(asset.id);
+        angleCheck.setAttribute('aria-label', 'Selecteer ' + asset.name + ' als multicam-hoek');
+        angleCheck.addEventListener('change', () => {
+          if (angleCheck.checked) multicamAngleSelection.add(asset.id);
+          else multicamAngleSelection.delete(asset.id);
+          updateMulticamSelectionControls();
+        });
+        const angleText = document.createElement('span');
+        angleText.textContent = 'Multicam-hoek';
+        angleLabel.append(angleCheck, angleText);
+        card.append(angleLabel);
         const proxy = document.createElement('button');
         proxy.type = 'button';
         proxy.className = 'video-media-proxy';
@@ -741,6 +756,7 @@ void main() {
       bin.append(card);
     });
     updateProxyControls();
+    updateMulticamSelectionControls();
   }
 
   function formatDuration(value) {
@@ -1158,6 +1174,10 @@ void main() {
   });
   $('video-bin-search').addEventListener('input', renderMediaBin);
   $('video-bin-filter').addEventListener('change', renderMediaBin);
+  $('video-multicam-create').addEventListener('click', createMulticamGroup);
+  $('video-multicam-group').addEventListener('change', renderMulticamInspector);
+  $('video-multicam-attach').addEventListener('click', attachMulticamGroup);
+  $('video-multicam-cut').addEventListener('click', cutToMulticamAngle);
   $('video-proxy-file').addEventListener('change', event => {
     linkProxyFile(event.target.files?.[0]);
     event.target.value = '';
@@ -1221,6 +1241,7 @@ void main() {
   window.addEventListener('fluxivora:motion-refresh', () => {
     applyProxyPreview();
     renderMediaBin();
+    renderMulticamGroups();
     renderLutControls();
     renderGrades();
     const selected = api.selected();
@@ -1233,6 +1254,7 @@ void main() {
   // Older beta.4 sessions have no independent bin metadata; infer it from available clips.
   state.clips.filter(clip => clip.type !== 'title' && clip.file).forEach(clip => registerImportedClip(clip.id));
   renderMediaBin();
+  renderMulticamGroups();
   renderLutControls();
   renderGrades();
   paintScopes();
