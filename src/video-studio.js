@@ -110,13 +110,13 @@
     const holder = $('video-media-engine');
     if (c.type === 'title') return c;
     const media = document.createElement(c.type === 'audio' ? 'audio' : 'video');
-    media.preload = 'auto';
+    media.preload = 'metadata';
     media.src = c.url;
     media.playsInline = true;
     if (c.type === 'video') media.muted = true;
     media.setAttribute('aria-hidden', 'true');
     const audio = c.type === 'video' ? document.createElement('audio') : media;
-    if (audio !== media) { audio.preload = 'auto'; audio.src = c.url; audio.setAttribute('aria-hidden', 'true'); }
+    if (audio !== media) { audio.preload = 'metadata'; audio.src = c.url; audio.setAttribute('aria-hidden', 'true'); }
     holder.append(media);
     if (audio !== media) holder.append(audio);
     c.mediaEl = media;
@@ -418,8 +418,8 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, 1920, 1080);
-    ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, 1920, 1080);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     const videoTracks = state.tracks.filter(t => t.kind === 'video' && !t.hidden);
     // Composite lower tracks first, then upper tracks.
     videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawVideoClip(ctx, c)));
