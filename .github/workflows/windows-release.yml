@@ -63,8 +63,8 @@ jobs:
       - name: Run unit and UI contract tests
         run: npm test
 
-      - name: Build Windows installer
-        run: npm run dist:win
+      - name: Build Windows installer (disable implicit publishing)
+        run: npm run dist:win -- --publish never
 
       - name: Verify installer and create checksum manifest
         shell: pwsh
