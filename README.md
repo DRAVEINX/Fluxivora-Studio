@@ -1,16 +1,17 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.5 — Motion Studio bronworkflow, effectstack en kleurtools.**
+**Huidige ontwikkelversie: 0.5.0-beta.5 — Motion Studio bronworkflow, keyframe-curves en 3D-LUT.**
 
 ### Nieuw in bèta.5
-- Bronmonitor naast de programmamonitor, met bron-in/out en invoegen op de playhead.
+- Bronmonitor naast de programmamonitor, met afspelen, scrubben, bron-in/out en invoegen op de playhead.
 - Afzonderlijke mediabibliotheek met zoeken, filters, bronbestanden koppelen na heropenen en metadata die blijft bestaan wanneer timelineclips worden verwijderd.
 - Niet-destructieve effectstack met schakelen, opnieuw ordenen en verwijderen.
 - Clipkleurcorrectie voor exposure, contrast, saturatie, temperatuur en tint; RGB-histogram en luma-waveform als visuele hulpmiddelen.
-- Keyframe-interpolatie met lineair, ease-in, ease-out, ease-in-out en hold.
+- Visuele keyframe-curve-editor om punten te verslepen, met lineair, ease-in, ease-out, ease-in-out en hold.
+- Gevalideerde 3D `.cube`-output-LUT's die via WebGL2 op de samengestelde programmamonitor worden toegepast en bij het project worden opgeslagen.
 - De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief, en geïmporteerde .cube-LUT's, proxy- en multicam-workflows en een frame-voor-frame offline render-engine met MP4/H.264-export moeten nog worden gebouwd. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief en de output-LUT geldt voor de samengestelde programmamonitor, niet als afzonderlijke per-clip LUT-stack. Proxy- en multicam-workflows en een frame-voor-frame offline render-engine met MP4/H.264-export moeten nog worden gebouwd. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
 
 **Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 
