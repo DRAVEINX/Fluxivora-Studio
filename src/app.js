@@ -47,6 +47,7 @@
   let recoveryTimer = null;
   let recoveryQueue = Promise.resolve();
   let recoveryFailureNotified = false;
+  let closePreparationCompleted = false;
 
   const descriptions = {
     pixel: { title: 'Pixel Lab', subtitle: 'Foto’s verfijnen en pixel voor pixel creëren', glyph: '▧' },
@@ -1627,7 +1628,18 @@
   });
   window.addEventListener('keyup', (event) => { if (event.code === 'Space') state.spaceHeld = false; });
   // Never cancel the native window close: request a last recovery snapshot, then let Electron exit.
-  window.addEventListener('beforeunload', () => { if (state.dirty) { cancelRecoveryTimer(); persistRecoverySnapshot(); } });
+  window.fluxivora?.onPrepareClose?.(async () => {
+    try {
+      cancelRecoveryTimer();
+      await persistRecoverySnapshot();
+    } catch (_) {
+      // Closing the app must remain possible even if recovery storage fails.
+    } finally {
+      closePreparationCompleted = true;
+      window.fluxivora?.confirmClose?.();
+    }
+  });
+  window.addEventListener('beforeunload', () => { if (state.dirty && !closePreparationCompleted) { cancelRecoveryTimer(); persistRecoverySnapshot(); } });
 
   // Start in the welcome view. Each workspace has a separate object collection inside one project.
   showWelcome(); updateHistoryButtons(); offerRecoveryIfAvailable();
