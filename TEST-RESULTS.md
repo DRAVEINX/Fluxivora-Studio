@@ -11,11 +11,12 @@ Controles bijgewerkt op 17 oktober 2026.
 
 ## Motion Studio beta.5 — nieuwe testscope
 
-- Dedicated source monitor, media-bin search/filter, in/out selection, insert-at-playhead, and source relinking are covered by UI contract checks.
-- Color-grade controls and effect-stack actions are wired to clip metadata and the existing undo/redo snapshots.
+- Source monitor playback/scrubbing, media-bin search/filter, in/out selection, insert-at-playhead, source relinking and project migration are covered by UI contract checks.
+- Color-grade controls, effect-stack actions, the draggable keyframe curve editor and output-LUT history are wired to project/clip metadata and undo/redo snapshots.
+- 3D `.cube` output LUTs are validated and applied to the composed program canvas with a WebGL2 3D texture; LUT data is stored in sequence metadata.
 - RGB histogram and luma waveform are derived from a reduced-size copy of the program canvas to limit analysis overhead.
 - The source bin records asset metadata only; actual source media remains external and must be relinked after reopening a project.
-- Browser/Electron codec availability, visual color accuracy, long-duration media, 4K export performance, proxies, multicam, and final offline MP4/H.264 rendering still require separate implementation and practical validation.
+- Scope accuracy is indicative rather than broadcast-calibrated. WebGL2 support, visual color fidelity across displays, long-duration media, 4K export performance, managed proxies, multicam, and final offline MP4/H.264 rendering still require separate implementation and practical validation.
 
 ## Nog niet geverifieerd
 
