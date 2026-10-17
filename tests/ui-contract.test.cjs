@@ -346,3 +346,18 @@ test('nieuw ontwerp overschrijft geen niet-opgeslagen project zonder eerst op te
   assert.match(app, /title: 'Niet-opgeslagen wijzigingen'[\s\S]*?confirmText: 'Opslaan en nieuw ontwerp'/);
   assert.match(app, /const saved = await saveProject\(\);\s*if \(!saved\) return false;\s*createProject\(workspace, name\);/);
 });
+
+test('graceful sluiten wacht op een herstelkopie maar heeft een vaste timeout', () => {
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
+  assert.match(main, /win\.on\('close'/);
+  assert.match(main, /event\.preventDefault\(\)/);
+  assert.match(main, /win\.webContents\.send\('app:prepare-close'\)/);
+  assert.match(main, /CLOSE_PREPARATION_TIMEOUT_MS = 3500/);
+  assert.match(main, /ipcMain\.on\('app:close-prepared'/);
+  assert.match(main, /BrowserWindow\.fromWebContents\(event\.sender\)/);
+  assert.match(preload, /onPrepareClose:/);
+  assert.match(preload, /confirmClose: \(\) => ipcRenderer\.send\('app:close-prepared'\)/);
+  assert.match(app, /await persistRecoverySnapshot\(\)/);
+  assert.match(app, /closePreparationCompleted = true/);
+});
