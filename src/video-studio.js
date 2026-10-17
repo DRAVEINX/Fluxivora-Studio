@@ -800,7 +800,17 @@
       state.clips.forEach(c => disposeMedia(c, true));
       state.history.length = 0; state.redo.length = 0;
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
+      state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); });
       state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true })) : [];
+      if (!Array.isArray(data.assets)) {
+        const seenAssets = new Set();
+        data.clips.filter(clip => clip && ['video','audio'].includes(clip.type)).forEach(clip => {
+          const key = clip.type + ':' + String(clip.name || 'Media').toLowerCase();
+          if (seenAssets.has(key)) return;
+          seenAssets.add(key);
+          state.assets.push({ id: uid('asset'), name: String(clip.name || 'Media').slice(0, 512), type: clip.type, duration: Math.max(0, Number(clip.duration) || 0), url: null, file: null, missing: true });
+        });
+      }
       state.markers = Array.isArray(data.sequence?.markers) ? data.sequence.markers.slice(0, 500).map(m => ({ id: String(m.id || uid('marker')), time: Math.max(0, Math.min(86400, Number(m.time) || 0)), label: String(m.label || 'Marker').slice(0, 80) })).sort((a, b) => a.time - b.time) : [];
       state.tracks = data.tracks.slice(0, 24).map(t => ({
         id: String(t.id || uid('track')), name: String(t.name || 'Track').slice(0, 12),
@@ -852,6 +862,7 @@
       $('video-preview').pause(); $('video-preview').removeAttribute('src'); $('video-preview').load();
       $('video-empty').classList.remove('hidden');
       refresh(); renderPreview();
+      window.dispatchEvent(new Event('fluxivora:session-opened'));
       notice('Montage geopend. Voeg de bronbestanden opnieuw toe om ontbrekende clips te koppelen.');
     } catch (error) { notice('Montage openen mislukt: ' + error.message); }
     finally { $('video-session-file').value = ''; }
