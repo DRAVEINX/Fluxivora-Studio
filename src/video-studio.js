@@ -1038,7 +1038,7 @@
     }));
     window.addEventListener('beforeunload', () => { state.clips.forEach(c => disposeMedia(c, true)); state.assets.forEach(a => { if (a.url) URL.revokeObjectURL(a.url); }); });
   }
-  window.FluxivoraMotionStudio = { state, selected, track, createClip, pushHistory, refresh, renderPreview, seekTo, stopPlayback, notice, uid };
+  window.FluxivoraMotionStudio = { state, selected, track, createClip, createMedia, pushHistory, refresh, renderPreview, seekTo, stopPlayback, notice, uid };
   wire();
   refresh();
 })();
