@@ -833,6 +833,20 @@ void main() {
   }
 
   wireCurveEditor();
+  api.applyProgramLut = applyProgramLut;
+  $('video-lut-load').addEventListener('click', () => $('video-lut-file').click());
+  $('video-lut-file').addEventListener('change', event => importProgramLut(event.target.files?.[0]));
+  $('video-lut-clear').addEventListener('click', () => {
+    if (!state.programLut) return;
+    api.pushHistory();
+    state.programLut = null;
+    lutTextureRef = null;
+    renderLutControls();
+    api.refresh();
+    api.renderPreview();
+    api.notice('Output-LUT verwijderd.');
+  });
+
   $('video-view-program').addEventListener('click', () => setMonitorMode('program'));
   $('video-view-source').addEventListener('click', () => setMonitorMode('source'));
   $('video-source-mark-in').addEventListener('click', () => setMark('in'));
@@ -896,6 +910,7 @@ void main() {
   window.addEventListener('fluxivora:asset-file-imported', event => registerImportedFile(event.detail));
   window.addEventListener('fluxivora:motion-refresh', () => {
     renderMediaBin();
+    renderLutControls();
     renderGrades();
     const selected = api.selected();
     $('video-source-insert').disabled = !(activeSource() && !activeSource().missing && activeSource().file);
@@ -906,6 +921,7 @@ void main() {
   // Older beta.4 sessions have no independent bin metadata; infer it from available clips.
   state.clips.filter(clip => clip.type !== 'title' && clip.file).forEach(clip => registerImportedClip(clip.id));
   renderMediaBin();
+  renderLutControls();
   renderGrades();
   paintScopes();
 })();
