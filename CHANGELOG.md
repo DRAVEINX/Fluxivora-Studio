@@ -1,3 +1,25 @@
+## 0.5.0-beta.5 — Motion Studio source workflow, grading and scopes
+
+- Added a separate source monitor with playback, scrubbing, source in/out marks and insert-at-playhead alongside the program monitor.
+- Added a searchable media bin with video/audio filters, source relinking after reopening projects, and asset metadata that remains separate from timeline clips.
+- Added a reversible effect stack with enable/disable, reordering and removal.
+- Added clip-level exposure, contrast, saturation, temperature and tint controls; RGB histogram and luma waveform are indicative rather than calibrated scopes.
+- Added a visual keyframe curve editor where existing points can be dragged in time/value, alongside linear, ease-in, ease-out, ease-in-out and hold interpolation.
+- Added validated 3D .cube output-LUT import and WebGL2 application to the composed program monitor. LUT metadata/data is saved in the montage project.
+- Added linking/relinking of pre-generated video proxy files and an optional proxy-preview mode; export is blocked in proxy mode to prevent accidental low-resolution output.
+- Added manual multicam angle groups with per-source timeline-zero offsets and cut-to-angle editing at the playhead. The original audio track remains intact; waveform/timecode auto-sync and a live multiview monitor are not yet implemented.
+- Existing Pixel Lab, Vector Forge and Page Studio remain intact.
+- Still not part of this beta: per-clip LUT/effect automation, automatic proxy generation/batch management, automatic multicam sync/live multiview monitoring, offline/frame-accurate rendering and MP4/H.264 + AAC encoding. Export remains real-time WebM and depends on Electron's available codecs.
+
+## 0.5.0-beta.4 — Motion Studio multi-track workflow
+
+- Motion Studio upgraded from a single video lane to editable multi-track video, audio and title tracks.
+- Added timeline ruler, zoom, playhead, clip drag/reorder, compatible-track drop targets and edge trim handles.
+- Added title overlays, opacity/scale/fit and playback speed, clip volume, fades, look filters, track mute/hide/lock and undo/redo.
+- Added a canvas-based layered preview, Web Audio mix graph and quality-selectable real-time WebM export with audio when supported by Electron.
+- Montage files persist track/clip metadata and require source media to be relinked; source files are never embedded in the project JSON.
+- Existing three creative workspaces stay available; the build script now syntax-checks Motion Studio directly.
+
 # Wijzigingen
 
 ## 0.5.0-beta.1 — 17 oktober 2026

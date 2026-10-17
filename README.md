@@ -1,23 +1,23 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.2 — uitbreiding van de gereedschapssets.**
+**Huidige ontwikkelversie: 0.5.0-beta.5 — Motion Studio bronworkflow, keyframe-curves en 3D-LUT.**
 
-### Nieuw in bèta.2
+### Nieuw in bèta.5
+- Bronmonitor naast de programmamonitor, met afspelen, scrubben, bron-in/out en invoegen op de playhead.
+- Afzonderlijke mediabibliotheek met zoeken, filters, bronbestanden koppelen na heropenen en metadata die blijft bestaan wanneer timelineclips worden verwijderd.
+- Niet-destructieve effectstack met schakelen, opnieuw ordenen en verwijderen.
+- Clipkleurcorrectie voor exposure, contrast, saturatie, temperatuur en tint; RGB-histogram en luma-waveform als visuele hulpmiddelen.
+- Visuele keyframe-curve-editor om punten te verslepen, met lineair, ease-in, ease-out, ease-in-out en hold.
+- Gevalideerde 3D `.cube`-output-LUT's die via WebGL2 op de samengestelde programmamonitor worden toegepast en bij het project worden opgeslagen.
+- Proxybestanden kunnen aan originele videobronnen worden gekoppeld; proxy-preview is optioneel en export is geblokkeerd zolang deze preview actief is.
+- Multicamgroepen met meerdere videobronnen, handmatige sync-offsets per hoek en cuts naar een gekozen camerahoek op de playhead; de bestaande audiotrack blijft behouden.
+- De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-- Extra vormen in alle werkruimtes: vijfhoek, zeshoek, ruit, pijl, achthoek en tekstballon.
-- Afgeronde rechthoeken met opgeslagen hoekradius.
-- Pixel Lab krijgt een lijn-, pen- en pipetgereedschap.
-- Vector Forge krijgt afbeelding plaatsen, pipet en objectgum.
-- Page Studio krijgt vrije paden, Bézier-curves met ankerbewerking, pipet en objectgum.
-- Nieuwe vormen en afgeronde rechthoeken zijn opgenomen in projectvalidatie en SVG-export.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De scopes zijn indicatief en de output-LUT geldt voor de samengestelde programmamonitor, niet als afzonderlijke per-clip LUT-stack. Automatische proxy-generatie, automatische sync op waveform/tijdcode en een echte live-multicam-viewer moeten nog worden gebouwd. Ook ontbreekt een frame-voor-frame offline render-engine met MP4/H.264-export. De huidige WebM-export blijft realtime en is afhankelijk van de beschikbare Electron-codecs. De bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moet je de bronnen opnieuw koppelen.
 
-**Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
+**Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-beta.2 brengt drie werkruimtes samen in één projectbestand:
-
-- **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
-- **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.
-- **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
+Fluxivora Studio is een local-first Windows-desktopproject van DRAVEINX. De montage wordt lokaal verwerkt; media worden niet automatisch naar een server geüpload.
 
 ## Stabiliteitsbasis uit 0.5.0-alpha.27
 

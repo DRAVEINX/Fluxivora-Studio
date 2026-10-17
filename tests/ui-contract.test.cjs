@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.3');
+  assert.equal(pkg.version, '0.5.0-beta.5');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -503,14 +503,210 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
   assert.match(app, /window\.setTimeout\(finish, 3300\)/);
 });
 
-test('Motion Studio heeft video-import, preview, tijdlijn, trimmen en exportbediening', () => {
-  for (const id of ['video-screen','video-files','video-preview','video-timeline','video-in','video-out','video-save-session','video-open-session','video-export']) {
+test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag', () => {
+  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-marker','video-snap','video-fit-timeline','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-split-clip','video-ripple-delete','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function addTrack\(/);
+  assert.match(video, /function addTitle\(/);
+  assert.match(video, /function addKeyframe\(/);
+  assert.match(video, /function splitSelectedAtPlayhead\(/);
+  assert.match(video, /function removeSelected\(/);
+  assert.match(video, /function snapTime\(/);
+  assert.match(video, /function addCrossfade\(/);
+  assert.match(video, /function computeAudioWaveform\(/);
+  assert.match(video, /video-clip-waveform/);
+  assert.match(video, /function animatedValue\(/);
   assert.match(video, /function importFiles\(/);
-  assert.match(video, /function trim\(/);
+  assert.match(video, /function renderTracks\(/);
+  assert.match(video, /function renderPreview\(/);
   assert.match(video, /function exportVideo\(/);
+  assert.match(video, /createMediaStreamDestination\(/);
+  assert.match(video, /function undo\(/);
   assert.match(video, /fluxivora-video-project/);
   assert.match(html, /src="video-studio.js"/);
+});
+
+test('Motion Studio projecteert meerdere video-, audio- en titeltracks afzonderlijk', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /kind: 'video'/);
+  assert.match(video, /kind: 'audio'/);
+  assert.match(video, /kind: 'title'/);
+  assert.match(video, /videoTracks\.slice\(\)\.reverse\(\)/);
+  assert.match(video, /compatibleTrack\(/);
+  assert.match(video, /function saveSession\(/);
+  assert.match(video, /async function openSession\(/);
+});
+
+test('Motion Studio heeft snelheidsregeling, key-effecten, fades en keyboard undo', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const feature of ['fadeIn','fadeOut','speed','opacity','scale','filter','video-undo','video-redo','e.shiftKey ? redo() : undo()']) {
+    assert.ok(video.includes(feature), 'Ontbrekend video-editingonderdeel: ' + feature);
+  }
+  assert.match(video, /function alphaFor\(/);
+  assert.match(video, /function effectFilter\(/);
+});
+
+test('keyframe-animatie en crossfade bewaren hun projectmetadata', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /keyframes: Array\.isArray\(c\.keyframes\)/);
+  assert.match(video, /c\.fadeIn = duration/);
+  assert.match(video, /previous\.fadeOut = duration/);
+  assert.match(video, /animatedValue\(c, 'opacity'/);
+  assert.match(video, /animatedValue\(c, 'scale'/);
+});
+
+test('bèta.3-montages worden gemigreerd in plaats van afgewezen', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /Migrate the original beta\.3 single-track montage format/);
+  assert.match(video, /Oud montageproject omgezet naar de multi-track tijdlijn/);
+  assert.match(video, /let cursor = 0;/);
+});
+
+test('Motion Studio genereert lokale filmstrip-miniaturen voor videoclips', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function captureVideoThumbnails\(/);
+  assert.match(video, /video-clip-filmstrip/);
+  assert.match(video, /canvas\.toDataURL\('image\/jpeg'/);
+});
+
+test('Motion Studio ondersteunt sequence markers, split shortcuts en 25fps-tijdcode', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const feature of ["function addMarker(", "state.markers.map", "e.key.toLowerCase() === 'm'", "e.key.toLowerCase() === 'i'", "e.key.toLowerCase() === 'o'", "const SEQUENCE_FPS = 25", "captureStream(SEQUENCE_FPS)"]) {
+    assert.ok(video.includes(feature), 'Ontbrekend montageonderdeel: ' + feature);
+  }
+});
+
+test('Motion Studio plaatst trackkoppen naast de correcte timeline-lanes', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /row\.append\(header, lane\)/);
+  assert.match(video, /video-track-label/);
+  assert.match(video, /video-track-buttons/);
+  assert.match(video, /Track vergrendelen/);
+  assert.match(video, /Track dempen/);
+});
+
+test('Motion Studio rendert het volledige canvas op de gekozen exportresolutie', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /ctx\.fillRect\(0, 0, canvas\.width, canvas\.height\)/);
+  assert.match(video, /canvas\.width = size === '720p' \? 1280 : size === '4k' \? 3840 : 1920/);
+  assert.match(video, /canvas\.height = size === '720p' \? 720 : size === '4k' \? 2160 : 1080/);
+});
+
+test('Motion Studio ondersteunt snapping aan/uit en de tijdlijn passend maken', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function fitTimeline\(/);
+  assert.match(video, /if \(!state\.snap\) return Math\.max\(0, value\)/);
+  assert.match(video, /video-fit-timeline/);
+  assert.match(video, /video-snap/);
+});
+
+
+test('Motion Studio beta.5 biedt mediabibliotheek, bronmonitor en bronkoppeling', () => {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name','video-proxy-file','video-proxy-preview','video-proxy-status','video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut','video-bin-search','video-bin-filter','video-import-to-timeline','video-media-empty','video-view-program','video-view-source','video-source-player','video-source-audio','video-source-play','video-source-seek','video-source-time','video-source-in','video-source-out','video-source-mark-in','video-source-mark-out','video-source-insert','video-relink-files']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend bronworkflow-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /assets: state\.assets\.map/);
+  assert.match(video, /fluxivora:asset-imported/);
+  assert.match(video, /fluxivora:asset-file-imported/);
+  assert.match(video, /window\.FluxivoraMotionStudio =/);
+  assert.match(motion, /function renderMediaBin\(/);
+  assert.match(motion, /function selectSource\(/);
+  assert.match(motion, /function insertSource\(/);
+  assert.match(motion, /function relinkAsset\(/);
+});
+
+test('Motion Studio beta.5 ondersteunt effectstacks, kleurcorrectie, scopes en keyframe-easing', () => {
+  for (const id of ['video-effect-type','video-effect-add','video-effect-stack','video-grade-exposure','video-grade-contrast','video-grade-saturation','video-grade-temperature','video-grade-tint','video-scope-histogram','video-scope-waveform','video-keyframe-easing']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend grading-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /function effectFilter\(value, clip\)/);
+  assert.match(video, /colorAdjustments/);
+  assert.match(video, /curves = \{ linear:/);
+  assert.match(motion, /function renderEffectStack\(/);
+  assert.match(motion, /function paintScopes\(/);
+  assert.match(motion, /function applyGrade\(/);
+  assert.match(html, /src="motion-pro\.js"/);
+});
+
+
+test('Motion Studio bronmonitor ondersteunt afspelen, scrubben en nauwkeurige bronmarkeringen', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  for (const feature of ['function activeSourcePlayer(', 'function updateSourceTransport(', 'function toggleSourcePlayback(', "'timeupdate','loadedmetadata','durationchange','play','pause','ended','seeking','seeked'", 'player.addEventListener(type, updateSourceTransport)', 'function setMark(', 'function setSourcePoint(']) {
+    assert.ok(motion.includes(feature), 'Ontbrekend bronmonitoronderdeel: ' + feature);
+  }
+  assert.match(html, /id="video-source-play"/);
+  assert.match(html, /id="video-source-seek"/);
+});
+
+
+test('Motion Studio heeft een visuele, versleepbare keyframe-curve-editor', () => {
+  assert.match(html, /id="video-curve-property"/);
+  assert.match(html, /id="video-curve-canvas"/);
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /function renderCurveEditor\(/);
+  assert.match(motion, /function wireCurveEditor\(/);
+  assert.match(motion, /canvas\.addEventListener\('pointerdown'/);
+  assert.match(motion, /canvas\.addEventListener\('pointermove'/);
+  assert.match(motion, /curveEase = \{/);
+  assert.match(motion, /function curveValueAt\(/);
+});
+
+
+test('Motion Studio ondersteunt gevalideerde 3D .cube-output-LUTs', () => {
+  for (const id of ['video-lut-load','video-lut-clear','video-lut-file','video-lut-status','video-lut-name']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend LUT-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /function normaliseProgramLut\(/);
+  assert.match(video, /lut: state\.programLut/);
+  assert.match(video, /applyProgramLut\(canvas\)/);
+  assert.match(motion, /async function parseCubeLut\(/);
+  assert.match(motion, /LUT_3D_SIZE/);
+  assert.match(motion, /gl\.texImage3D\(/);
+  assert.match(motion, /function applyProgramLut\(/);
+  assert.match(motion, /api\.applyProgramLut = applyProgramLut/);
+});
+
+
+test('Motion Studio kan proxybestanden koppelen zonder de originele media te vervangen', () => {
+  for (const id of ['video-proxy-file','video-proxy-preview','video-proxy-status']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend proxy-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /assetId/);
+  assert.match(video, /proxyName: a\.proxyName/);
+  assert.match(video, /hasProxyPreview/);
+  assert.match(motion, /function applyProxyPreview\(/);
+  assert.match(motion, /async function linkProxyFile\(/);
+  assert.match(motion, /function findAssetForClip\(/);
+  assert.match(motion, /asset\.proxyUrl/);
+  assert.match(motion, /video-proxy-preview/);
+});
+
+
+test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
+  for (const id of ['video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend multicam-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(video, /multicamGroups/);
+  assert.match(video, /activeAngleAssetId/);
+  assert.match(video, /function splitSelectedAtPlayhead/);
+  assert.match(video, /videoPosition = angleAsset/);
+  assert.match(motion, /function createMulticamGroup\(/);
+  assert.match(motion, /function renderMulticamGroups\(/);
+  assert.match(motion, /function attachMulticamGroup\(/);
+  assert.match(motion, /function cutToMulticamAngle\(/);
+  assert.match(motion, /Bron-offset bij tijdlijn 00:00/);
+  assert.match(motion, /const angleAsset = clip\.activeAngleAssetId/);
+  assert.match(motion, /api\.splitSelectedAtPlayhead\(\{ silent: true \}\)/);
 });

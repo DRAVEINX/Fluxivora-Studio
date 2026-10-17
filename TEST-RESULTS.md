@@ -1,4 +1,4 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.1
+# Testresultaten — Fluxivora Studio 0.5.0-beta.5
 
 Controles bijgewerkt op 17 oktober 2026.
 
@@ -9,6 +9,17 @@ Controles bijgewerkt op 17 oktober 2026.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
 - Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
 
+## Motion Studio beta.5 — nieuwe testscope
+
+- Source monitor playback/scrubbing, media-bin search/filter, in/out selection, insert-at-playhead, source relinking and project migration are covered by UI contract checks.
+- Color-grade controls, effect-stack actions, the draggable keyframe curve editor and output-LUT history are wired to project/clip metadata and undo/redo snapshots.
+- 3D `.cube` output LUTs are validated and applied to the composed program canvas with a WebGL2 3D texture; LUT data is stored in sequence metadata.
+- Proxy contracts cover pre-generated proxy linking/relinking, original-vs-proxy preview switching, persistent proxy filenames and prevention of proxy-quality exports.
+- Multicam contracts cover saved angle groups, manual timeline-zero source offsets, split-at-playhead angle cuts, angle source relinking, and independent original-audio playback.
+- RGB histogram and luma waveform are derived from a reduced-size copy of the program canvas to limit analysis overhead.
+- The source bin records asset metadata only; actual source media remains external and must be relinked after reopening a project.
+- Scope accuracy is indicative rather than broadcast-calibrated. WebGL2 support, visual color fidelity across displays, long-duration media, 4K export performance, automatic proxy generation, waveform/timecode-based multicam sync, live multiview monitoring, and final offline MP4/H.264 rendering still require separate implementation and practical validation.
+
 ## Nog niet geverifieerd
 
 - De gebruiker heeft bevestigd dat alpha.25, alpha.26 en alpha.27 op diens Windows-pc werken. Beta.1 moet na een groene CI-run op de pc worden getest.
@@ -16,3 +27,9 @@ Controles bijgewerkt op 17 oktober 2026.
 - De tests bewijzen niet dat elk abrupt stroomverlies of geforceerd beëindigen van Windows alle wijzigingen bewaart; de herstelkopie wordt lokaal geschreven en periodiek bijgewerkt. Beta.1 is daarom nog een testkandidaat, geen definitieve stabiele release.
 
 Een groene test-suite bevestigt de codecontroles, niet de volledige praktijktest op een Windows-pc.
+
+
+## Beta.4 — Motion Studio test scope
+- Added UI contract tests for multi-track video/audio/title capability, track rendering, source relinking, fades, speed/opacity/scale and undo/redo.
+- Added Motion Studio to the JavaScript syntax gate used by Windows CI.
+- CI will verify this branch in the pull request; real-world audio codec support, 4K performance and Windows interactive usability still require hands-on testing.

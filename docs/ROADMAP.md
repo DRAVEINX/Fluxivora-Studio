@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.2 (testkandidaat))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.5 (testkandidaat))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -63,6 +63,35 @@
 - GPU-versnelde filters waar stabiel, grote documenten, performance-profielen en crashherstel.
 - Toegankelijkheid, schaalbare UI, licht/donker thema, NL/EN en geautomatiseerde regressietests.
 
+## Motion Studio — professionele montage-uitbouw (beta.5 en volgende fases)
+
+### Afgerond in beta.5
+- Afzonderlijke bronmonitor en programmamonitor, bronweergave met afspelen/scrubben, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
+- Mediabronnen blijven als metadata in het montageproject staan wanneer een timelineclip wordt verwijderd; het bronbestand wordt niet in het project-JSON ingebed en moet na heropenen gekoppeld worden.
+- Reversibele effectstack met in-/uitschakelen, volgorde aanpassen en verwijderen.
+- Clip-kleurinstellingen voor exposure, contrast, saturatie, temperatuur en tint, plus RGB-histogram en luma-waveform van de samengestelde programmamonitor.
+- Visuele keyframe-curve-editor met versleepbare punten voor tijd/waarde, plus lineair, ease-in, ease-out, ease-in-out en hold.
+- Gevalideerde 3D `.cube`-output-LUT, toegepast via WebGL2 op de samengestelde programmamonitor en opgeslagen in het montageproject.
+- Vooraf gegenereerde proxybestanden aan originele video's koppelen/herkoppelen; preview kan tussen proxy en origineel wisselen en export is geblokkeerd bij proxy-preview.
+- Multicamgroepen maken uit meerdere videobronnen, handmatige bron-offsets bij tijdlijn 00:00 instellen en hoekwisselingen als cuts op de playhead maken; oorspronkelijke audio blijft apart.
+
+### Volgende fase — kleur en keyframes
+- Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
+- Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.5-LUT is een sequence/output-LUT.
+- Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.5-scopes zijn indicatief en niet gekalibreerd.
+- Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
+
+### Volgende fase — proxies en multicam
+- Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.5 biedt al handmatig koppelen en proxy-preview.
+- Automatische synchronisatie van multicambronnen via audiowaveform/tijdcode, live multiview met angle switching, audio-angle routing en robuuste source-offset validatie; beta.5 heeft handmatige offsets en cut-to-angle.
+- Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
+
+### Volgende fase — volwaardige offline render/export
+- Aparte render-engine/worker die sequenties frame voor frame rendert onafhankelijk van realtime playback.
+- Betrouwbare encoderintegratie voor MP4/H.264 met AAC, exportpresets, bitrate, framerate, schaal, kleurbehoud, voortgang, annuleren en nette foutherstel.
+- Regressieclips voor A/V-sync, fade-overgangen, keyframes, kleur, audio-mix, audio-clipping, en renderen na project-heropening.
+- Hardware-acceleratie alleen gebruiken na capability-detectie en fallback-tests; nooit aannemen dat elke Windows-machine dezelfde encoder ondersteunt.
+
 ## Release-gates vóór een publieke 1.0
 
 1. Volledige unit- en integratietest van import, save/reopen, undo/redo en export.
@@ -80,3 +109,13 @@
 - Polygon-geometrie wordt gevalideerd en bewaard bij projectopslag/heropenen en meegenomen in SVG-export.
 - De straal van afgeronde rechthoeken wordt bewaard in .fluxivora-projecten en SVG-export.
 - Acceptatie blijft afhankelijk van groene syntax-, unit- en UI-contracttests én een praktische Windows-test van tekenen, opslaan/heropenen en PNG/SVG/PDF-export.
+
+
+## 0.5.0-beta.5 — Motion Studio professional NLE foundation
+
+- Separate Motion Studio workspace with a sequence monitor, editable multi-track timeline and clip inspector.
+- Video, audio and title tracks. Add tracks, drag clips to compatible tracks, move clips in time, trim with edge handles, lock tracks, hide video tracks and mute audio tracks.
+- Clip controls for source in/out, timeline position, playback speed, opacity, scale, fit mode, volume, fades and a first set of look filters.
+- Canvas-based multi-layer preview with title rendering; Web Audio mixing and real-time WebM capture where supported by the installed Electron runtime.
+- Projects store track layout and edit metadata locally; source video/audio files remain external and must be relinked when reopening a project.
+- Version still uses a real-time recorder and WebM browser codecs. A complete professional parity target needs subsequent work on frame-accurate decode/encode, keyframe curves, color scopes/LUTs, transitions beyond fades, title/motion graphics, proxies, multicam, media conforming, autosave/recovery and a broader export codec pipeline.
