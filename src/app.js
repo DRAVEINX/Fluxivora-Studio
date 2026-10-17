@@ -1069,7 +1069,7 @@
     }
   }
 
-  async function openProject() {
+  async function openProjectFile() {
     try {
       const opened = await window.fluxivora.openProject();
       if (!opened) return;
@@ -1082,16 +1082,39 @@
     }
   }
 
+  async function openProject() {
+    if (state.project && state.dirty) {
+      showModal({
+        title: 'Niet-opgeslagen wijzigingen',
+        description: 'Sla je huidige project eerst op voordat je een ander project opent. Zo raak je geen werk kwijt.',
+        confirmText: 'Opslaan en openen',
+        cancelText: 'Annuleren',
+        onConfirm: async () => {
+          const saved = await saveProject();
+          if (!saved) return false;
+          await openProjectFile();
+          return true;
+        }
+      });
+      return;
+    }
+    await openProjectFile();
+  }
+
   async function saveProject(asNew = false) {
-    if (!state.project) return;
+    if (!state.project) return false;
     try {
       state.project.workspace = state.activeWorkspace;
       const payload = { name: state.project.name, json: JSON.stringify(state.project, null, 2), filePath: asNew ? null : state.filePath };
       const result = await window.fluxivora.saveProject(payload);
-      if (!result) return;
-      state.filePath = result.filePath; await markSaved(); notify('Project lokaal opgeslagen.', 'success');
+      if (!result) return false;
+      state.filePath = result.filePath;
+      await markSaved();
+      notify('Project lokaal opgeslagen.', 'success');
+      return true;
     } catch (err) {
       notify(`Opslaan mislukt: ${err.message || 'onbekende fout'}`, 'error');
+      return false;
     }
   }
 
