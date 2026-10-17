@@ -397,7 +397,7 @@
         if (!c || !compatibleTrack(c, t)) { notice('Dit type clip past niet op deze track.'); return; }
         pushHistory();
         c.trackId = t.id;
-        c.start = Math.max(0, (e.clientX - lane.getBoundingClientRect().left) / state.zoom);
+        c.start = snapTime((e.clientX - lane.getBoundingClientRect().left) / state.zoom, c.id);
         state.selected = c.id; state.activeTrack = t.id; refresh();
       });
       state.clips.filter(c => c.trackId === t.id).forEach(c => {
@@ -634,6 +634,53 @@
     $('footer-workspace').textContent = 'Motion Studio';
     refresh(); renderPreview();
   }
+  function splitSelectedAtPlayhead() {
+    const c = selected();
+    if (!c) return;
+    const relative = state.playhead - c.start;
+    if (relative < 0.05 || relative > clipLength(c) - 0.05) {
+      notice('Zet de playhead binnen een clip om deze te splitsen.');
+      return;
+    }
+    pushHistory();
+    const original = { ...metaClip(c), keyframes: (c.keyframes || []).map(frame => ({...frame})), file: c.file, url: c.url, missing: c.missing };
+    const splitSource = c.in + relative * c.speed;
+    const rightFrames = original.keyframes.filter(frame => frame.time > relative).map(frame => ({...frame, time: frame.time - relative}));
+    c.out = splitSource;
+    c.keyframes = original.keyframes.filter(frame => frame.time <= relative);
+    const right = {
+      ...original, id: uid(), name: original.name + ' (deel 2)', trackId: c.trackId,
+      start: state.playhead, in: splitSource, out: original.out, keyframes: rightFrames,
+      file: original.file || null, url: original.url || null, mediaEl: null, audioEl: null,
+      audioSource: null, audioGain: null, missing: original.missing
+    };
+    if (right.type !== 'title' && right.url) createMedia(right);
+    state.clips.push(right);
+    state.selected = right.id; state.playhead = right.start;
+    refresh(); renderPreview();
+    notice('Clip gesplitst op de playhead.');
+  }
+  function removeSelected(ripple = false) {
+    const c = selected(); if (!c) return;
+    pushHistory();
+    const start = c.start, end = c.start + clipLength(c), trackId = c.trackId;
+    if (c.mediaEl) c.mediaEl.pause();
+    if (c.audioEl) c.audioEl.pause();
+    if (ripple) {
+      const duration = clipLength(c);
+      state.clips.filter(item => item.id !== c.id && item.trackId === trackId && item.start >= end - 0.02).forEach(item => { item.start = Math.max(start, item.start - duration); });
+    }
+    state.clips = state.clips.filter(item => item.id !== c.id);
+    state.selected = null;
+    refresh(); renderPreview();
+    notice(ripple ? 'Clip verwijderd; volgende clips op deze track zijn naar links geschoven.' : 'Clip uit de montage verwijderd.');
+  }
+  function snapTime(value, excludingId) {
+    const candidates = [state.playhead];
+    state.clips.filter(c => c.id !== excludingId).forEach(c => { candidates.push(c.start, c.start + clipLength(c)); });
+    const nearest = candidates.reduce((best, point) => Math.abs(point - value) < Math.abs(best - value) ? point : best, value);
+    return Math.abs(nearest - value) <= 0.16 ? Math.max(0, nearest) : Math.max(0, value);
+  }
   function addCrossfade() {
     const c = selected();
     if (!c || c.type !== 'video') { notice('Selecteer eerst een videoclips om een crossfade toe te voegen.'); return; }
@@ -715,6 +762,8 @@
     $('video-session-file').addEventListener('change', e => openSession(e.target.files?.[0]));
     $('video-export').addEventListener('click', exportVideo);
     $('video-add-title').addEventListener('click', addTitle);
+    $('video-split-clip').addEventListener('click', splitSelectedAtPlayhead);
+    $('video-ripple-delete').addEventListener('click', () => removeSelected(true));
     $('video-add-crossfade').addEventListener('click', addCrossfade);
     $('video-add-keyframe').addEventListener('click', addKeyframe);
     $('video-clear-keyframes').addEventListener('click', clearKeyframes);
@@ -733,7 +782,10 @@
       const typing = target && ['INPUT','TEXTAREA','SELECT'].includes(target.tagName);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
       else if (e.code === 'Space' && !typing && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); state.playing ? stopPlayback() : startPlayback(); }
-      else if (e.key === 'Delete' && !typing && !$('video-screen').classList.contains('hidden')) { const c = selected(); if (c) { pushHistory(); state.clips = state.clips.filter(x => x.id !== c.id); state.selected = null; refresh(); renderPreview(); } }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); splitSelectedAtPlayhead(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); saveSession(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); $('video-session-file').click(); }
+      else if (e.key === 'Delete' && !typing && !$('video-screen').classList.contains('hidden')) { removeSelected(e.altKey); }
     });
     document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.addEventListener('click', () => {
       if (b.dataset.workspace === 'video') show();
