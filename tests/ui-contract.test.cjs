@@ -502,3 +502,15 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
   assert.match(app, /function playStartupIntro\(/);
   assert.match(app, /window\.setTimeout\(finish, 3300\)/);
 });
+
+test('Motion Studio heeft video-import, preview, tijdlijn, trimmen en exportbediening', () => {
+  for (const id of ['video-screen','video-files','video-preview','video-timeline','video-in','video-out','video-save-session','video-open-session','video-export']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
+  }
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function importFiles\(/);
+  assert.match(video, /function trim\(/);
+  assert.match(video, /function exportVideo\(/);
+  assert.match(video, /fluxivora-video-project/);
+  assert.match(html, /src="video-studio.js"/);
+});
