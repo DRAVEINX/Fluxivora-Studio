@@ -10,7 +10,7 @@
 - Titels op een aparte track, fades, basislooks/kleurfilters en preview-compositing over meerdere videolagen.
 - Audiobestanden importeren en waar de browser-runtime dit ondersteunt audio meepakken in de realtime WebM-export.
 - Video-montageprojecten bewaren tracks, volgorde, trim, titel- en effectmetadata; bronbestanden blijven apart en moeten na openen opnieuw worden gekoppeld.
-- Undo/redo, zoom, 720p/1080p/4K WebM-renderkeuze en extra contracttests voor Motion Studio.
+- Undo/redo, zoom, sequence-markers, I/O-trimtoetsen, 25-fps-tijdcode, 720p/1080p/4K WebM-renderkeuze en extra contracttests voor Motion Studio.
 - De bestaande Pixel Lab-, Vector Forge- en Page Studio-functies blijven in dezelfde toepassing bestaan.
 
 **Let op:** dit is een eigen professionele montageomgeving, geen exacte pixel-voor-pixel-kloon van Adobe Premiere Pro. De eerste beta.4 mist nog onderdelen zoals een volledige keyframe-editor, geavanceerde kleurcorrectie, motion graphics, proxy-media, multicam, echte offline hardware-accelerated rendering en MP4/H.264-export.
