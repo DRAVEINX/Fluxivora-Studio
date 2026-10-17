@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -773,7 +773,7 @@
       format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut },
       tracks: state.tracks.map(t => ({...t})),
-      assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true })),
+      assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -838,7 +838,7 @@
       }));
       if (!state.tracks.length) state.tracks = [{id:'v1',name:'V1',kind:'video',hidden:false,muted:false,locked:false}];
       state.clips = data.clips.map(c => ({
-        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512),
+        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null,
         type: ['video','audio','title'].includes(c.type) ? c.type : 'video',
         trackId: String(c.trackId || state.tracks[0].id),
         start: Math.max(0, Math.min(86400, Number(c.start) || 0)),
