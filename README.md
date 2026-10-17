@@ -10,6 +10,7 @@ Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAV
 
 ## Nieuw in 0.5.0-alpha.22
 
+- Zoom met Ctrl/Cmd + `+` of `=` en Ctrl/Cmd + `-`; Ctrl/Cmd + `0` past het canvas aan het beschikbare scherm aan. Deze sneltoetsen respecteren actieve tekstvelden en keuzelijsten.
 - Verplaats geselecteerde objecten met de pijltjestoetsen (1 px) of Shift + pijltjestoetsen (10 px); Bézier-ankers en -handgrepen bewegen mee.
 
 - Zoom rond de muiscursor met Ctrl + muiswiel; gewoon scrollen blijft werken.
@@ -112,7 +113,7 @@ Dit is geen volledige vervanging van Photoshop, Illustrator of InDesign. Geavanc
 
 ## Status van tests en installatie
 
-De huidige codecontroles en 56 tests zijn geslaagd in de beschikbare ontwikkelomgeving. De Windows-installer is nog niet gebouwd of op Windows getest. Zie [TEST-RESULTS.md](TEST-RESULTS.md) voor de exacte grenzen van deze controle.
+De laatst gedocumenteerde controles zijn uitgevoerd op 17 oktober 2026: **63 tests geslaagd, 0 mislukt** en `npm run check` geslaagd. Dit zijn codecontroles; ze bewijzen niet dat de Windows-installer of de runtime op een echte Windows-pc is gevalideerd. Volgens [TEST-RESULTS.md](TEST-RESULTS.md) zijn de installerbuild en de GitHub Actions-run nog niet onafhankelijk bevestigd. Controleer daarom de nieuwste [GitHub Actions-runs](https://github.com/DRAVEINX/Fluxivora-Studio/actions) en test de installer op Windows voordat je deze alpha breder verspreidt.
 
 ## Licentie
 
