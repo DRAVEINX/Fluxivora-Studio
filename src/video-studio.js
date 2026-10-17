@@ -332,8 +332,9 @@
     tracks.replaceChildren(); ruler.replaceChildren();
     const maxTime = Math.max(20, timelineEnd() + 8);
     const width = Math.max(1100, maxTime * state.zoom);
-    $('video-timeline-content').style.width = width + 'px';
+    $('video-timeline-content').style.width = (width + 132) + 'px';
     ruler.style.width = width + 'px';
+    ruler.style.marginLeft = '132px';
     const step = state.zoom >= 72 ? 1 : state.zoom >= 36 ? 2 : 5;
     for (let t = 0; t <= maxTime; t += step) {
       const tick = document.createElement('button');
@@ -413,9 +414,10 @@
         }));
         lane.append(block);
       });
-      tracks.append(row, lane);
+      row.append(lane);
+      tracks.append(row);
     });
-    const playhead = $('video-playhead-line'); playhead.style.left = (state.playhead * state.zoom) + 'px'; playhead.style.height = (tracks.scrollHeight + 40) + 'px';
+    const playhead = $('video-playhead-line'); playhead.style.left = (132 + state.playhead * state.zoom) + 'px'; playhead.style.height = (tracks.scrollHeight + 40) + 'px';
     $('video-track-count').textContent = state.tracks.length + ' tracks';
   }
   function populateInspector() {
