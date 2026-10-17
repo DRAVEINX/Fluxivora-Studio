@@ -1,4 +1,4 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.1
+# Testresultaten — Fluxivora Studio 0.5.0-beta.4
 
 Controles bijgewerkt op 17 oktober 2026.
 
@@ -16,3 +16,9 @@ Controles bijgewerkt op 17 oktober 2026.
 - De tests bewijzen niet dat elk abrupt stroomverlies of geforceerd beëindigen van Windows alle wijzigingen bewaart; de herstelkopie wordt lokaal geschreven en periodiek bijgewerkt. Beta.1 is daarom nog een testkandidaat, geen definitieve stabiele release.
 
 Een groene test-suite bevestigt de codecontroles, niet de volledige praktijktest op een Windows-pc.
+
+
+## Beta.4 — Motion Studio test scope
+- Added UI contract tests for multi-track video/audio/title capability, track rendering, source relinking, fades, speed/opacity/scale and undo/redo.
+- Added Motion Studio to the JavaScript syntax gate used by Windows CI.
+- CI will verify this branch in the pull request; real-world audio codec support, 4K performance and Windows interactive usability still require hands-on testing.
