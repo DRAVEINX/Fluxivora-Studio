@@ -316,3 +316,24 @@ test('window-close handler does not block Electron closing while requesting reco
   assert.match(handler[0], /persistRecoverySnapshot\(\)/, 'Laatste herstelkopie wordt niet aangevraagd');
   assert.doesNotMatch(handler[0], /preventDefault|returnValue/, 'beforeunload blokkeert het sluiten van het venster');
 });
+
+test('openen van een ander project bewaart eerst wijzigingen van het huidige project', () => {
+  assert.match(app, /async function openProjectFile\(\)/);
+  assert.match(app, /async function openProject\(\)/);
+  assert.match(app, /if \(state\.project && state\.dirty\) \{\s*showModal\(\{/);
+  assert.match(app, /title: 'Niet-opgeslagen wijzigingen'/);
+  assert.match(app, /confirmText: 'Opslaan en openen'/);
+  assert.match(app, /const saved = await saveProject\(\);\s*if \(!saved\) return false;\s*await openProjectFile\(\);/);
+});
+
+test('saveProject reports cancellation or failure and confirms success only after saving', () => {
+  const start = app.indexOf('async function saveProject(');
+  assert.notEqual(start, -1, 'saveProject ontbreekt');
+  const end = app.indexOf('\n  }', start);
+  const source = app.slice(start, end);
+  assert.match(source, /if \(!state\.project\) return false/);
+  assert.match(source, /if \(!result\) return false/);
+  assert.match(source, /await markSaved\(\)/);
+  assert.match(source, /return true/);
+  assert.match(source, /catch \(err\)[\s\S]*?return false/);
+});
