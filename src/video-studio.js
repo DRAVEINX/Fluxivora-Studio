@@ -184,18 +184,21 @@
       probe.preload = 'metadata';
       probe.onloadedmetadata = () => {
         const duration = Number.isFinite(probe.duration) ? probe.duration : 0;
+        let imported;
         if (missing) {
           missing.url = url; missing.file = file; missing.duration = duration;
           missing.in = Math.max(0, Math.min(missing.in || 0, duration));
           missing.out = Math.max(missing.in, Math.min(missing.out || duration, duration));
           missing.missing = false;
           createMedia(missing);
+          imported = missing;
         } else {
           const preferred = type === 'audio' ? state.tracks.find(t => t.kind === 'audio') : state.tracks.find(t => t.kind === 'video' && t.id === state.activeTrack) || state.tracks.find(t => t.kind === 'video' && t.name === 'V1') || state.tracks.find(t => t.kind === 'video');
-          createClip({type, name: file.name, file, url, duration, trackId: preferred.id});
+          imported = createClip({type, name: file.name, file, url, duration, trackId: preferred.id});
         }
         refresh();
         renderPreview();
+        if (type === 'audio') computeAudioWaveform(file, imported.id);
         probe.removeAttribute('src'); probe.load();
       };
       probe.onerror = () => { URL.revokeObjectURL(url); notice('Kan bestand niet lezen: ' + file.name); };
@@ -203,6 +206,30 @@
     }
     if (kind === 'audio') $('video-audio-files').value = ''; else $('video-files').value = '';
     notice(files.length + (files.length === 1 ? ' bestand toegevoegd' : ' bestanden toegevoegd'));
+  }
+  async function computeAudioWaveform(file, clipId) {
+    if (!AudioContextClass || file.size > 100 * 1024 * 1024) return;
+    try {
+      const context = ensureAudioContext();
+      if (!context || typeof context.decodeAudioData !== 'function') return;
+      const decoded = await context.decodeAudioData((await file.arrayBuffer()).slice(0));
+      const item = state.clips.find(c => c.id === clipId);
+      if (!item || item.type !== 'audio') return;
+      const samples = decoded.getChannelData(0);
+      const bins = Math.max(64, Math.min(600, Math.ceil(decoded.duration * 8)));
+      const step = Math.max(1, Math.floor(samples.length / bins));
+      const peaks = [];
+      for (let i = 0; i < bins; i++) {
+        let peak = 0;
+        const end = Math.min(samples.length, (i + 1) * step);
+        for (let j = i * step; j < end; j++) peak = Math.max(peak, Math.abs(samples[j]));
+        peaks.push(peak);
+      }
+      item.waveform = peaks;
+      renderTracks();
+    } catch (_) {
+      // Waveforms are a preview enhancement; unsupported audio codecs do not block import.
+    }
   }
   function addTitle() {
     pushHistory();
@@ -413,7 +440,26 @@
         const left = document.createElement('span'); left.className = 'clip-trim trim-left'; left.title = 'Beginpunt trimmen';
         const right = document.createElement('span'); right.className = 'clip-trim trim-right'; right.title = 'Eindpunt trimmen';
         if (c.type !== 'title') block.append(left);
-        block.append(title, duration);
+        block.append(title);
+        if (c.type === 'audio' && Array.isArray(c.waveform) && c.waveform.length) {
+          const wave = document.createElement('canvas');
+          wave.className = 'video-clip-waveform';
+          wave.width = Math.min(600, Math.max(32, Math.floor(clipLength(c) * state.zoom)));
+          wave.height = 16;
+          wave.style.width = '100%';
+          wave.style.height = '16px';
+          const waveCtx = wave.getContext('2d');
+          if (waveCtx) {
+            waveCtx.fillStyle = '#79e3cd';
+            const barStep = wave.width / c.waveform.length;
+            c.waveform.forEach((peak, idx) => {
+              const h = Math.max(1, peak * (wave.height - 2));
+              waveCtx.fillRect(idx * barStep, (wave.height - h) / 2, Math.max(1, barStep * 0.58), h);
+            });
+          }
+          block.append(wave);
+        }
+        block.append(duration);
         if (c.type !== 'title') block.append(right);
         block.addEventListener('click', e => { e.stopPropagation(); state.selected = c.id; state.activeTrack = t.id; refresh(); });
         block.addEventListener('dragstart', e => { if (t.locked) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', c.id); });
