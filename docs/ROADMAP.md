@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.1 (testkandidaat))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.2 (testkandidaat))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -31,9 +31,9 @@
 - Alpha.25 is door de gebruiker bevestigd als werkend op de eigen Windows-pc.
 - Toegevoegd in alpha.26: undo/redo behoudt de objectselectie wanneer het geselecteerde object nog bestaat; verouderde Bézier-selectiestatus wordt gereset. De gebruiker heeft alpha.26 op Windows bevestigd als werkend.
 - Toegevoegd in alpha.27-broncode: inspector- en fotofilterwijzigingen maken pas een geschiedenisstap bij echte wijzigingen; no-op focus wist de redo-tak niet en filteraanpassingen markeren herstelbare wijzigingen direct als onopgeslagen.
-- Beta.1 is de eerste functievrijeze-testkandidaat. Tijdens de beta voegen we geen nieuwe functies toe; alleen noodzakelijke reparaties blijven toegestaan.
+- Beta.1 was de eerste functievrijeze-testkandidaat. Op basis van de gemelde ontbrekende gereedschappen voegt beta.2 een gecontroleerde uitbreiding van de drie werkruimtes toe; na deze uitbreiding geldt opnieuw een stabilisatieperiode.
 - De gebruiker heeft alpha.27 op Windows bevestigd als werkend en de alpha.27 CI/build was groen.
-- Om beta.1 te accepteren moet de Windows-praktijktest opslaan/sluiten/heropenen, PNG/SVG/PDF-export en herstelkopieën bevestigen. Daarna volgen de tests voor installeren, bijwerken en verwijderen vóór 1.0.0.
+- Om beta.2 te accepteren moet de Windows-praktijktest opslaan/sluiten/heropenen, PNG/SVG/PDF-export en herstelkopieën bevestigen. Daarna volgen de tests voor installeren, bijwerken en verwijderen vóór 1.0.0.
 
 ## Fase 3 — solide grafische basis
 
@@ -70,3 +70,13 @@
 3. Projecten met grote afbeeldingen, veel pagina’s en complexe SVG-bestanden getest.
 4. Rechten/attributies, componentlicenties, privacyverklaring, foutmeldingen en crash logging expliciet beoordeeld.
 5. Ondersteunde bestandsformaten en beperkingen zichtbaar documenteren; nooit compatibiliteit beloven zonder tests.
+
+
+## 0.5.0-beta.2 — extra gereedschappen
+
+- Pixel Lab: rechte lijn, pen als aparte bewerkbare padlaag, afgeronde rechthoek, extra geometrische vormen en pipet voor zichtbare canvaspixels.
+- Vector Forge: extra geometrische vormen, afgeronde rechthoek, afbeelding plaatsen, pipet en objectgum met bescherming voor vergrendelde lagen.
+- Page Studio: dezelfde extra vormen, vrije paden, Bézier-curves met bewerkbare ankerpunten, pipet en objectgum.
+- Polygon-geometrie wordt gevalideerd en bewaard bij projectopslag/heropenen en meegenomen in SVG-export.
+- De straal van afgeronde rechthoeken wordt bewaard in .fluxivora-projecten en SVG-export.
+- Acceptatie blijft afhankelijk van groene syntax-, unit- en UI-contracttests én een praktische Windows-test van tekenen, opslaan/heropenen en PNG/SVG/PDF-export.

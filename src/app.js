@@ -10,37 +10,69 @@
     dragMode: null, drawing: false, dragHistoryRecorded: false, dragHasMoved: false, startSnapshot: null, bezierPointIndex: null, bezierHandleType: null, selectedBezierPointIndex: null, spaceHeld: false, panDrag: null
   };
 
+  const POLYGON_TOOLS = new Set(['triangle', 'star', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech']);
   const toolsets = {
     pixel: [
       ['select', '↖', 'Selecteren', 'Selecteer en verplaats een object.'],
       ['brush', '✎', 'Penseel', 'Teken vrij met een zachte lijn.'],
+      ['pen', '⌁', 'Pen', 'Teken een nauwkeurige vrije lijn als aparte objectlaag.'],
       ['eraser', '⌫', 'Gum', 'Gum pixels en eerdere tekeningen uit.'],
+      ['line', '／', 'Lijn', 'Trek een rechte lijn met instelbare lijnkleur en dikte.'],
       ['rect', '▱', 'Rechthoek', 'Sleep om een rechthoek te tekenen.'],
+      ['roundrect', '▱', 'Afgeronde rechthoek', 'Teken een rechthoek met afgeronde hoeken.'],
       ['ellipse', '◯', 'Ellips', 'Sleep om een ellips te tekenen.'],
       ['triangle', '△', 'Driehoek', 'Teken een schaalbare driehoekvorm.'],
       ['star', '☆', 'Ster', 'Teken een vijfpuntige ster.'],
-      ['text', 'T', 'Tekst', 'Voeg tekst toe en pas die rechts aan.']
+      ['pentagon', '⬟', 'Vijfhoek', 'Teken een regelmatige vijfhoek.'],
+      ['hexagon', '⬢', 'Zeshoek', 'Teken een regelmatige zeshoek.'],
+      ['diamond', '◇', 'Ruit', 'Teken een ruitvorm.'],
+      ['arrow', '➜', 'Pijl', 'Teken een gevulde pijl naar rechts.'],
+      ['octagon', '⯃', 'Achthoek', 'Teken een regelmatige achthoek.'],
+      ['speech', '▱', 'Tekstballon', 'Teken een eenvoudige tekstballon.'],
+      ['text', 'T', 'Tekst', 'Voeg tekst toe en pas die rechts aan.'],
+      ['eyedropper', '◉', 'Pipet', 'Neem een zichtbare kleur van het canvas over.']
     ],
     vector: [
       ['select', '↖', 'Selecteren', 'Klik op een vorm en sleep deze om te verplaatsen.'],
       ['rect', '▱', 'Rechthoek', 'Maak een schaalbare vectorrechthoek.'],
+      ['roundrect', '▱', 'Afgeronde rechthoek', 'Maak een vectorrechthoek met afgeronde hoeken.'],
       ['ellipse', '◯', 'Ellips', 'Maak een schaalbare ellips.'],
       ['line', '／', 'Lijn', 'Sleep om een lijn te tekenen.'],
       ['triangle', '△', 'Driehoek', 'Teken een driehoek met instelbare vulling en lijn.'],
       ['star', '☆', 'Ster', 'Teken een vijfpuntige vectorster.'],
+      ['pentagon', '⬟', 'Vijfhoek', 'Teken een regelmatige vijfhoek.'],
+      ['hexagon', '⬢', 'Zeshoek', 'Teken een regelmatige zeshoek.'],
+      ['diamond', '◇', 'Ruit', 'Teken een ruitvorm.'],
+      ['arrow', '➜', 'Pijl', 'Teken een gevulde pijl naar rechts.'],
+      ['octagon', '⯃', 'Achthoek', 'Teken een regelmatige achthoek.'],
+      ['speech', '▱', 'Tekstballon', 'Teken een eenvoudige tekstballon.'],
       ['pen', '⌁', 'Vrije lijn', 'Sleep om een schaalbaar vrij pad te tekenen.'],
-      ['bezier', '⌒', 'Bézier-pen', 'Klik om ankerpunten te plaatsen; dubbelklik of druk Enter om de vloeiende curve af te sluiten.'],
-      ['text', 'T', 'Tekst', 'Voeg schaalbare vectortekst toe.']
+      ['bezier', '⌒', 'Bézier-pen', 'Klik om ankerpunten te plaatsen; dubbelklik of druk Enter om de curve af te sluiten.'],
+      ['text', 'T', 'Tekst', 'Voeg schaalbare vectortekst toe.'],
+      ['image', '▧', 'Afbeelding', 'Importeer en plaats een afbeelding op het canvas.'],
+      ['eyedropper', '◉', 'Pipet', 'Neem de vul- of lijnkleur van een vorm over.'],
+      ['object-eraser', '⌫', 'Objectgum', 'Verwijder een aangeklikt object; vergrendelde lagen blijven beschermd.']
     ],
     layout: [
       ['select', '↖', 'Selecteren', 'Klik op een object en sleep het op de pagina.'],
       ['text', 'T', 'Tekstkader', 'Voeg tekst toe; bewerk de inhoud rechts.'],
       ['image', '▧', 'Afbeelding', 'Importeer een afbeelding en plaats deze op de pagina.'],
       ['rect', '▱', 'Rechthoek', 'Voeg een vorm of kleurvlak toe.'],
+      ['roundrect', '▱', 'Afgeronde rechthoek', 'Voeg een afgerond kleurvlak toe.'],
       ['ellipse', '◯', 'Ellips', 'Voeg een cirkel of ellips toe.'],
+      ['line', '／', 'Lijn', 'Voeg een lijn toe aan je lay-out.'],
       ['triangle', '△', 'Driehoek', 'Voeg een driehoek toe aan je publicatie.'],
       ['star', '☆', 'Ster', 'Voeg een ster toe aan je publicatie.'],
-      ['line', '／', 'Lijn', 'Voeg een lijn toe aan je lay-out.']
+      ['pentagon', '⬟', 'Vijfhoek', 'Voeg een vijfhoek toe aan je publicatie.'],
+      ['hexagon', '⬢', 'Zeshoek', 'Voeg een zeshoek toe aan je publicatie.'],
+      ['diamond', '◇', 'Ruit', 'Voeg een ruit toe aan je publicatie.'],
+      ['arrow', '➜', 'Pijl', 'Voeg een pijl toe aan je publicatie.'],
+      ['octagon', '⯃', 'Achthoek', 'Voeg een achthoek toe aan je publicatie.'],
+      ['speech', '▱', 'Tekstballon', 'Voeg een tekstballon toe aan je publicatie.'],
+      ['pen', '⌁', 'Vrije lijn', 'Teken een vrij vectorpad op de pagina.'],
+      ['bezier', '⌒', 'Bézier-pen', 'Klik ankerpunten; dubbelklik of druk Enter om de curve af te sluiten.'],
+      ['eyedropper', '◉', 'Pipet', 'Neem de vul- of lijnkleur van een object over.'],
+      ['object-eraser', '⌫', 'Objectgum', 'Verwijder een aangeklikt object; vergrendelde lagen blijven beschermd.']
     ]
   };
 
@@ -373,7 +405,7 @@
     $('vector-canvas').classList.toggle('hidden', state.activeWorkspace !== 'vector');
     $('layout-canvas').classList.toggle('hidden', state.activeWorkspace !== 'layout');
     const bezierControls = $('bezier-point-controls');
-    const isBezierSelection = state.activeWorkspace === 'vector' && selected?.type === 'bezier' && !selectedLocked;
+    const isBezierSelection = ['vector', 'layout'].includes(state.activeWorkspace) && selected?.type === 'bezier' && !selectedLocked;
     bezierControls.classList.toggle('hidden', !isBezierSelection);
     if (isBezierSelection) {
       const count = selected.points?.length || 0;
@@ -412,7 +444,7 @@
     state.currentTool = tool;
     renderToolList();
     const canvas = activeSvgOrCanvas();
-    if (canvas) canvas.style.cursor = tool === 'select' ? 'default' : tool === 'text' ? 'text' : tool === 'image' ? 'copy' : 'crosshair';
+    if (canvas) canvas.style.cursor = tool === 'select' ? 'default' : tool === 'text' ? 'text' : ['image', 'eyedropper'].includes(tool) ? 'copy' : 'crosshair';
   }
 
   function activeSvgOrCanvas() {
@@ -532,8 +564,18 @@
           if (obj.stroke && obj.stroke !== 'none' && obj.strokeWidth > 0) { ctx.strokeStyle = obj.stroke; ctx.lineWidth = obj.strokeWidth; ctx.stroke(); }
         }
       } else if (obj.type === 'rect') {
-        if (obj.fill && obj.fill !== 'none') { ctx.fillStyle = obj.fill; ctx.fillRect(obj.x, obj.y, obj.w, obj.h); }
-        if (obj.stroke && obj.stroke !== 'none' && obj.strokeWidth > 0) { ctx.strokeStyle = obj.stroke; ctx.lineWidth = obj.strokeWidth; ctx.strokeRect(obj.x, obj.y, obj.w, obj.h); }
+        ctx.beginPath();
+        const radius = Math.min(Math.max(0, Number(obj.radius) || 0), Math.abs(obj.w) / 2, Math.abs(obj.h) / 2);
+        if (radius > 0) {
+          ctx.moveTo(obj.x + radius, obj.y);
+          ctx.arcTo(obj.x + obj.w, obj.y, obj.x + obj.w, obj.y + obj.h, radius);
+          ctx.arcTo(obj.x + obj.w, obj.y + obj.h, obj.x, obj.y + obj.h, radius);
+          ctx.arcTo(obj.x, obj.y + obj.h, obj.x, obj.y, radius);
+          ctx.arcTo(obj.x, obj.y, obj.x + obj.w, obj.y, radius);
+          ctx.closePath();
+        } else ctx.rect(obj.x, obj.y, obj.w, obj.h);
+        if (obj.fill && obj.fill !== 'none') { ctx.fillStyle = obj.fill; ctx.fill(); }
+        if (obj.stroke && obj.stroke !== 'none' && obj.strokeWidth > 0) { ctx.strokeStyle = obj.stroke; ctx.lineWidth = obj.strokeWidth; ctx.stroke(); }
       } else if (obj.type === 'ellipse') {
         ctx.beginPath(); ctx.ellipse(obj.x + obj.w / 2, obj.y + obj.h / 2, Math.max(0, Math.abs(obj.w / 2)), Math.max(0, Math.abs(obj.h / 2)), 0, 0, Math.PI * 2);
         if (obj.fill && obj.fill !== 'none') { ctx.fillStyle = obj.fill; ctx.fill(); }
@@ -597,7 +639,7 @@
       if (selected && selected.visible !== false) {
         const b = objectBounds(selected);
         svg.append(svgEl('rect', { x: b.x - 4, y: b.y - 4, width: Math.max(8, b.w + 8), height: Math.max(8, b.h + 8), fill: 'none', stroke: '#7568ff', 'stroke-width': 2, 'stroke-dasharray': '5 4', 'pointer-events': 'none' }));
-        if (workspace === 'vector' && selected.type === 'bezier' && state.currentTool === 'select') {
+        if (['vector', 'layout'].includes(workspace) && selected.type === 'bezier' && state.currentTool === 'select') {
           const points = selected.points || [];
           points.forEach((point, index) => {
             const previous = index > 0 ? Core.bezierSegmentHandles(points, index - 1) : null;
@@ -658,7 +700,7 @@
       $('opacity-value').textContent = `${$('opacity-slider').value}%`;
     }
     const bezierControls = $('bezier-point-controls');
-    const isBezierSelection = state.activeWorkspace === 'vector' && selected?.type === 'bezier' && !selectedLocked;
+    const isBezierSelection = ['vector', 'layout'].includes(state.activeWorkspace) && selected?.type === 'bezier' && !selectedLocked;
     bezierControls.classList.toggle('hidden', !isBezierSelection);
     if (isBezierSelection) {
       const count = selected.points?.length || 0;
@@ -767,6 +809,30 @@
     return null;
   }
 
+  function eraseObjectAtPoint(point, objects) {
+    const target = findObjectAt(point, objects);
+    if (!target) { notify('Geen object onder de objectgum.'); return; }
+    if (target.locked) { notify('Deze laag is vergrendeld. Ontgrendel haar eerst in het lagenpaneel.', 'error'); return; }
+    const index = objects.findIndex(item => item && item.id === target.id);
+    if (index < 0) return;
+    checkpoint();
+    objects.splice(index, 1);
+    if (state.selectedId === target.id) {
+      state.selectedId = null;
+      state.selectedBezierPointIndex = null;
+    }
+    markDirty('Object verwijderd');
+    renderAll();
+    notify('Object verwijderd.', 'success');
+  }
+
+  function sampleObjectColor(object) {
+    const color = [object?.fill, object?.stroke].find(value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value));
+    if (!color) { notify('Deze vorm heeft geen directe HEX-kleur om over te nemen.', 'error'); return; }
+    $('fill-color').value = color;
+    notify('Kleur ' + color.toUpperCase() + ' overgenomen.', 'success');
+  }
+
   function setShapeFromPoints(obj, start, end) {
     if (obj.type === 'line') {
       obj.x = start.x; obj.y = start.y; obj.w = end.x - start.x; obj.h = end.y - start.y;
@@ -774,6 +840,7 @@
       obj.x = Math.min(start.x, end.x); obj.y = Math.min(start.y, end.y);
       obj.w = Math.abs(end.x - start.x); obj.h = Math.abs(end.y - start.y);
       if (obj.type === 'polygon') obj.points = Core.polygonPoints(obj.polygonKind, obj.x, obj.y, obj.w, obj.h);
+      if (obj.type === 'rect' && Number(obj.radius) > 0) obj.radius = Math.min(Math.round(Math.min(obj.w, obj.h) * 0.18), obj.w / 2, obj.h / 2);
     }
     return obj;
   }
@@ -790,7 +857,10 @@
     }
     if (tool === 'text') return Core.makeObject('text', start.x, start.y, 0, 0, { fill: color, stroke, strokeWidth: width, fontSize: Number($('font-size').value || 32), text: 'Jouw tekst' });
     if (tool === 'image') return null;
-    if (tool === 'triangle' || tool === 'star') {
+    if (tool === 'roundrect') {
+      return Core.makeObject('rect', start.x, start.y, end.x - start.x, end.y - start.y, { fill: color, stroke, strokeWidth: width, radius: 4 });
+    }
+    if (POLYGON_TOOLS.has(tool)) {
       return Core.makeObject('polygon', start.x, start.y, end.x - start.x, end.y - start.y, { fill: color, stroke, strokeWidth: width, polygonKind: tool, points: Core.polygonPoints(tool, start.x, start.y, Math.abs(end.x - start.x), Math.abs(end.y - start.y)) });
     }
     return Core.makeObject(tool, start.x, start.y, end.x - start.x, end.y - start.y, { fill: color, stroke, strokeWidth: width });
@@ -812,7 +882,7 @@
     if (!obj || obj.type !== 'bezier') return false;
     if ((obj.points || []).length < 2) {
       state.draftObject = null;
-      renderSvgWorkspace('vector');
+      renderSvgWorkspace(state.activeWorkspace);
       notify('Plaats minimaal twee ankerpunten voor een Bézier-curve.', 'error');
       return false;
     }
@@ -835,7 +905,7 @@
     if (workspace !== state.activeWorkspace) return;
     const size = activeDocumentSize(), point = coordsFromPointer(event, svg, size), objects = activeObjects();
     const pointHandle = event.target.closest('[data-point-index]');
-    if (state.currentTool === 'select' && workspace === 'vector' && pointHandle) {
+    if (state.currentTool === 'select' && ['vector', 'layout'].includes(workspace) && pointHandle) {
       const targetObject = objects.find(o => o.id === pointHandle.getAttribute('data-id'));
       const pointIndex = Number(pointHandle.getAttribute('data-point-index'));
       const handleType = pointHandle.getAttribute('data-handle-type');
@@ -857,6 +927,13 @@
     }
     const idEl = event.target.closest('[data-id]');
     const target = idEl ? objects.find(o => o.id === idEl.getAttribute('data-id')) : null;
+    if (state.currentTool === 'object-eraser') { eraseObjectAtPoint(point, objects); return; }
+    if (state.currentTool === 'eyedropper') {
+      const sampled = target || findObjectAt(point, objects);
+      if (sampled) sampleObjectColor(sampled);
+      else notify('Klik op een vorm om de vul- of lijnkleur over te nemen.');
+      return;
+    }
     if (state.currentTool === 'select') {
       if (target) {
         if (state.selectedId !== target.id) state.selectedBezierPointIndex = null;
@@ -872,7 +949,7 @@
       } else { state.selectedId = null; state.selectedBezierPointIndex = null; state.movingObject = null; state.dragMode = null; }
       renderAll(); return;
     }
-    if (state.currentTool === 'bezier' && workspace === 'vector') {
+    if (state.currentTool === 'bezier' && workspace !== 'pixel') {
       if (!state.draftObject || state.draftObject.type !== 'bezier') {
         const color = $('stroke-color').value || '#d9d5ff';
         state.draftObject = Core.makeObject('bezier', point.x, point.y, 0, 0, { fill: 'none', stroke: color, strokeWidth: Number($('stroke-width').value || 2), points: [point] });
@@ -939,7 +1016,7 @@
 
   function svgPointerUp(event, workspace) {
     if (!state.project || workspace !== state.activeWorkspace) return;
-    if (state.currentTool === 'bezier' && workspace === 'vector') return;
+    if (state.currentTool === 'bezier' && workspace !== 'pixel') return;
     const svg = workspace === 'vector' ? $('vector-canvas') : $('layout-canvas');
     const size = activeDocumentSize(), point = coordsFromPointer(event, svg, size);
     if (state.dragMode === 'draw' && state.draftObject) {
@@ -961,6 +1038,18 @@
   function pixelPointerDown(event) {
     if (!state.project || event.button !== 0 || state.activeWorkspace !== 'pixel') return;
     const canvas = $('pixel-canvas'), size = activeDocumentSize(), point = coordsFromPointer(event, canvas, size), objects = activeObjects();
+    if (state.currentTool === 'eyedropper') {
+      try {
+        const x = Math.max(0, Math.min(canvas.width - 1, Math.floor(point.x)));
+        const y = Math.max(0, Math.min(canvas.height - 1, Math.floor(point.y)));
+        const pixel = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+        $('fill-color').value = '#' + [...pixel].slice(0, 3).map(value => value.toString(16).padStart(2, '0')).join('');
+        notify('Kleur ' + $('fill-color').value.toUpperCase() + ' overgenomen.', 'success');
+      } catch (_) {
+        notify('Deze pixelkleur kon niet worden gelezen. Probeer een andere plek.', 'error');
+      }
+      return;
+    }
     if (state.currentTool === 'select') {
       const target = findObjectAt(point, objects);
       state.selectedId = target?.id || null;
@@ -996,7 +1085,7 @@
       renderPixel(); return;
     }
     if (state.dragMode !== 'draw' || !state.draftObject || !state.pointerStart) return;
-    if (state.draftObject.type === 'stroke') state.draftObject.points.push(point);
+    if (state.draftObject.type === 'stroke' || state.draftObject.type === 'path') state.draftObject.points.push(point);
     else setShapeFromPoints(state.draftObject, state.pointerStart, point);
     const all = [...activeObjects(), state.draftObject];
     const ctx = canvas.getContext('2d');
@@ -1010,7 +1099,7 @@
     if (!state.project || state.activeWorkspace !== 'pixel') return;
     const canvas = $('pixel-canvas'), point = coordsFromPointer(event, canvas, activeDocumentSize());
     if (state.dragMode === 'draw' && state.draftObject) {
-      if (state.draftObject.type === 'stroke') state.draftObject.points.push(point);
+      if (state.draftObject.type === 'stroke' || state.draftObject.type === 'path') state.draftObject.points.push(point);
       else setShapeFromPoints(state.draftObject, state.pointerStart, point);
       finishDrawObject(state.draftObject);
     } else if (state.dragMode === 'move' && state.movingObject) {
@@ -1025,7 +1114,7 @@
 
   function addBezierAnchor() {
     const object = activeObjects().find(item => item.id === state.selectedId && item.type === 'bezier');
-    if (!object || state.activeWorkspace !== 'vector' || object.locked || object.points.length < 2) return;
+    if (!object || !['vector', 'layout'].includes(state.activeWorkspace) || object.locked || object.points.length < 2) return;
     let segmentIndex = 0, longest = -1;
     for (let i = 0; i < object.points.length - 1; i++) {
       const a = object.points[i], b = object.points[i + 1];
@@ -1554,7 +1643,7 @@
 
   function showHelp() {
     showModal({
-      title: 'Snel aan de slag', description: 'De huidige alpha bevat de eerste werkende tools. Bewaar je projecten als .fluxivora om ze later verder te bewerken.', confirmText: 'Begrepen', cancelText: 'Sluiten',
+      title: 'Snel aan de slag', description: 'De huidige bèta bevat uitgebreide gereedschappen voor foto, vector en pagina-opmaak. Bewaar je projecten als .fluxivora om ze later verder te bewerken.', confirmText: 'Begrepen', cancelText: 'Sluiten',
       body: (body) => {
         const list = document.createElement('div'); list.className = 'shortcut-list';
         const entries = [['Object precies verplaatsen', 'Pijltjes (1 px), Shift + pijltje (10 px)'], ['Opslaan', 'Ctrl + S'], ['Ongedaan maken', 'Ctrl + Z'], ['Opnieuw', 'Ctrl + Y'], ['Object verwijderen', 'Delete'], ['Object dupliceren', 'Ctrl + D'], ['Kopiëren / plakken', 'Ctrl + C / Ctrl + V'], ['Laag naar voren', 'Ctrl + ]'], ['Laag naar achteren', 'Ctrl + ['], ['Pixel export', 'PNG'], ['Vector export', 'SVG'], ['Lay-out export', 'Afdrukken → PDF'], ['Pagina dupliceren', 'Knop in Pagina’s'], ['Zoom in/uit', 'Knoppen, Ctrl + muiswiel of Ctrl + +/-'], ['Aanpassen aan scherm', 'Ctrl + 0'], ['Laag verbergen', 'Oog in Lagen'], ['Laag vergrendelen', 'Slot in Lagen'], ['Nieuw project', 'Start → Nieuw ontwerp']];
@@ -1659,7 +1748,7 @@
     svg.addEventListener('pointermove', (event) => svgPointerMove(event, workspace));
     svg.addEventListener('pointerup', (event) => svgPointerUp(event, workspace));
     svg.addEventListener('pointercancel', (event) => svgPointerUp(event, workspace));
-    if (workspace === 'vector') svg.addEventListener('dblclick', (event) => { if (state.currentTool === 'bezier' && state.draftObject?.type === 'bezier') { event.preventDefault(); finishBezierPath(); } });
+    if (workspace !== 'pixel') svg.addEventListener('dblclick', (event) => { if (state.currentTool === 'bezier' && state.draftObject?.type === 'bezier') { event.preventDefault(); finishBezierPath(); } });
   }
 
   const canvasScroll = $('canvas-scroll');

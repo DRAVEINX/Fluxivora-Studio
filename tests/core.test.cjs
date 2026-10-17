@@ -7,7 +7,7 @@ const validPngDataUrl = `data:image/png;base64,${Buffer.from('png-test').toStrin
 test('maakt één project met de drie werkruimtes aan', () => {
   const p = FluxCore.createProject('pixel', 'Test');
   assert.equal(p.format, 'fluxivora-project');
-  assert.equal(p.version, '0.5.0-beta.1');
+  assert.equal(p.version, '0.5.0-beta.2');
   assert.equal(p.name, 'Test');
   assert.equal(p.pixel.objects.length, 0);
   assert.equal(p.vector.objects.length, 0);
@@ -23,7 +23,7 @@ test('normaliseert oudere projectbestanden en pagina’s', () => {
     layout: { pages: [{ objects: [{ type: 'text', text: 'Hallo', x: '10' }] }] }
   });
   assert.equal(p.workspace, 'layout');
-  assert.equal(p.version, '0.5.0-beta.1');
+  assert.equal(p.version, '0.5.0-beta.2');
   assert.equal(p.layout.pages[0].objects[0].text, 'Hallo');
   assert.equal(p.layout.pages[0].objects[0].x, 10);
   assert.throws(() => FluxCore.normaliseProject({ format: 'onbekend' }), /geen Fluxivora-projectbestand/);
@@ -492,4 +492,29 @@ test('geschiedenis legt alleen echte inspectorwijzigingen vast en bewaart redo b
 
   before.name = 'Gewijzigde bron';
   assert.equal(undo[0].name, 'Voor', 'geschiedenissnapshot moet onafhankelijk blijven van het bronobject');
+});
+
+
+test('ondersteunt extra polygonvormen met geldige punten en behoud van projectdata', () => {
+  for (const kind of ['pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech']) {
+    const points = FluxCore.polygonPoints(kind, 10, 20, 120, 80);
+    assert.ok(points.length >= 4, kind + ' bevat minstens vier punten');
+    assert.ok(points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y)), kind + ' bevat alleen eindige coördinaten');
+    assert.ok(points.every(point => point.x >= 10 && point.x <= 130 && point.y >= 20 && point.y <= 100), kind + ' blijft binnen de vormgrenzen');
+    const project = FluxCore.normaliseProject({
+      format: 'fluxivora-project',
+      vector: { objects: [{ type: 'polygon', polygonKind: kind, x: 10, y: 20, w: 120, h: 80, points }] }
+    });
+    assert.equal(project.vector.objects[0].polygonKind, kind);
+    assert.match(FluxCore.serializeSvg(160, 120, project.vector.objects), /<polygon /);
+  }
+});
+
+test('bewaart de hoekradius van afgeronde rechthoeken na opslaan en heropenen', () => {
+  const project = FluxCore.normaliseProject({
+    format: 'fluxivora-project',
+    vector: { objects: [{ type: 'rect', x: 10, y: 20, w: 100, h: 60, radius: 12 }] }
+  });
+  assert.equal(project.vector.objects[0].radius, 12);
+  assert.match(FluxCore.serializeSvg(160, 120, project.vector.objects), /rx="12"/);
 });

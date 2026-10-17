@@ -104,7 +104,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.1');
+  assert.equal(pkg.version, '0.5.0-beta.2');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -464,4 +464,27 @@ test('photo-adjustmentsliders bewaren undo en markeren echte live-wijzigingen al
   assert.ok(app.includes('commitEditorEdit(id, beforeProject);'));
   assert.ok(app.includes("$('reset-adjustments-button').addEventListener('click', () => {"));
   assert.ok(app.includes('if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100) return;'));
+});
+
+
+test('beta.2 toont uitgebreide gereedschappen in Pixel Lab, Vector Forge en Page Studio', () => {
+  const start = app.indexOf('const toolsets = {');
+  const end = app.indexOf('let recoveryTimer', start);
+  assert.ok(start >= 0 && end > start, 'toolsets zijn in de app gedefinieerd');
+  const toolSource = app.slice(start, end);
+  const expected = {
+    pixel: ['line', 'roundrect', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech', 'eyedropper', 'pen'],
+    vector: ['image', 'roundrect', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech', 'eyedropper', 'object-eraser'],
+    layout: ['roundrect', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech', 'pen', 'bezier', 'eyedropper', 'object-eraser']
+  };
+  for (const workspace of Object.keys(expected)) {
+    const startWorkspace = toolSource.indexOf(workspace + ': [');
+    assert.ok(startWorkspace >= 0, 'werkruimte ontbreekt: ' + workspace);
+    const nextStarts = Object.keys(expected).map(key => toolSource.indexOf(key + ': [')).filter(index => index > startWorkspace).sort((a,b) => a-b);
+    const block = toolSource.slice(startWorkspace, nextStarts[0] ?? toolSource.length);
+    for (const name of expected[workspace]) assert.ok(block.includes("['" + name + "',"), workspace + ' mist gereedschap ' + name);
+  }
+  assert.match(app, /function eraseObjectAtPoint\(/);
+  assert.match(app, /function sampleObjectColor\(/);
+  assert.match(app, /getImageData\(x, y, 1, 1\)/);
 });

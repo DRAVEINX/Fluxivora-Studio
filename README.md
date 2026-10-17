@@ -1,8 +1,19 @@
 # Fluxivora Studio
 
+**Huidige ontwikkelversie: 0.5.0-beta.2 — uitbreiding van de gereedschapssets.**
+
+### Nieuw in bèta.2
+
+- Extra vormen in alle werkruimtes: vijfhoek, zeshoek, ruit, pijl, achthoek en tekstballon.
+- Afgeronde rechthoeken met opgeslagen hoekradius.
+- Pixel Lab krijgt een lijn-, pen- en pipetgereedschap.
+- Vector Forge krijgt afbeelding plaatsen, pipet en objectgum.
+- Page Studio krijgt vrije paden, Bézier-curves met ankerbewerking, pipet en objectgum.
+- Nieuwe vormen en afgeronde rechthoeken zijn opgenomen in projectvalidatie en SVG-export.
+
 **Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-beta.1 brengt drie werkruimtes samen in één projectbestand:
+Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-beta.2 brengt drie werkruimtes samen in één projectbestand:
 
 - **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
 - **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.

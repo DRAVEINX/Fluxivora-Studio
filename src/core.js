@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
 
-  const VERSION = '0.5.0-beta.1';
+  const VERSION = '0.5.0-beta.2';
   const DEFAULT_WIDTH = 1200;
   const DEFAULT_HEIGHT = 800;
   const OBJECT_TYPES = new Set(['rect', 'ellipse', 'line', 'text', 'image', 'stroke', 'path', 'bezier', 'polygon']);
@@ -173,6 +173,7 @@
         fill: safePaint(input.fill, DEFAULT_FILL),
         stroke: safePaint(input.stroke, DEFAULT_STROKE),
         strokeWidth: safeNumber(input.strokeWidth, 2, 0, 500),
+        radius: safeNumber(input.radius, 0, 0, 10000000),
         opacity: safeNumber(input.opacity, 1, 0, 1),
         text: cleanText(input.text, 100000),
         fontSize: safeNumber(input.fontSize, 32, 6, 1000),
@@ -224,13 +225,17 @@
     };
   }
 
-  function safePolygonKind(value) { return ['triangle', 'star'].includes(value) ? value : 'triangle'; }
+  function safePolygonKind(value) {
+    return ['triangle', 'star', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech'].includes(value) ? value : 'triangle';
+  }
 
   function polygonPoints(kind, x, y, w, h) {
     const left = safeNumber(x, 0), top = safeNumber(y, 0);
     const width = Math.max(0, safeNumber(w, 0)), height = Math.max(0, safeNumber(h, 0));
-    if (safePolygonKind(kind) === 'star') {
-      const cx = left + width / 2, cy = top + height / 2;
+    const right = left + width, bottom = top + height;
+    const cx = left + width / 2, cy = top + height / 2;
+    const safeKind = safePolygonKind(kind);
+    if (safeKind === 'star') {
       const outerX = width / 2, outerY = height / 2;
       return Array.from({ length: 10 }, (_, index) => {
         const angle = -Math.PI / 2 + index * Math.PI / 5;
@@ -238,13 +243,41 @@
         return { x: round(cx + Math.cos(angle) * outerX * radius), y: round(cy + Math.sin(angle) * outerY * radius) };
       });
     }
+    if (safeKind === 'diamond') return [
+      { x: round(cx), y: top }, { x: right, y: round(cy) },
+      { x: round(cx), y: bottom }, { x: left, y: round(cy) }
+    ];
+    if (safeKind === 'arrow') return [
+      { x: left, y: round(top + height * 0.25) },
+      { x: round(left + width * 0.56), y: round(top + height * 0.25) },
+      { x: round(left + width * 0.56), y: top },
+      { x: right, y: round(cy) },
+      { x: round(left + width * 0.56), y: bottom },
+      { x: round(left + width * 0.56), y: round(top + height * 0.75) },
+      { x: left, y: round(top + height * 0.75) }
+    ];
+    if (safeKind === 'speech') return [
+      { x: round(left + width * 0.08), y: top },
+      { x: round(left + width * 0.92), y: top },
+      { x: right, y: round(top + height * 0.18) },
+      { x: right, y: round(top + height * 0.66) },
+      { x: round(left + width * 0.58), y: round(top + height * 0.66) },
+      { x: round(left + width * 0.42), y: bottom },
+      { x: round(left + width * 0.4), y: round(top + height * 0.66) },
+      { x: left, y: round(top + height * 0.66) },
+      { x: left, y: round(top + height * 0.18) }
+    ];
+    const sides = { pentagon: 5, hexagon: 6, octagon: 8 }[safeKind];
+    if (sides) return Array.from({ length: sides }, (_, index) => {
+      const angle = -Math.PI / 2 + index * Math.PI * 2 / sides;
+      return { x: round(cx + Math.cos(angle) * width / 2), y: round(cy + Math.sin(angle) * height / 2) };
+    });
     return [
-      { x: round(left + width / 2), y: top },
-      { x: left + width, y: top + height },
-      { x: left, y: top + height }
+      { x: round(cx), y: top },
+      { x: right, y: bottom },
+      { x: left, y: bottom }
     ];
   }
-
 
   function resizeObject(input, width, height, options = {}) {
     if (!input || typeof input !== 'object' || !OBJECT_TYPES.has(input.type)) throw new Error('Dit object kan niet worden geschaald.');
