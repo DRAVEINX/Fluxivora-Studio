@@ -78,7 +78,9 @@ test('herstelkopieën gebruiken atomische opslag met unieke tijdelijke bestanden
   const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
   const store = fs.readFileSync(path.join(root, 'electron', 'project-store.cjs'), 'utf8');
   assert.ok(store.includes("const { randomUUID } = require('node:crypto')"));
-  assert.ok(store.includes("const tempPath = `${filePath}.fluxivora-${process.pid}-${randomUUID()}.tmp`"));
+  assert.ok(store.includes("const tempPath = `${destination}.fluxivora-${process.pid}-${randomUUID()}.tmp`"));
+  assert.match(store, /const previous = pendingWrites\.get\(key\) \|\| Promise\.resolve\(\)/);
+  assert.match(store, /pendingWrites\.set\(key, operation\)/);
   const recoveryHandler = main.slice(main.indexOf("ipcMain.handle('recovery:write'"));
   assert.ok(recoveryHandler.includes("await atomicWrite(filePath, record, { encoding: 'utf8', mode: 0o600 })"), 'herstelkopie moet via de atomische opslaghelper worden geschreven');
   assert.ok(store.includes('await fs.unlink(tempPath).catch(() => {})'));
