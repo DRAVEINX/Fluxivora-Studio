@@ -579,7 +579,7 @@ void main() {
       api.notice('Kies een passend bronbestand.');
       return;
     }
-    const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && clip.name.toLowerCase() === asset.name.toLowerCase());
+    const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
     asset.file = file;
     asset.url = URL.createObjectURL(file);
     asset.duration = asset.duration || 0;
@@ -589,6 +589,7 @@ void main() {
       matches.forEach(clip => {
         clip.url = URL.createObjectURL(file);
         clip.file = file;
+        clip.assetId = asset.id;
         clip.duration = asset.duration || clip.duration;
         clip.in = Math.max(0, Math.min(clip.in, clip.duration));
         clip.out = Math.max(clip.in + 0.04, Math.min(clip.out || clip.duration, clip.duration));
