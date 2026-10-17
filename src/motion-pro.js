@@ -28,19 +28,21 @@
     const existingFile = state.assets.find(asset => asset.file === clip.file);
     if (existingFile) return;
     const waiting = state.assets.find(asset => asset.missing && asset.type === clip.type && asset.name.toLowerCase() === clip.name.toLowerCase());
+    let asset = waiting;
     if (waiting) {
       waiting.file = clip.file;
       waiting.url = URL.createObjectURL(clip.file);
       waiting.duration = clip.duration;
       waiting.missing = false;
     } else {
-      state.assets.push({
+      asset = {
         id: api.uid('asset'), name: clip.name, type: clip.type, duration: clip.duration,
         url: URL.createObjectURL(clip.file), file: clip.file, missing: false
-      });
+      };
+      state.assets.push(asset);
     }
     renderMediaBin();
-    if (!sourceId) selectSource(state.assets[state.assets.length - 1].id);
+    if (!sourceId && asset) selectSource(asset.id);
   }
 
   function selectSource(id) {
