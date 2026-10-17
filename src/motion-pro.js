@@ -68,6 +68,42 @@
     if (!sourceId) selectSource(asset.id);
   }
 
+  function activeSourcePlayer() {
+    const asset = activeSource();
+    if (!asset) return null;
+    return asset.type === 'audio' ? $('video-source-audio') : $('video-source-player');
+  }
+
+  function updateSourceTransport() {
+    const asset = activeSource();
+    const player = activeSourcePlayer();
+    const duration = Math.max(0.01, Number(player?.duration) || Number(asset?.duration) || 0.01);
+    const time = Math.max(0, Number(player?.currentTime) || 0);
+    $('video-source-seek').max = String(duration);
+    if (document.activeElement !== $('video-source-seek')) $('video-source-seek').value = String(Math.min(time, duration));
+    $('video-source-time').textContent = formatTime(time);
+    $('video-source-play').textContent = player && !player.paused ? 'Ⅱ Pauzeren' : '▶ Bron afspelen';
+    $('video-source-play').disabled = !asset || asset.missing || !asset.url;
+  }
+
+  function formatTime(value) {
+    const seconds = Math.max(0, Number(value) || 0);
+    return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + (seconds % 60).toFixed(2).padStart(5, '0');
+  }
+
+  function toggleSourcePlayback() {
+    const player = activeSourcePlayer();
+    const asset = activeSource();
+    if (!player || !asset || asset.missing || !asset.url) return;
+    if (!player.paused) player.pause();
+    else {
+      if (player.currentTime >= (Number(player.duration) || asset.duration || 0)) player.currentTime = 0;
+      const playPromise = player.play();
+      if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => api.notice('Deze bron kan niet worden afgespeeld met de beschikbare codec.'));
+    }
+    updateSourceTransport();
+  }
+
   function selectSource(id) {
     sourceId = id;
     const asset = activeSource();
@@ -91,6 +127,9 @@
     sourceOut = Math.max(0.04, Number(asset.duration) || 0.04);
     $('video-source-in').value = sourceIn.toFixed(2);
     $('video-source-out').value = sourceOut.toFixed(2);
+    $('video-source-seek').value = '0';
+    $('video-source-seek').max = String(Math.max(0.01, sourceOut));
+    $('video-source-time').textContent = '00:00.00';
     $('video-source-empty').classList.add('hidden');
     if (asset.type === 'video') {
       audio.removeAttribute('src');
@@ -440,6 +479,18 @@
   $('video-source-in').addEventListener('change', event => setSourcePoint('in', event.target.value));
   $('video-source-out').addEventListener('change', event => setSourcePoint('out', event.target.value));
   $('video-source-insert').addEventListener('click', insertSource);
+  $('video-source-play').addEventListener('click', toggleSourcePlayback);
+  $('video-source-seek').addEventListener('input', event => {
+    const player = activeSourcePlayer();
+    if (!player) return;
+    const next = Math.max(0, Number(event.target.value) || 0);
+    try { player.currentTime = next; } catch (_) {}
+    updateSourceTransport();
+  });
+  ['video-source-player','video-source-audio'].forEach(id => {
+    const player = $(id);
+    ['timeupdate','loadedmetadata','durationchange','play','pause','ended','seeking','seeked'].forEach(type => player.addEventListener(type, updateSourceTransport));
+  });
   $('video-bin-search').addEventListener('input', renderMediaBin);
   $('video-bin-filter').addEventListener('change', renderMediaBin);
   $('video-relink-files').addEventListener('change', event => {
