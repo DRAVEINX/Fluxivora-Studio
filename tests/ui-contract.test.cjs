@@ -504,13 +504,16 @@ test('de startup-intro heeft een animatie en een knop om over te slaan', () => {
 });
 
 test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag', () => {
-  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
+  for (const id of ['video-screen','video-files','video-audio-files','video-canvas','video-timeline-scroll','video-ruler','video-tracks','video-in','video-out','video-save-session','video-open-session','video-export','video-add-title','video-add-crossfade','video-add-keyframe','video-clear-keyframes','video-split-clip','video-ripple-delete','video-x','video-y','video-keyframe-count','video-add-track-video','video-add-track-audio','video-undo','video-redo','video-filter','video-fade-in','video-fade-out']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend video-element: ' + id);
   }
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   assert.match(video, /function addTrack\(/);
   assert.match(video, /function addTitle\(/);
   assert.match(video, /function addKeyframe\(/);
+  assert.match(video, /function splitSelectedAtPlayhead\(/);
+  assert.match(video, /function removeSelected\(/);
+  assert.match(video, /function snapTime\(/);
   assert.match(video, /function addCrossfade\(/);
   assert.match(video, /function animatedValue\(/);
   assert.match(video, /function importFiles\(/);
