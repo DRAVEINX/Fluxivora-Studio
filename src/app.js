@@ -319,7 +319,8 @@
   }
 
   function showWelcome() {
-    state.activeWorkspace = 'home';
+    // Keep a loaded project's active workspace valid while showing the welcome screen.
+    if (!state.project) state.activeWorkspace = 'home';
     $('editor-screen').classList.add('hidden');
     $('welcome-screen').classList.remove('hidden');
     document.querySelectorAll('.rail-button[data-workspace]').forEach(btn => btn.classList.toggle('active', btn.dataset.workspace === 'home'));

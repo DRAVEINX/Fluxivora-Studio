@@ -124,7 +124,7 @@ Dit is geen volledige vervanging van Photoshop, Illustrator of InDesign. Geavanc
 
 ## Status van tests en installatie
 
-De automatische suite bevat **76 tests**. De syntax- en teststappen zijn groen in de huidige validatie; bekijk de nieuwste [GitHub Actions-run](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele Windows-buildstatus. Een groene CI-run bevestigt niet zelfstandig dat de installer op een echte Windows 10/11-pc is geïnstalleerd en gebruikt. De nieuwe sluitprocedure en herstelkopie moeten daarom ook in de gebouwde app praktisch worden gecontroleerd.
+De automatische suite bevat **77 tests**. De syntax- en teststappen zijn groen in de huidige validatie; bekijk de nieuwste [GitHub Actions-run](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele Windows-buildstatus. Een groene CI-run bevestigt niet zelfstandig dat de installer op een echte Windows 10/11-pc is geïnstalleerd en gebruikt. De nieuwe sluitprocedure en herstelkopie moeten daarom ook in de gebouwde app praktisch worden gecontroleerd.
 
 ## Licentie
 

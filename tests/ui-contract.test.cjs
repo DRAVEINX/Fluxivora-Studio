@@ -361,3 +361,9 @@ test('graceful sluiten wacht op een herstelkopie maar heeft een vaste timeout', 
   assert.match(app, /await persistRecoverySnapshot\(\)/);
   assert.match(app, /closePreparationCompleted = true/);
 });
+
+test('Startscherm bewaart de actieve werkruimte zolang er een project geladen is', () => {
+  assert.match(app, /function showWelcome\(\) \{\s*\/\/ Keep a loaded project's active workspace valid while showing the welcome screen\.\s*if \(!state\.project\) state\.activeWorkspace = 'home';/);
+  assert.match(app, /function updateTitle\(\)/);
+  assert.match(app, /descriptions\[state\.activeWorkspace\]\.title/);
+});

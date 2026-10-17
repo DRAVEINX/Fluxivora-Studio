@@ -2,7 +2,7 @@
 
 Controles bijgewerkt op 17 oktober 2026.
 
-- De automatische suite bevat **76 tests**. De code- en teststappen zijn groen in de huidige GitHub Actions-validatie; zie de [nieuwste workflow](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele buildstatus.
+- De automatische suite bevat **77 tests**. De code- en teststappen zijn groen in de huidige GitHub Actions-validatie; zie de [nieuwste workflow](https://github.com/DRAVEINX/Fluxivora-Studio/actions) voor de actuele buildstatus.
 - `npm run check`: geslaagd voor Electron main, preload, app en core in de validatie van de huidige bronwijzigingen.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
