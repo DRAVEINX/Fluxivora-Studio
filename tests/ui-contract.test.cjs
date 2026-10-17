@@ -142,7 +142,7 @@ test('Vector Forge heeft een Bézier-pen met afsluiten via dubbelklik of Enter',
   assert.match(app, /\['bezier',/);
   assert.match(app, /function finishBezierPath\(/);
   assert.match(app, /finishBezierPath\(\)/);
-  assert.match(html, /0\.5\.0-alpha\.26/);
+  // Version consistency is covered by the dedicated package/core/HTML contract test.
 });
 
 test('Bézier-paden worden als vloeiende kubische SVG-curves geëxporteerd', () => {
