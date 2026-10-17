@@ -643,3 +643,16 @@ test('Motion Studio bronmonitor ondersteunt afspelen, scrubben en nauwkeurige br
   assert.match(html, /id="video-source-play"/);
   assert.match(html, /id="video-source-seek"/);
 });
+
+
+test('Motion Studio heeft een visuele, versleepbare keyframe-curve-editor', () => {
+  assert.match(html, /id="video-curve-property"/);
+  assert.match(html, /id="video-curve-canvas"/);
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /function renderCurveEditor\(/);
+  assert.match(motion, /function wireCurveEditor\(/);
+  assert.match(motion, /canvas\.addEventListener\('pointerdown'/);
+  assert.match(motion, /canvas\.addEventListener\('pointermove'/);
+  assert.match(motion, /curveEase = \{/);
+  assert.match(motion, /function curveValueAt\(/);
+});
