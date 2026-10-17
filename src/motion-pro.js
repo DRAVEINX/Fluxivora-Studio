@@ -224,7 +224,7 @@ void main() {
     const clip = state.clips.find(item => item.id === clipId);
     if (!clip || clip.type === 'title' || !clip.file) return;
     const existingFile = state.assets.find(asset => asset.file === clip.file);
-    if (existingFile) return;
+    if (existingFile) { clip.assetId = existingFile.id; return; }
     const waiting = state.assets.find(asset => asset.missing && asset.type === clip.type && asset.name.toLowerCase() === clip.name.toLowerCase());
     let asset = waiting;
     if (waiting) {
@@ -239,6 +239,7 @@ void main() {
       };
       state.assets.push(asset);
     }
+    if (asset) clip.assetId = asset.id;
     renderMediaBin();
     if (!sourceId && asset) selectSource(asset.id);
   }
@@ -405,7 +406,7 @@ void main() {
     }
     const clipUrl = URL.createObjectURL(asset.file);
     const clip = api.createClip({
-      type, name: asset.name, file: asset.file, url: clipUrl,
+      type, name: asset.name, assetId: asset.id, file: asset.file, url: clipUrl,
       duration: asset.duration, trackId: target.id, start: state.playhead
     });
     clip.in = Math.max(0, Math.min(asset.duration, sourceIn));
@@ -421,7 +422,8 @@ void main() {
   let useProxyPreview = false;
 
   function findAssetForClip(clip) {
-    return state.assets.find(asset => asset.file && clip.file && asset.file === clip.file) ||
+    return state.assets.find(asset => clip.assetId && asset.id === clip.assetId) ||
+      state.assets.find(asset => asset.file && clip.file && asset.file === clip.file) ||
       state.assets.find(asset => asset.type === clip.type && asset.name.toLocaleLowerCase() === String(clip.name || '').toLocaleLowerCase()) || null;
   }
 
@@ -437,6 +439,7 @@ void main() {
 
   function applyProxyPreview() {
     let linked = 0;
+    let switched = false;
     for (const clip of state.clips) {
       if (clip.type !== 'video' || !clip.mediaEl || clip.missing) continue;
       const asset = findAssetForClip(clip);
@@ -447,6 +450,7 @@ void main() {
       const media = clip.mediaEl;
       const currentTime = Number(media.currentTime) || 0;
       const wasPlaying = !media.paused;
+      switched = true;
       media.pause();
       media.src = target;
       media.dataset.fluxivoraActiveSource = target;
@@ -454,9 +458,11 @@ void main() {
       media.addEventListener('loadedmetadata', () => {
         try { media.currentTime = Math.max(0, Math.min(Number.isFinite(media.duration) ? media.duration : currentTime, currentTime)); } catch (_) {}
         if (wasPlaying && state.playing) media.play().catch(() => {});
+        api.renderPreview();
       }, { once: true });
     }
     updateProxyControls();
+    if (switched) api.renderPreview();
     return linked;
   }
 
@@ -515,7 +521,7 @@ void main() {
       title.textContent = asset.name;
       title.title = asset.name;
       const meta = document.createElement('small');
-      meta.textContent = (asset.type === 'audio' ? 'AUDIO' : 'VIDEO') + ' · ' + formatDuration(asset.duration) + (asset.missing || !asset.url ? ' · BRON ONTBREEKT' : '');
+      meta.textContent = (asset.type === 'audio' ? 'AUDIO' : 'VIDEO') + ' · ' + formatDuration(asset.duration) + (asset.missing || !asset.url ? ' · BRON ONTBREEKT' : '') + (asset.proxyUrl && !asset.proxyMissing ? ' · PROXY' : asset.proxyName ? ' · PROXY ONTBREEKT' : '');
       details.append(title, meta);
       const choose = document.createElement('button');
       choose.type = 'button';
