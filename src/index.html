@@ -130,15 +130,25 @@
             <input id="video-files" type="file" accept="video/*" multiple hidden />
             <input id="video-audio-files" type="file" accept="audio/*" multiple hidden />
             <input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden />
-            <div id="video-media" class="video-media-bin"></div>
+            <div class="video-bin-tools"><input id="video-bin-search" type="search" placeholder="Zoek in media…" aria-label="Zoek projectmedia" /><select id="video-bin-filter" aria-label="Filter projectmedia"><option value="all">Alle media</option><option value="video">Video</option><option value="audio">Audio</option></select></div>
+            <div id="video-media" class="video-media-bin" aria-label="Mediabibliotheek"></div>
+            <div id="video-media-empty" class="video-media-empty">Importeer video of audio om bronnen hier te bekijken.</div>
             <div class="video-media-footer"><span class="video-accent-dot"></span><p>Je bestanden worden lokaal verwerkt. Montagebestanden bewaren bewerkingsinformatie, niet de originele media.</p></div>
           </aside>
           <section class="video-editing-area">
             <div class="video-monitor-panel">
-              <div class="video-panel-heading"><div><small>PROGRAM MONITOR</small><h3>Voorbeeldmonitor</h3></div><span class="video-status"><i></i> Lokaal</span></div>
-              <div class="video-monitor">
+              <div class="video-panel-heading"><div><small id="video-monitor-kicker">PROGRAM MONITOR</small><h3 id="video-monitor-title">Programmamonitor</h3></div><div class="video-monitor-tools"><div class="video-monitor-tabs" role="group" aria-label="Monitorweergave"><button id="video-view-program" type="button" class="active">Program</button><button id="video-view-source" type="button">Bron</button></div><span class="video-status"><i></i> Lokaal</span></div></div>
+              <div class="video-monitor" id="video-monitor">
                 <canvas id="video-canvas" width="1920" height="1080" aria-label="Samengesteld videovoorbeeld"></canvas>
+                <video id="video-source-player" playsinline preload="metadata" aria-label="Bronmonitor voor video" hidden></video>
+                <audio id="video-source-audio" controls preload="metadata" aria-label="Bronmonitor voor audio" hidden></audio>
+                <div id="video-source-empty" class="video-empty hidden"><div class="video-empty-icon">◉</div><strong>Geen bron geselecteerd.</strong><span>Kies een item uit de mediabibliotheek.</span></div>
                 <div id="video-empty" class="video-empty"><div class="video-empty-icon">▶</div><strong>Jouw verhaal begint hier.</strong><span>Importeer media of voeg een titel toe.</span></div>
+              </div>
+              <div id="video-source-controls" class="video-source-controls hidden">
+                <label>IN (s)<input id="video-source-in" type="number" min="0" step="0.04" value="0" /></label><button id="video-source-mark-in" class="button subtle compact" title="Markeer huidig punt als ingang">Mark In · I</button>
+                <label>OUT (s)<input id="video-source-out" type="number" min="0" step="0.04" value="0" /></label><button id="video-source-mark-out" class="button subtle compact" title="Markeer huidig punt als uitgang">Mark Out · O</button>
+                <button id="video-source-insert" class="button primary compact" disabled>＋ Invoegen op playhead</button>
               </div>
               <div class="video-transport">
                 <div class="video-transport-buttons"><button id="video-stop" title="Naar begin" aria-label="Naar begin">■</button><button id="video-play" class="video-play" title="Afspelen / pauzeren" aria-label="Afspelen">▶</button></div>
@@ -178,7 +188,7 @@
                 <div class="video-property-grid"><label class="video-field">X-POSITIE (%)<input id="video-x" type="number" min="-100" max="100" step="1" /></label><label class="video-field">Y-POSITIE (%)<input id="video-y" type="number" min="-100" max="100" step="1" /></label></div>
                 <div class="video-property-grid"><label class="video-field">SCHAAL <input id="video-scale" type="number" min="0.1" max="3" step="0.05" /></label><label class="video-field">DEKKING <input id="video-opacity" type="range" min="0" max="1" step="0.05" /></label></div>
                 <div class="video-keyframe-actions"><button id="video-add-keyframe" class="button subtle compact">◇ Keyframe op playhead</button><button id="video-clear-keyframes" class="button subtle compact">Wissen</button></div>
-                <small id="video-keyframe-count" class="video-keyframe-count">0 keyframes</small>
+                <div class="video-keyframe-bottom"><small id="video-keyframe-count" class="video-keyframe-count">0 keyframes</small><label class="video-field">INTERPOLATIE <select id="video-keyframe-easing"><option value="linear">Lineair</option><option value="easeIn">Ease in</option><option value="easeOut">Ease out</option><option value="easeInOut" selected>Ease in/out</option><option value="hold">Vasthouden / hold</option></select></label></div>
               </div>
               <div class="video-property-section video-audio-controls"><h4>AUDIO</h4>
                 <label class="video-field video-range-field">VOLUME <input id="video-volume" type="range" min="0" max="2" step="0.05" /></label>
@@ -186,9 +196,19 @@
               <div class="video-property-section video-transition-controls"><h4>FADES & OVERGANGEN</h4>
                 <div class="video-property-grid"><label class="video-field">FADE-IN (s)<input id="video-fade-in" type="number" min="0" max="10" step="0.1" /></label><label class="video-field">FADE-OUT (s)<input id="video-fade-out" type="number" min="0" max="10" step="0.1" /></label></div>
               </div>
-              <div class="video-property-section video-video-controls"><h4>KLEUR & EFFECTEN</h4>
+              <div class="video-property-section video-video-controls"><h4>KLEURCORRECTIE</h4>
                 <label class="video-field">BASISLOOK <select id="video-filter"><option value="normal">Origineel</option><option value="cinematic">Cinematic contrast</option><option value="monochrome">Zwart-wit</option><option value="warm">Warm</option><option value="cool">Koel</option><option value="faded">Fade / matte</option><option value="blur">Zachte focus</option></select></label>
+                <label class="video-field video-grade-field">EXPOSURE <input id="video-grade-exposure" type="range" min="-2" max="2" step="0.1" value="0" /></label>
+                <label class="video-field video-grade-field">CONTRAST <input id="video-grade-contrast" type="range" min="0.5" max="2" step="0.05" value="1" /></label>
+                <label class="video-field video-grade-field">SATURATIE <input id="video-grade-saturation" type="range" min="0" max="2" step="0.05" value="1" /></label>
+                <label class="video-field video-grade-field">TEMPERATUUR <input id="video-grade-temperature" type="range" min="-100" max="100" step="5" value="0" /></label>
+                <label class="video-field video-grade-field">TINT <input id="video-grade-tint" type="range" min="-100" max="100" step="5" value="0" /></label>
               </div>
+              <div class="video-property-section video-video-controls"><h4>EFFECTSTACK</h4>
+                <div class="video-effect-adder"><select id="video-effect-type" aria-label="Effect kiezen"><option value="grayscale">Zwart-wit</option><option value="sepia">Sepia</option><option value="blur">Blur</option><option value="soften">Zachte focus</option><option value="boost">Contrast + kleur</option><option value="desaturate">Gedempt kleur</option></select><button id="video-effect-add" class="button subtle compact">＋ Effect</button></div>
+                <div id="video-effect-stack" class="video-effect-stack"><p class="video-effect-empty">Nog geen losse effecten.</p></div>
+              </div>
+              <div class="video-property-section video-video-controls"><h4>VIDEO-SCOPES</h4><div class="video-scopes-grid"><div><small>RGB-HISTOGRAM</small><canvas id="video-scope-histogram" width="240" height="88" aria-label="RGB kleurhistogram"></canvas></div><div><small>LUMA-WAVEFORM</small><canvas id="video-scope-waveform" width="240" height="88" aria-label="Luma waveform monitor"></canvas></div></div><p class="video-scope-note">Scopes tonen een analyse van het samengestelde voorbeeld, niet van een gekalibreerde hardware-uitgang.</p></div>
               <div id="video-title-controls" class="video-property-section hidden"><h4>TITEL / LOWER THIRD</h4>
                 <label class="video-field">TEKST <textarea id="video-title-text" rows="3" maxlength="1000"></textarea></label>
                 <div class="video-property-grid"><label class="video-field">LETTERGROOTTE<input id="video-title-size" type="number" min="18" max="180" step="2" /></label><label class="video-field">KLEUR<input id="video-title-color" type="color" /></label></div>
@@ -200,7 +220,7 @@
       </section>
 
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.4</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.5</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>
@@ -209,5 +229,6 @@
   <script src="core.js"></script>
   <script src="app.js"></script>
   <script src="video-studio.js"></script>
+  <script src="motion-pro.js"></script>
 </body>
 </html>
