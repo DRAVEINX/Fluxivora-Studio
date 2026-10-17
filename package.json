@@ -1,0 +1,57 @@
+{
+  "name": "fluxivora-studio",
+  "version": "0.5.0-alpha.22",
+  "description": "Free, local-first creative studio for photo editing, vector design and page layout on Windows.",
+  "main": "electron/main.cjs",
+  "license": "MIT",
+  "author": "DRAVEINX",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "dist:win": "electron-builder --win nsis --x64",
+    "dist:dir": "electron-builder --dir",
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check src/app.js && node --check src/core.js"
+  },
+  "devDependencies": {
+    "electron": "44.9.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "studio.fluxivora.desktop",
+    "productName": "Fluxivora Studio",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "README.md",
+      "LICENSE"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "assets/fluxivora.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Fluxivora-Studio-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Fluxivora Studio"
+    }
+  }
+}

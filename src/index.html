@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <title>Fluxivora Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <img src="../assets/fluxivora-mark.svg" alt="" class="brand-mark" />
+        <div class="brand-wordmark"><strong>fluxivora</strong><span>STUDIO <i>ALPHA</i></span></div>
+      </div>
+      <div class="topbar-center">
+        <div class="document-name-wrap"><span class="live-dot"></span><input id="project-name" class="project-name" value="Geen project geopend" aria-label="Projectnaam" readonly /></div>
+        <span id="save-state" class="save-state">Lokaal · privé</span>
+      </div>
+      <div class="top-actions">
+        <button id="undo-button" class="icon-button" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken" disabled>↶</button>
+        <button id="redo-button" class="icon-button" title="Opnieuw" aria-label="Opnieuw" disabled>↷</button>
+        <span class="top-divider"></span>
+        <button id="open-button" class="button subtle">Openen</button>
+        <button id="save-button" class="button subtle" disabled>Opslaan</button>
+        <button id="save-as-button" class="button primary" disabled><span>↓</span> Exporteren</button>
+        <button id="menu-button" class="icon-button menu-button" title="Meer acties" aria-label="Meer acties">⋯</button>
+      </div>
+    </header>
+
+    <aside class="rail" aria-label="Hoofdnavigatie">
+      <button class="rail-button active" data-workspace="home" title="Start" aria-label="Start"><span class="rail-icon">⌂</span><span>Start</span></button>
+      <div class="rail-separator"></div>
+      <button class="rail-button" data-workspace="pixel" title="Pixel Lab" aria-label="Pixel Lab"><span class="rail-icon">▧</span><span>Foto</span></button>
+      <button class="rail-button" data-workspace="vector" title="Vector Forge" aria-label="Vector Forge"><span class="rail-icon">◇</span><span>Vector</span></button>
+      <button class="rail-button" data-workspace="layout" title="Page Studio" aria-label="Page Studio"><span class="rail-icon">▤</span><span>Pagina</span></button>
+      <div class="rail-spacer"></div>
+      <button id="help-button" class="rail-button" title="Sneltoetsen en uitleg" aria-label="Help"><span class="rail-icon">?</span><span>Help</span></button>
+      <div class="avatar-chip">F</div>
+    </aside>
+
+    <main class="main-view">
+      <section id="welcome-screen" class="welcome-screen">
+        <div class="welcome-glow glow-one"></div><div class="welcome-glow glow-two"></div>
+        <div class="welcome-content">
+          <div class="eyebrow"><span class="sparkle">✳</span> JOUW CREATIEVE WERKPLAATS</div>
+          <h1>Drie disciplines.<br /><em>Eén canvas.</em></h1>
+          <p class="welcome-copy">Van de kleinste pixel tot een complete publicatie. Maak het op jouw manier, met je eigen bestanden en zonder abonnement.</p>
+          <div class="welcome-cta"><button id="create-project-button" class="button primary large">＋ Nieuw ontwerp</button><button id="welcome-open-button" class="button outline large">Project openen <span>↗</span></button></div>
+          <div class="feature-strip"><div><span class="feature-icon purple">▧</span><div><strong>Pixel Lab</strong><small>Foto's & retoucheren</small></div></div><div><span class="feature-icon cyan">◇</span><div><strong>Vector Forge</strong><small>Logo's & illustraties</small></div></div><div><span class="feature-icon pink">▤</span><div><strong>Page Studio</strong><small>Lay-out & publicaties</small></div></div></div>
+          <div class="welcome-footer"><span><i class="status-dot"></i> Werkt lokaal op je pc</span><span>Gratis & open source</span><span>Geen account nodig</span></div>
+        </div>
+        <div class="welcome-art" aria-hidden="true">
+          <div class="art-orbit orbit-a"></div><div class="art-orbit orbit-b"></div>
+          <div class="art-card card-back"><div class="card-dots">● ● ●</div><div class="art-scribble"></div><div class="art-scribble short"></div><div class="art-mini-grid"><i></i><i></i><i></i><i></i></div></div>
+          <div class="art-card card-front"><div class="card-dots">● ● ●</div><div class="art-photo"><div class="sun"></div><div class="mountain m-one"></div><div class="mountain m-two"></div><div class="mountain m-three"></div></div><div class="art-label">MAKE SOMETHING<br /><b>REMARKABLE.</b></div></div>
+          <div class="floating-tool tool-pen">✎</div><div class="floating-tool tool-vector">◇</div><div class="floating-tool tool-color"><i></i><i></i><i></i></div><div class="art-caption"><span class="caption-line"></span><span>IDEAS → ARTWORK</span></div>
+        </div>
+      </section>
+
+      <section id="editor-screen" class="editor-screen hidden">
+        <div class="editor-toolbar">
+          <div class="workspace-heading"><div id="workspace-glyph" class="workspace-glyph">▧</div><div><h2 id="workspace-title">Pixel Lab</h2><p id="workspace-subtitle">Foto's verfijnen en pixel voor pixel creëren</p></div></div>
+          <div class="toolbar-main-actions"><button id="import-image-button" class="button subtle compact">＋ Afbeelding</button><button id="fit-canvas-button" class="button subtle compact">Aanpassen aan scherm</button><div class="zoom-controls" aria-label="Zoom"><button id="zoom-out-button" class="zoom-button" title="Uitzoomen" aria-label="Uitzoomen">−</button><span class="zoom-label" id="zoom-label">100%</span><button id="zoom-in-button" class="zoom-button" title="Inzoomen" aria-label="Inzoomen">＋</button></div></div>
+        </div>
+        <div class="editor-grid">
+          <aside class="tools-panel">
+            <div class="panel-label">TOOLS</div>
+            <div id="tool-list" class="tool-list"></div>
+            <div class="tool-panel-footer"><div class="tool-hint-icon">⌘</div><div><strong>Tip</strong><p id="tool-hint">Kies een gereedschap om te starten.</p></div></div>
+          </aside>
+          <section class="stage-area" id="stage-area">
+            <div class="stage-topline"><div class="breadcrumb"><span>Werkruimte</span><b>/</b><strong id="stage-breadcrumb">Pixel Lab</strong></div><div class="stage-actions"><span class="tiny-status"><i></i> Niet-destructieve projectopzet</span><button id="stage-menu-button" class="icon-button small" title="Canvasopties" aria-label="Canvasopties">⋯</button></div></div>
+            <div id="canvas-scroll" class="canvas-scroll">
+              <div id="canvas-holder" class="canvas-holder">
+                <canvas id="pixel-canvas" aria-label="Foto- en tekenwerkvlak" tabindex="0"></canvas>
+                <svg id="vector-canvas" class="design-svg hidden" xmlns="http://www.w3.org/2000/svg" aria-label="Vector-werkvlak" tabindex="0"></svg>
+                <svg id="layout-canvas" class="design-svg hidden" xmlns="http://www.w3.org/2000/svg" aria-label="Pagina-werkvlak" tabindex="0"></svg>
+              </div>
+            </div>
+            <div class="stage-status"><span id="status-message"><i class="status-led"></i> Klaar om te creëren</span><span id="canvas-dimensions">1200 × 800 px</span><span id="page-status" class="hidden">Pagina 1 van 1</span></div>
+          </section>
+          <aside class="inspector-panel">
+            <div class="inspector-tabs"><button class="inspector-tab active" data-inspector="properties">Eigenschappen</button><button class="inspector-tab" data-inspector="layers">Lagen</button></div>
+            <section id="properties-panel" class="inspector-content">
+              <div class="inspector-section document-section"><div class="section-title"><span>DOCUMENT</span><button class="mini-ghost" id="document-reset-button">Reset</button></div><div class="field-grid"><label>Breedte<input type="number" id="document-width" min="100" max="6000" value="1200" /></label><label>Hoogte<input type="number" id="document-height" min="100" max="6000" value="800" /></label></div><div class="field-inline"><label>Eenheid</label><span class="field-value">Pixels / lokaal</span></div><label class="aspect-lock"><input id="export-transparent-background" type="checkbox" /> Transparante achtergrond bij PNG/SVG-export</label><label class="full-field">PNG-exportresolutie (Pixel Lab)<select id="export-scale-select"><option value="1">1× — oorspronkelijke afmetingen</option><option value="2">2× — dubbele resolutie</option><option value="3">3× — drievoudige resolutie</option></select></label><p class="muted-note">De resolutie-instelling geldt voor PNG-export in Pixel Lab. SVG blijft schaalbaar; PDF-pagina’s blijven wit.</p></div>
+              <div id="object-section" class="inspector-section"><div class="section-title"><span>SELECTIE</span><span id="selection-type" class="selection-badge">Geen selectie</span></div><p id="no-selection-note" class="muted-note">Selecteer een object of kies een teken-tool. Je kunt de instellingen hieronder aanpassen.</p><div id="object-fields" class="object-fields hidden"><label class="full-field">Tekst<textarea id="object-text" rows="3" placeholder="Typ je tekst…"></textarea></label><div class="field-grid"><label>X-positie<input id="object-x" type="number" min="-100000" max="10000000" step="1" value="0" /></label><label>Y-positie<input id="object-y" type="number" min="-100000" max="10000000" step="1" value="0" /></label></div><div class="field-grid"><label>Breedte<input id="object-width" type="number" min="0" max="10000000" step="1" value="100" /></label><label>Hoogte<input id="object-height" type="number" min="0" max="10000000" step="1" value="100" /></label></div><label class="aspect-lock"><input id="keep-aspect" type="checkbox" /> Verhoudingen behouden</label><label class="full-field rotation-field">Rotatie (graden)<input id="object-rotation" type="number" min="-360" max="360" step="1" value="0" /></label><div class="field-grid"><label>Vulling<input id="fill-color" type="color" value="#8b7cff" /></label><label>Lijn<input id="stroke-color" type="color" value="#d9d5ff" /></label></div><div class="field-grid"><label>Lijndikte<input id="stroke-width" type="number" min="0" max="80" step="1" value="2" /></label><label>Tekstgrootte<input id="font-size" type="number" min="6" max="400" value="32" /></label></div><label class="slider-label">Dekking <span id="opacity-value">100%</span><input id="opacity-slider" type="range" min="0" max="100" value="100" /></label><div id="alignment-controls" class="alignment-controls"><div class="section-title"><span>UITLIJNEN</span><span class="selection-badge">CANVAS</span></div><p class="muted-note">Lijn het geselecteerde object uit met de documentrand of het midden.</p><div class="field-grid"><button id="align-left-button" class="button subtle compact" title="Links uitlijnen">← Links</button><button id="align-center-x-button" class="button subtle compact" title="Horizontaal centreren">↔ Midden</button><button id="align-right-button" class="button subtle compact" title="Rechts uitlijnen">Rechts →</button><button id="align-top-button" class="button subtle compact" title="Boven uitlijnen">↑ Boven</button><button id="align-center-y-button" class="button subtle compact" title="Verticaal centreren">↕ Midden</button><button id="align-bottom-button" class="button subtle compact" title="Onder uitlijnen">Onder ↓</button></div></div><div id="bezier-point-controls" class="bezier-point-controls hidden"><div class="section-title"><span>ANKERPUNTEN</span><span id="bezier-point-count" class="selection-badge">0 punten</span></div><p class="muted-note">Selecteer een ankerpunt op de curve. Voeg een punt toe om een segment verder te verfijnen.</p><div class="field-grid"><button id="add-bezier-point-button" class="button subtle">＋ Punt toevoegen</button><button id="delete-bezier-point-button" class="button danger" disabled>− Punt verwijderen</button></div></div><button id="delete-object-button" class="button danger wide">Verwijder selectie</button></div></div>
+              <div id="pixel-adjust-section" class="inspector-section hidden"><div class="section-title"><span>FOTO-AANPASSINGEN</span><span class="live-badge">LIVE</span></div><label class="slider-label">Helderheid <span id="brightness-value">100%</span><input id="brightness-slider" type="range" min="0" max="200" value="100" /></label><label class="slider-label">Contrast <span id="contrast-value">100%</span><input id="contrast-slider" type="range" min="0" max="200" value="100" /></label><label class="slider-label">Verzadiging <span id="saturation-value">100%</span><input id="saturation-slider" type="range" min="0" max="200" value="100" /></label><button id="reset-adjustments-button" class="button subtle wide">Aanpassingen herstellen</button><p class="muted-note">Aanpassingen zijn niet-destructief en worden in het project bewaard.</p><div class="section-title crop-heading"><span>CANVAS BIJSNIJDEN</span><span class="selection-badge">PIXEL LAB</span></div><p class="muted-note">Snijd het canvas bij met coördinaten in pixels. Objecten en tekeningen verschuiven mee.</p><div class="field-grid"><label>X vanaf links<input id="crop-x" type="number" min="0" max="6000" step="1" value="0" /></label><label>Y vanaf boven<input id="crop-y" type="number" min="0" max="6000" step="1" value="0" /></label></div><div class="field-grid"><label>Nieuwe breedte<input id="crop-width" type="number" min="100" max="6000" step="1" value="600" /></label><label>Nieuwe hoogte<input id="crop-height" type="number" min="100" max="6000" step="1" value="400" /></label></div><button id="crop-apply-button" class="button primary wide">Bijsnijden toepassen</button><p class="muted-note crop-footnote">Minimale canvasgrootte: 100 × 100 px. Je kunt de bewerking ongedaan maken met Ctrl+Z.</p></div>
+              <div id="layout-section" class="inspector-section hidden"><div class="section-title"><span>PAGINA'S</span><span id="page-count-badge" class="selection-badge">1 pagina</span></div><div class="page-controls"><button id="previous-page-button" class="button subtle compact">← Vorige</button><button id="next-page-button" class="button subtle compact">Volgende →</button></div><div class="page-actions"><button id="add-page-button" class="button outline">＋ Nieuwe pagina</button><button id="duplicate-page-button" class="button subtle">⧉ Dupliceren</button><button id="delete-page-button" class="button danger">− Verwijderen</button></div><div class="section-title page-format-heading"><span>PAGINAFORMAAT</span><span class="selection-badge">PDF</span></div><label class="full-field">Papierformaat<select id="page-format-select"><option value="a4-portrait">A4 — staand</option><option value="a4-landscape">A4 — liggend</option><option value="a5-portrait">A5 — staand</option><option value="letter-portrait">US Letter — staand</option></select></label><button id="apply-page-format-button" class="button subtle wide">PDF-formaat instellen</button><p class="muted-note">De PDF krijgt één papierformaat. Elke pagina wordt passend geschaald; de originele canvasafmetingen en objectposities blijven behouden.</p><p class="muted-note">Pagina's blijven in hetzelfde project. Exporteer de lay-out via Afdrukken / PDF.</p></div>
+              <div class="inspector-bottom-note"><span class="lock-icon">⌑</span><p><strong>Jouw werk blijft van jou.</strong><br />Bestanden worden lokaal bewaard. Geen account, tracking of cloud vereist.</p></div>
+            </section>
+            <section id="layers-panel" class="inspector-content hidden"><div class="section-title"><span>OBJECTEN & LAGEN</span><button id="add-layer-button" class="mini-ghost" title="Object toevoegen">＋</button></div><div class="layer-controls"><button id="layer-up-button" class="button subtle compact" title="Laag naar voren (Ctrl + ])" disabled>↑ Naar voren</button><button id="layer-down-button" class="button subtle compact" title="Laag naar achteren (Ctrl + [)" disabled>↓ Naar achteren</button><button id="duplicate-object-button" class="button subtle compact" title="Selectie dupliceren (Ctrl + D)" disabled>⧉ Dupliceren</button><button id="delete-layer-button" class="button danger compact" title="Geselecteerde laag verwijderen" disabled>− Verwijderen</button></div><div id="layer-list" class="layer-list"></div><p class="muted-note">Kies een laag om deze te selecteren. Versleep objecten op het canvas om ze te verplaatsen.</p></section>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-alpha.22</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+  </div>
+
+  <section id="print-container" aria-hidden="true"></section>
+  <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-card"><button id="modal-close" class="modal-close" aria-label="Sluiten">×</button><div class="modal-kicker">FLUXIVORA STUDIO</div><h2 id="modal-title">Nieuw ontwerp</h2><p id="modal-description" class="modal-description">Kies een werkruimte en start met creëren.</p><div id="modal-body"></div><div class="modal-actions"><button id="modal-cancel" class="button subtle">Annuleren</button><button id="modal-confirm" class="button primary">Doorgaan</button></div></div></div>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
