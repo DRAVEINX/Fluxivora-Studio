@@ -581,6 +581,7 @@
       if (data.format !== 'fluxivora-video-project' || !Array.isArray(data.clips) || data.clips.length > 1000 || !Array.isArray(data.tracks)) throw new Error('Dit is geen geldig Fluxivora-video-project.');
       stopPlayback();
       state.clips.forEach(c => disposeMedia(c, true));
+      state.history.length = 0; state.redo.length = 0;
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
       state.tracks = data.tracks.slice(0, 24).map(t => ({
         id: String(t.id || uid('track')), name: String(t.name || 'Track').slice(0, 12),
@@ -601,6 +602,14 @@
         x: Math.max(-100, Math.min(100, Number(c.x) || 0)), y: Math.max(-100, Math.min(100, Number(c.y) || 0)),
         filter: String(c.filter || 'normal'), fit: String(c.fit || 'contain'),
         fadeIn: Math.max(0, Math.min(10, Number(c.fadeIn) || 0)), fadeOut: Math.max(0, Math.min(10, Number(c.fadeOut) || 0)),
+        keyframes: Array.isArray(c.keyframes) ? c.keyframes.slice(0, 200).map(f => ({
+          time: Math.max(0, Math.min(86400, Number(f.time) || 0)),
+          opacity: Math.max(0, Math.min(1, Number(f.opacity) || 0)),
+          scale: Math.max(0.1, Math.min(3, Number(f.scale) || 1)),
+          x: Math.max(-100, Math.min(100, Number(f.x) || 0)),
+          y: Math.max(-100, Math.min(100, Number(f.y) || 0)),
+          volume: Math.max(0, Math.min(2, Number(f.volume) || 0))
+        })) : [],
         text: String(c.text || '').slice(0, 1000), fontSize: Math.max(18, Math.min(180, Number(c.fontSize) || 72)),
         color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffffff', bold: c.bold !== false,
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
