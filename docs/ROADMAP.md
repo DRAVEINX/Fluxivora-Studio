@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.25)
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-alpha.26)
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -28,7 +28,9 @@
 - Afgerond in alpha.24: een gewone selectieklik maakt geen geschiedenisstap; verplaatsen in Vector Forge/Page Studio initialiseert de pointerpositie en slaat geschiedenis pas bij echte beweging op.
 - Aanvulling in alpha.24: opslagacties naar hetzelfde doelbestand worden geserialiseerd om een Windows-`EPERM`-race bij gelijktijdige vervanging te voorkomen.
 - Afgerond in alpha.25: projectnaamwijzigingen zijn ongedaan te maken en een ongewijzigde naam maakt geen lege geschiedenisstap.
-- Volgende prioriteit: de alpha.25-installer op een schone Windows 10/11-machine installeren en starten; undo/redo voor filters, eigenschappen en afbeeldingsinvoeging praktisch testen.
+- Alpha.25 is door de gebruiker bevestigd als werkend op de eigen Windows-pc.
+- Toegevoegd in alpha.26: undo/redo behoudt de objectselectie wanneer het geselecteerde object nog bestaat; verouderde Bézier-selectiestatus wordt gereset.
+- Volgende prioriteit: undo/redo voor meer bewerkingspaden en filterinstellingen valideren; test vervolgens alpha.26 in de Windows-runtime.
 
 ## Fase 3 — solide grafische basis
 

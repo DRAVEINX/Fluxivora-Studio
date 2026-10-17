@@ -1406,16 +1406,26 @@
 
   function undo() {
     if (!state.project) return;
+    const selectedId = state.selectedId;
     const previous = Core.undoProjectHistory(state.undoStack, state.redoStack, state.project, 60);
     if (!previous) return;
-    state.project = previous; state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
+    state.project = previous;
+    state.activeWorkspace = state.project.workspace || state.activeWorkspace;
+    state.selectedId = Core.resolveSelectionId(activeObjects(), selectedId);
+    state.selectedBezierPointIndex = null;
+    state.bezierHandleType = null;
     markDirty(); renderAll(); updateHistoryButtons(); notify('Laatste stap ongedaan gemaakt.');
   }
   function redo() {
     if (!state.project) return;
+    const selectedId = state.selectedId;
     const next = Core.redoProjectHistory(state.undoStack, state.redoStack, state.project, 60);
     if (!next) return;
-    state.project = next; state.activeWorkspace = state.project.workspace || state.activeWorkspace; state.selectedId = null;
+    state.project = next;
+    state.activeWorkspace = state.project.workspace || state.activeWorkspace;
+    state.selectedId = Core.resolveSelectionId(activeObjects(), selectedId);
+    state.selectedBezierPointIndex = null;
+    state.bezierHandleType = null;
     markDirty(); renderAll(); updateHistoryButtons(); notify('Stap opnieuw uitgevoerd.');
   }
 

@@ -1,11 +1,18 @@
 # Wijzigingen
 
+## 0.5.0-alpha.26 — 17 oktober 2026
+
+- Undo/redo houdt het geselecteerde object actief als het object in de herstelde projecttoestand nog bestaat; zo kan de gebruiker direct verder bewerken.
+- Niet meer bestaande selecties worden gewist en Bézier-anker-/handgreepselecties worden na undo/redo gereset om verouderde UI-status te vermijden.
+- Kern- en UI-contracttests toegevoegd voor selectieherstel en versienummers.
+- Alpha.25 is door de gebruiker op Windows bevestigd als werkend; alpha.26 moet opnieuw door CI en een praktijktest.
+
 ## 0.5.0-alpha.25 — 17 oktober 2026
 
 - Projectnamen wijzigen is nu correct undo/redo-ondersteund: de vorige toestand wordt vóór de naamswijziging vastgelegd.
 - Een bevestiging zonder gewijzigde projectnaam voegt geen lege geschiedenisstap toe.
 - Regressietests toegevoegd voor het ongedaan maken van projectnaamwijzigingen en het invoegen van afbeeldingen met een undo-checkpoint.
-- Alpha.24 bleef de laatst door de gebruiker bevestigde werkende basis; alpha.25 moet opnieuw door de Windows-build en praktijktest.
+- Alpha.25 is door de gebruiker op Windows bevestigd als werkend; alpha.26 vraagt een nieuwe CI-build en praktijktest.
 
 
 ## 0.5.0-alpha.24 — 17 oktober 2026

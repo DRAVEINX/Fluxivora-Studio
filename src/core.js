@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
 
-  const VERSION = '0.5.0-alpha.25';
+  const VERSION = '0.5.0-alpha.26';
   const DEFAULT_WIDTH = 1200;
   const DEFAULT_HEIGHT = 800;
   const OBJECT_TYPES = new Set(['rect', 'ellipse', 'line', 'text', 'image', 'stroke', 'path', 'bezier', 'polygon']);
@@ -78,6 +78,11 @@
     undoStack.push(current);
     trimHistory(undoStack, safeHistoryLimit(limit));
     return next;
+  }
+
+  function resolveSelectionId(objects, selectedId) {
+    if (!selectedId || !Array.isArray(objects)) return null;
+    return objects.some(object => object && object.id === selectedId) ? selectedId : null;
   }
 
   function normaliseProject(input) {
@@ -467,5 +472,5 @@
     return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}${body}</svg>`;
   }
 
-  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl, recordProjectHistory, undoProjectHistory, redoProjectHistory };
+  return { VERSION, DEFAULT_WIDTH, DEFAULT_HEIGHT, createProject, normaliseProject, normaliseObject, makeObject, duplicateObject, moveObject, setObjectFlag, resizeObject, rotateObject, polygonPoints, bezierSegmentHandles, splitBezierSegment, deleteBezierAnchor, smoothPathData, objectToSvg, serializeSvg, xml, safeImageDataUrl, recordProjectHistory, undoProjectHistory, redoProjectHistory, resolveSelectionId };
 });

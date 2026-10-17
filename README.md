@@ -2,14 +2,14 @@
 
 **Eén gratis creatieve werkplaats voor beeldbewerking, vectorontwerp en pagina-opmaak.**
 
-Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.25 brengt drie werkruimtes samen in één projectbestand:
+Fluxivora Studio is een zelfstandig, local-first Windows-desktopproject van DRAVEINX. Versie 0.5.0-alpha.26 brengt drie werkruimtes samen in één projectbestand:
 
 - **Pixel Lab** — rasterafbeeldingen importeren, vrije penseelstreken en gum, vormen, tekst, basisfilters en PNG-export.
 - **Vector Forge** — schaalbare vormen, lijnen, vrije paden, tekst en rasterafbeeldingen; SVG-export.
 - **Page Studio** — objecten en tekst plaatsen, meerdere pagina’s toevoegen/dupliceren/verwijderen en via het afdrukvenster naar PDF exporteren.
 
-## Nieuw in 0.5.0-alpha.25
-- Projectnamen zijn nu onderdeel van undo/redo; een wijziging wordt vooraf vastgelegd en het bevestigen van dezelfde naam maakt geen lege geschiedenisstap.
+## Nieuw in 0.5.0-alpha.26
+- Undo/redo houdt een geselecteerd object geselecteerd wanneer dat object na het terugdraaien of opnieuw uitvoeren nog bestaat. Verouderde Bézier-anker- en handgreepselecties worden gewist.
 - Gelijktijdige opslagacties naar hetzelfde bestand worden op volgorde uitgevoerd, om concurrerende Windows-bestandsvervangingen te voorkomen.
 
 - Undo/redo gebruikt een geteste geschiedenismanager met maximaal 60 snapshots per richting; een nieuwe bewerking wist de redo-tak.

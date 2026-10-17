@@ -104,7 +104,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-alpha.25');
+  assert.equal(pkg.version, '0.5.0-alpha.26');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -433,3 +433,18 @@ test('afbeeldingen invoegen in Vector Forge en Page Studio krijgt een undo-check
   assert.ok(pushIndex > insertion, 'Afbeelding wordt niet in de actieve werkruimte ingevoegd');
 });
 
+
+
+test('undo en redo behouden een nog bestaand geselecteerd object', () => {
+  assert.match(core, /function resolveSelectionId\(objects, selectedId\)/);
+  assert.equal((app.match(/Core\.resolveSelectionId\(activeObjects\(\), selectedId\)/g) || []).length, 2);
+  for (const name of ['undo', 'redo']) {
+    const start = app.indexOf(`function ${name}()`);
+    const end = app.indexOf(name === 'undo' ? 'function redo()' : 'function resetDocument()', start);
+    assert.ok(start >= 0 && end > start, `${name}()-handler ontbreekt`);
+    const handler = app.slice(start, end);
+    assert.match(handler, /const selectedId = state\.selectedId/);
+    assert.match(handler, /state\.selectedBezierPointIndex = null/);
+    assert.match(handler, /state\.bezierHandleType = null/);
+  }
+});
