@@ -224,7 +224,7 @@ void main() {
     const clip = state.clips.find(item => item.id === clipId);
     if (!clip || clip.type === 'title' || !clip.file) return;
     const existingFile = state.assets.find(asset => asset.file === clip.file);
-    if (existingFile) { clip.assetId = existingFile.id; return; }
+    if (existingFile) { clip.assetId = existingFile.id; applyProxyPreview(); return; }
     const waiting = state.assets.find(asset => asset.missing && asset.type === clip.type && asset.name.toLowerCase() === clip.name.toLowerCase());
     let asset = waiting;
     if (waiting) {
