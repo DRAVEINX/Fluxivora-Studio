@@ -55,8 +55,11 @@ test('herstelkopie wordt gepland bij wijzigingen en verwijderd na opslaan of weg
 
 
 test('driehoek- en stertools zijn beschikbaar in de drie werkruimtes', () => {
-  assert.equal((app.match(/\['triangle',/g) || []).length, 3);
-  assert.equal((app.match(/\['star',/g) || []).length, 3);
+  const toolsetStart = app.indexOf('const toolsets = {');
+  const toolsetEnd = app.indexOf('let recoveryTimer', toolsetStart);
+  const toolsetSource = app.slice(toolsetStart, toolsetEnd);
+  assert.equal((toolsetSource.match(/\['triangle',/g) || []).length, 3);
+  assert.equal((toolsetSource.match(/\['star',/g) || []).length, 3);
   assert.match(app, /Core\.polygonPoints\(obj\.polygonKind/);
   assert.match(app, /svgEl\('polygon'/);
   assert.match(app, /obj\.type === 'polygon'/);
