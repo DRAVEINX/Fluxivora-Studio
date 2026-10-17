@@ -819,8 +819,8 @@
       state.name = String(data.name || 'Mijn videoproject').slice(0, 100);
       state.programLut = normaliseProgramLut(data.sequence?.lut);
       if (data.sequence?.lut && !state.programLut) notice('De opgeslagen 3D-LUT is ongeldig en is niet geladen.');
-      state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); });
-      state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true })) : [];
+      state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl); });
+      state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true, proxyName: a.proxyName ? String(a.proxyName).slice(0, 512) : null, proxyFile: null, proxyUrl: null, proxyDuration: 0, proxyMissing: !!a.proxyName })) : [];
       if (!Array.isArray(data.assets)) {
         const seenAssets = new Set();
         data.clips.filter(clip => clip && ['video','audio'].includes(clip.type)).forEach(clip => {
