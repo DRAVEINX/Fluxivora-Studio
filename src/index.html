@@ -107,28 +107,94 @@
         </div>
       </section>
 
-      <section id="video-screen" class="video-screen hidden" aria-label="Motion Studio video-editor">
-        <header class="video-header"><div class="video-brand"><span class="video-brand-icon">▶</span><div><h2>Motion Studio</h2><p>Video montage · lokaal op je pc</p></div></div>
-          <div class="video-actions"><label>PROJECTNAAM<input id="video-project-name" value="Mijn videoproject" maxlength="100" /></label><button id="video-open-session" class="button subtle compact">Montage openen</button><button id="video-save-session" class="button subtle compact">Montage opslaan</button><button id="video-export" class="button primary compact" disabled>Export WebM</button></div>
+
+      <section id="video-screen" class="video-screen hidden" aria-label="Motion Studio professionele videomontage">
+        <header class="video-header">
+          <div class="video-brand"><span class="video-brand-icon">▶</span><div><h2>Motion Studio</h2><p>Professionele videomontage · offline-first</p></div></div>
+          <div class="video-project-actions">
+            <label class="video-project-field">PROJECT<input id="video-project-name" value="Mijn videoproject" maxlength="100" /></label>
+            <button id="video-open-session" class="button subtle compact">Openen</button>
+            <button id="video-save-session" class="button subtle compact">Opslaan</button>
+            <button id="video-undo" class="button subtle compact" title="Ongedaan maken" disabled>↶</button>
+            <button id="video-redo" class="button subtle compact" title="Opnieuw" disabled>↷</button>
+            <label class="video-export-field">EXPORT<select id="video-export-size"><option value="1080p">1080p</option><option value="720p">720p</option><option value="4k">4K</option></select></label>
+            <button id="video-export" class="button primary compact" disabled>Render WebM</button>
+          </div>
         </header>
-        <div class="video-layout"><aside class="video-library"><div class="video-section-heading"><div><small>PROJECT</small><h3>Media</h3></div><span id="video-count">0 clips</span></div>
-          <button id="video-import" class="button outline video-import-button">＋ Video's toevoegen</button><input id="video-files" type="file" accept="video/*" multiple hidden /><input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden /><div id="video-media"></div>
-          <p class="video-note">Videobestanden blijven lokaal. Na het heropenen van een montage koppel je de bronbestanden opnieuw.</p></aside>
-          <section class="video-center"><div class="video-preview-panel"><div class="video-section-heading"><div><small>PROGRAM MONITOR</small><h3>Voorbeeld</h3></div><span class="video-status">● Lokaal</span></div>
-            <div class="video-monitor"><video id="video-preview" playsinline preload="metadata" aria-label="Videovoorbeeld"></video><div id="video-empty" class="video-empty"><strong>Jouw verhaal begint hier.</strong><span>Importeer video's om te monteren.</span></div></div>
-            <div class="video-controls"><button id="video-stop" aria-label="Stop">■</button><button id="video-play" class="video-play" aria-label="Afspelen">▶</button><span id="video-current">00:00:00</span><span>/</span><span id="video-duration">00:00:00</span><input id="video-seek" type="range" min="0" max="0.01" step="0.01" value="0" aria-label="Tijdlijnpositie" /></div></div>
-          <div class="video-timeline-panel"><div class="video-section-heading"><div><small>SEQUENCE 01</small><h3>Tijdlijn</h3></div><span>Sleep clips om de volgorde te wijzigen</span></div>
-            <div class="video-ruler"><span>00:00</span><span>00:15</span><span>00:30</span><span>00:45</span><span>01:00</span></div>
-            <div class="video-track"><b>V1</b><div id="video-timeline" class="video-timeline"></div></div><div class="video-track audio"><b>A1</b><div>Audiotracks volgen in een volgende fase.</div></div><div class="video-meta">Realtime preview · WebM-export momenteel zonder audio</div></div>
+        <div class="video-workspace">
+          <aside class="video-media-panel">
+            <div class="video-panel-title"><div><small>PROJECT</small><h3>Projectmedia</h3></div><span id="video-count" class="video-count">0 clips</span></div>
+            <button id="video-import" class="button outline video-action-button">＋ Video importeren</button>
+            <button id="video-import-audio" class="button outline video-action-button">＋ Audio importeren</button>
+            <button id="video-add-title" class="button outline video-action-button">T Titel toevoegen</button>
+            <input id="video-files" type="file" accept="video/*" multiple hidden />
+            <input id="video-audio-files" type="file" accept="audio/*" multiple hidden />
+            <input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden />
+            <div id="video-media" class="video-media-bin"></div>
+            <div class="video-media-footer"><span class="video-accent-dot"></span><p>Je bestanden worden lokaal verwerkt. Montagebestanden bewaren bewerkingsinformatie, niet de originele media.</p></div>
+          </aside>
+          <section class="video-editing-area">
+            <div class="video-monitor-panel">
+              <div class="video-panel-heading"><div><small>PROGRAM MONITOR</small><h3>Voorbeeldmonitor</h3></div><span class="video-status"><i></i> Lokaal</span></div>
+              <div class="video-monitor">
+                <canvas id="video-canvas" width="1920" height="1080" aria-label="Samengesteld videovoorbeeld"></canvas>
+                <div id="video-empty" class="video-empty"><div class="video-empty-icon">▶</div><strong>Jouw verhaal begint hier.</strong><span>Importeer media of voeg een titel toe.</span></div>
+              </div>
+              <div class="video-transport">
+                <div class="video-transport-buttons"><button id="video-stop" title="Naar begin" aria-label="Naar begin">■</button><button id="video-play" class="video-play" title="Afspelen / pauzeren" aria-label="Afspelen">▶</button></div>
+                <div class="video-timecode"><strong id="video-current">00:00:00</strong><span>/</span><span id="video-duration">00:00:00</span></div>
+                <input id="video-seek" type="range" min="0" max="0.01" step="0.01" value="0" aria-label="Playheadpositie" />
+              </div>
+            </div>
+            <div class="video-timeline-panel">
+              <div class="video-timeline-toolbar">
+                <div class="video-timeline-title"><small>SEQUENCE 01</small><h3>Montagetijdlijn</h3><span id="video-track-count">5 tracks</span></div>
+                <div class="video-track-adders"><button id="video-add-track-video" class="button subtle compact">＋ Videotrack</button><button id="video-add-track-audio" class="button subtle compact">＋ Audiotrack</button><button id="video-add-track-title" class="button subtle compact">＋ Titeltrack</button></div>
+                <label class="video-zoom-control">ZOOM <input id="video-zoom" type="range" min="16" max="100" step="4" value="48" /><span id="video-zoom-label">48 px/s</span></label>
+              </div>
+              <div id="video-timeline-scroll" class="video-timeline-scroll">
+                <div id="video-timeline-content" class="video-timeline-content">
+                  <div id="video-ruler" class="video-ruler"></div>
+                  <div id="video-tracks" class="video-tracks"></div>
+                  <div id="video-playhead-line" class="video-playhead-line"></div>
+                </div>
+              </div>
+              <div class="video-timeline-footer"><span>25 fps playhead · multi-track compositing</span><span>Sleep clips naar andere compatibele tracks</span></div>
+            </div>
           </section>
-          <aside class="video-inspector"><div class="video-section-heading"><div><small>CLIP CONTROLS</small><h3>Eigenschappen</h3></div></div><p id="video-selected">Selecteer een clip</p>
-            <label>In-punt (seconden)<input id="video-in" type="number" min="0" step=".05" disabled /></label><label>Uit-punt (seconden)<input id="video-out" type="number" min="0" step=".05" disabled /></label>
-            <div class="video-order"><button id="video-left" class="button subtle compact" disabled>← Eerder</button><button id="video-right" class="button subtle compact" disabled>Later →</button></div><button id="video-remove" class="button danger compact" disabled>Clip verwijderen</button>
-            <p class="video-note">Eerste videofase: import, preview, trimmen, clipvolgorde, montage-opslag en video-only-export. Audio, titels, overgangen, effecten en kleurcorrectie zijn nog niet toegevoegd.</p></aside>
+          <aside class="video-inspector">
+            <div class="video-panel-heading"><div><small>CLIP CONTROLS</small><h3>Eigenschappen</h3></div></div>
+            <div id="video-inspector-empty" class="video-inspector-empty"><span>◈</span><strong>Geen clip geselecteerd</strong><p>Selecteer een clip op de tijdlijn om trim-, bewegings-, effect- en audio-instellingen te wijzigen.</p></div>
+            <div id="video-inspector-fields" class="video-inspector-fields hidden">
+              <div class="video-selected-banner"><span class="video-selected-icon">◈</span><div><strong id="video-selected-name">Clip</strong><small>Geselecteerde clip</small></div></div>
+              <label class="video-field">CLIPNAAM<input id="video-clip-name" maxlength="512" /></label>
+              <label class="video-field">POSITIE OP TIJDLIJN (s)<input id="video-clip-start" type="number" min="0" step="0.05" /></label>
+              <div class="video-property-grid"><label class="video-field">IN-PUNT (s)<input id="video-in" type="number" min="0" step="0.05" /></label><label class="video-field">UIT-PUNT (s)<input id="video-out" type="number" min="0" step="0.05" /></label></div>
+              <div class="video-property-section video-video-controls"><h4>BEWEGING & WEERGAVE</h4>
+                <label class="video-field">AFSPEELSNELHEID <select id="video-speed"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1× normaal</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option><option value="4">4×</option></select></label>
+                <label class="video-field">PASSEND MAKEN <select id="video-fit"><option value="contain">Volledig beeld</option><option value="cover">Vullen / bijsnijden</option><option value="fill">Uitrekken</option></select></label>
+                <label class="video-field">SCHAAL <input id="video-scale" type="number" min="0.1" max="3" step="0.05" /></label>
+                <label class="video-field video-range-field">DEKKING <input id="video-opacity" type="range" min="0" max="1" step="0.05" /></label>
+              </div>
+              <div class="video-property-section video-audio-controls"><h4>AUDIO & OVERGANGEN</h4>
+                <label class="video-field video-range-field">VOLUME <input id="video-volume" type="range" min="0" max="2" step="0.05" /></label>
+                <div class="video-property-grid"><label class="video-field">FADE-IN (s)<input id="video-fade-in" type="number" min="0" max="10" step="0.1" /></label><label class="video-field">FADE-OUT (s)<input id="video-fade-out" type="number" min="0" max="10" step="0.1" /></label></div>
+              </div>
+              <div class="video-property-section video-video-controls"><h4>KLEUR & EFFECTEN</h4>
+                <label class="video-field">BASISLOOK <select id="video-filter"><option value="normal">Origineel</option><option value="cinematic">Cinematic contrast</option><option value="monochrome">Zwart-wit</option><option value="warm">Warm</option><option value="cool">Koel</option><option value="faded">Fade / matte</option><option value="blur">Zachte focus</option></select></label>
+              </div>
+              <div id="video-title-controls" class="video-property-section hidden"><h4>TITEL / LOWER THIRD</h4>
+                <label class="video-field">TEKST <textarea id="video-title-text" rows="3" maxlength="1000"></textarea></label>
+                <div class="video-property-grid"><label class="video-field">LETTERGROOTTE<input id="video-title-size" type="number" min="18" max="180" step="2" /></label><label class="video-field">KLEUR<input id="video-title-color" type="color" /></label></div>
+              </div>
+            </div>
+            <div id="video-media-engine" class="video-media-engine" aria-hidden="true"><video id="video-preview" playsinline preload="metadata"></video></div>
+          </aside>
         </div>
       </section>
+
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.3</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.4</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>
