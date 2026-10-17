@@ -16,6 +16,7 @@
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p'
   };
+  const SEQUENCE_FPS = 25;
   const uid = prefix => (prefix || 'clip') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   const selected = () => state.clips.find(c => c.id === state.selected) || null;
   const track = id => state.tracks.find(t => t.id === id) || null;
@@ -24,7 +25,7 @@
   const tc = value => {
     const n = Math.max(0, Number(value) || 0);
     const p = x => String(x).padStart(2, '0');
-    return p(Math.floor(n / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * 25));
+    return p(Math.floor(n / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * SEQUENCE_FPS));
   };
   function notice(message, kind) {
     const stack = $('toast-stack');
@@ -672,7 +673,7 @@
     const size = $('video-export-size').value;
     canvas.width = size === '720p' ? 1280 : size === '4k' ? 3840 : 1920;
     canvas.height = size === '720p' ? 720 : size === '4k' ? 2160 : 1080;
-    const canvasStream = canvas.captureStream(30);
+    const canvasStream = canvas.captureStream(SEQUENCE_FPS);
     const tracks = [...canvasStream.getVideoTracks()];
     if (state.exportDestination) tracks.push(...state.exportDestination.stream.getAudioTracks());
     const stream = new MediaStream(tracks);
@@ -700,6 +701,8 @@
         notice('Export afgerond als WebM met gemixte audiotracks waar de browser dit ondersteunt.');
       }
       state.exportChunks = [];
+      canvas.width = 1920; canvas.height = 1080;
+      renderPreview(); updateTransport();
     };
     state.playhead = 0; recorder.start(250);
     startPlayback();
@@ -708,7 +711,7 @@
   function saveSession() {
     const data = {
       format: 'fluxivora-video-project', version: '0.5.0-beta.4', name: state.name,
-      sequence: { width: 1920, height: 1080, fps: 30, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
+      sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})) },
       tracks: state.tracks.map(t => ({...t})),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
     };
@@ -957,6 +960,21 @@
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); splitSelectedAtPlayhead(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); saveSession(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !$('video-screen').classList.contains('hidden')) { e.preventDefault(); $('video-session-file').click(); }
+      else if (!typing && !$('video-screen').classList.contains('hidden') && e.key.toLowerCase() === 'm') { e.preventDefault(); addMarker(); }
+      else if (!typing && !$('video-screen').classList.contains('hidden') && e.key.toLowerCase() === 'i') {
+        const c = selected();
+        if (c && !c.missing && activeAt(c) && c.type !== 'title') {
+          e.preventDefault(); const source = currentSourceTime(c);
+          if (source < c.out - 0.05) { pushHistory(); c.start = state.playhead; c.in = Math.max(0, Math.min(c.out - 0.1, source)); refresh(); renderPreview(); }
+        }
+      }
+      else if (!typing && !$('video-screen').classList.contains('hidden') && e.key.toLowerCase() === 'o') {
+        const c = selected();
+        if (c && !c.missing && activeAt(c) && c.type !== 'title') {
+          e.preventDefault(); const source = currentSourceTime(c);
+          if (source > c.in + 0.05) { pushHistory(); c.out = Math.min(c.duration, source); refresh(); renderPreview(); }
+        }
+      }
       else if (!typing && !$('video-screen').classList.contains('hidden') && e.key === 'ArrowLeft') { e.preventDefault(); seekTo(state.playhead - 0.04); }
       else if (!typing && !$('video-screen').classList.contains('hidden') && e.key === 'ArrowRight') { e.preventDefault(); seekTo(state.playhead + 0.04); }
       else if (e.key === 'Delete' && !typing && !$('video-screen').classList.contains('hidden')) { removeSelected(e.altKey); }
