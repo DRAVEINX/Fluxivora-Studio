@@ -172,3 +172,11 @@
 .video-output-lut-actions .button{flex:1;min-width:0;font-size:8px;padding:7px 8px}
 .video-output-lut-actions .button:disabled{opacity:.35;cursor:default}
 #video-lut-name{display:block;margin-top:7px;font-size:8px;line-height:1.45;overflow-wrap:anywhere;color:#828da9}
+
+.video-proxy-controls{border:1px solid #273044;border-radius:7px;background:#121827;padding:8px;margin:8px 0 10px}
+.video-proxy-controls label{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:#c9c6ed;cursor:pointer}
+.video-proxy-controls input{margin:0;accent-color:#8b7cff}
+.video-proxy-controls label input:disabled{opacity:.45}
+.video-proxy-controls small{display:block;margin-top:5px;font-size:8px;line-height:1.5;color:#7d89a7}
+.video-media-proxy{grid-column:1/-1;background:#181d2e;border:1px solid #383354;border-radius:6px;color:#aaa1ee;padding:6px;font-size:8px;font-weight:700;text-align:left}
+.video-media-proxy:hover{border-color:#766ad4;background:#22213a;color:#ebe6ff}
