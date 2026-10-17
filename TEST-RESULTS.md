@@ -1,4 +1,4 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.4
+# Testresultaten — Fluxivora Studio 0.5.0-beta.5
 
 Controles bijgewerkt op 17 oktober 2026.
 
@@ -8,6 +8,14 @@ Controles bijgewerkt op 17 oktober 2026.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
 - Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
+
+## Motion Studio beta.5 — nieuwe testscope
+
+- Dedicated source monitor, media-bin search/filter, in/out selection, insert-at-playhead, and source relinking are covered by UI contract checks.
+- Color-grade controls and effect-stack actions are wired to clip metadata and the existing undo/redo snapshots.
+- RGB histogram and luma waveform are derived from a reduced-size copy of the program canvas to limit analysis overhead.
+- The source bin records asset metadata only; actual source media remains external and must be relinked after reopening a project.
+- Browser/Electron codec availability, visual color accuracy, long-duration media, 4K export performance, proxies, multicam, and final offline MP4/H.264 rendering still require separate implementation and practical validation.
 
 ## Nog niet geverifieerd
 
