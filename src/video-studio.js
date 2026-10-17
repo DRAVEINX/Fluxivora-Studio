@@ -565,7 +565,7 @@
         }));
         lane.append(block);
       });
-      row.append(lane);
+      row.append(header, lane);
       tracks.append(row);
     });
     updatePlayheadLine();
