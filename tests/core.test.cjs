@@ -337,3 +337,53 @@ test('SVG-export behoudt documentafmetingen, viewBox en XML-veilige tekst', () =
   assert.match(svg, /&lt;Logo &amp; ontwerp&gt;/);
   assert.doesNotMatch(svg, /<Logo & ontwerp>/);
 });
+
+test('roundtrip van opslaan en heropenen bewaart alle werkruimtes en projectdetails', () => {
+  const project = FluxCore.createProject('layout', 'Rondreis');
+  project.createdAt = '2026-10-01T10:00:00.000Z';
+  project.updatedAt = '2026-10-17T18:00:00.000Z';
+  project.workspace = 'layout';
+  project.pixel.baseImage = validPngDataUrl;
+  project.pixel.brightness = 125;
+  project.pixel.objects.push(FluxCore.makeObject('stroke', 12, 18, 60, 40, {
+    points: [{ x: 12, y: 18 }, { x: 30, y: 24 }, { x: 72, y: 58 }],
+    stroke: '#123456', strokeWidth: 4, opacity: 0.75
+  }));
+  project.vector.objects.push(FluxCore.makeObject('bezier', 20, 30, 100, 80, {
+    id: 'curve-persist',
+    points: [
+      { x: 20, y: 30, outHandle: { x: 55, y: 20 } },
+      { x: 120, y: 110, inHandle: { x: 96, y: 100 } }
+    ],
+    visible: false, locked: true, rotation: 17
+  }));
+  project.layout.pageFormat = 'a4-landscape';
+  project.layout.pages = [
+    { width: 1123, height: 794, name: 'Omslag', objects: [FluxCore.makeObject('rect', 0, 0, 1123, 794, { fill: '#112233' })] },
+    { width: 1123, height: 794, name: 'Inhoud', objects: [FluxCore.makeObject('text', 35, 45, 0, 0, { text: 'Bewaar deze tekst', fontSize: 28 })] }
+  ];
+  project.layout.currentPage = 1;
+
+  const reopened = FluxCore.normaliseProject(JSON.parse(JSON.stringify(project)));
+
+  assert.equal(reopened.name, 'Rondreis');
+  assert.equal(reopened.workspace, 'layout');
+  assert.equal(reopened.createdAt, project.createdAt);
+  assert.equal(reopened.updatedAt, project.updatedAt);
+  assert.equal(reopened.pixel.baseImage, validPngDataUrl);
+  assert.equal(reopened.pixel.brightness, 125);
+  assert.equal(reopened.pixel.objects[0].points.length, 3);
+  assert.equal(reopened.vector.objects[0].visible, false);
+  assert.equal(reopened.vector.objects[0].locked, true);
+  assert.equal(reopened.vector.objects[0].rotation, 17);
+  assert.deepEqual(reopened.vector.objects[0].points[0].outHandle, { x: 55, y: 20 });
+  assert.equal(reopened.layout.pageFormat, 'a4-landscape');
+  assert.equal(reopened.layout.currentPage, 1);
+  assert.equal(reopened.layout.pages.length, 2);
+  assert.equal(reopened.layout.pages[1].objects[0].text, 'Bewaar deze tekst');
+});
+
+test('beschadigde opslagdata wordt geweigerd in plaats van stilzwijgend als project gebruikt', () => {
+  assert.throws(() => FluxCore.normaliseProject(JSON.parse('{kapot')), SyntaxError);
+  assert.throws(() => FluxCore.normaliseProject({ format: 'anders', pixel: {} }), /geen Fluxivora-projectbestand/);
+});
