@@ -637,7 +637,7 @@ test('Motion Studio beta.5 ondersteunt effectstacks, kleurcorrectie, scopes en k
 
 test('Motion Studio bronmonitor ondersteunt afspelen, scrubben en nauwkeurige bronmarkeringen', () => {
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
-  for (const feature of ['function activeSourcePlayer(', 'function updateSourceTransport(', 'function toggleSourcePlayback(', "addEventListener('timeupdate'", "addEventListener('seeked'", "function setMark(", 'function setSourcePoint(']) {
+  for (const feature of ['function activeSourcePlayer(', 'function updateSourceTransport(', 'function toggleSourcePlayback(', "'timeupdate','loadedmetadata','durationchange','play','pause','ended','seeking','seeked'", 'player.addEventListener(type, updateSourceTransport)', 'function setMark(', 'function setSourcePoint(']) {
     assert.ok(motion.includes(feature), 'Ontbrekend bronmonitoronderdeel: ' + feature);
   }
   assert.match(html, /id="video-source-play"/);
