@@ -421,6 +421,186 @@ void main() {
   let selectedProxyAssetId = null;
   let useProxyPreview = false;
 
+  const multicamAngleSelection = new Set();
+
+  function groupForId(id) {
+    return state.multicamGroups.find(group => group.id === id) || null;
+  }
+
+  function updateMulticamSelectionControls() {
+    const selectedVideos = [...multicamAngleSelection].filter(id => state.assets.some(asset => asset.id === id && asset.type === 'video'));
+    $('video-multicam-selection-count').textContent = selectedVideos.length + (selectedVideos.length === 1 ? ' hoek gekozen' : ' hoeken gekozen');
+    $('video-multicam-create').disabled = selectedVideos.length < 2;
+  }
+
+  function renderMulticamInspector() {
+    const clip = api.selected();
+    const groupSelect = $('video-multicam-group');
+    const angleSelect = $('video-multicam-angle');
+    const previousGroup = groupSelect.value;
+    const chosenGroup = clip?.multicamGroupId || previousGroup || (state.multicamGroups[0]?.id || '');
+    groupSelect.replaceChildren();
+    const none = document.createElement('option');
+    none.value = ''; none.textContent = 'Geen multicamgroep';
+    groupSelect.append(none);
+    state.multicamGroups.forEach(group => {
+      const option = document.createElement('option');
+      option.value = group.id; option.textContent = group.name;
+      groupSelect.append(option);
+    });
+    groupSelect.value = state.multicamGroups.some(group => group.id === chosenGroup) ? chosenGroup : '';
+    const group = groupForId(groupSelect.value);
+    angleSelect.replaceChildren();
+    const ids = group ? group.angleAssetIds : [];
+    ids.forEach(assetId => {
+      const asset = state.assets.find(item => item.id === assetId);
+      const option = document.createElement('option');
+      option.value = assetId;
+      option.textContent = asset ? asset.name + (asset.url && !asset.missing ? '' : ' · bron koppelen') : 'Ontbrekende bron';
+      angleSelect.append(option);
+    });
+    if (!ids.length) {
+      const option = document.createElement('option');
+      option.value = ''; option.textContent = 'Geen hoek beschikbaar';
+      angleSelect.append(option);
+    }
+    angleSelect.value = ids.includes(clip?.activeAngleAssetId) ? clip.activeAngleAssetId : (ids[0] || '');
+    angleSelect.disabled = !group || ids.length < 2 || !clip || clip.type !== 'video';
+    $('video-multicam-attach').disabled = !clip || clip.type !== 'video' || !group;
+    $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
+  }
+
+  function renderMulticamGroups() {
+    const host = $('video-multicam-groups');
+    if (!host) return;
+    host.replaceChildren();
+    state.multicamGroups.forEach(group => {
+      const card = document.createElement('div');
+      card.className = 'video-multicam-group-card';
+      const heading = document.createElement('div');
+      heading.className = 'video-multicam-group-card-heading';
+      const title = document.createElement('strong');
+      title.textContent = group.name;
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '×'; remove.title = 'Multicamgroep verwijderen';
+      remove.addEventListener('click', () => {
+        api.pushHistory();
+        state.multicamGroups = state.multicamGroups.filter(item => item.id !== group.id);
+        state.clips.forEach(clip => {
+          if (clip.multicamGroupId === group.id) {
+            clip.multicamGroupId = null;
+            clip.activeAngleAssetId = null;
+            clip.activeAngleIn = null;
+          }
+        });
+        applyProxyPreview();
+        api.refresh(); api.renderPreview();
+        api.notice('Multicamgroep verwijderd; clips en bronbestanden blijven behouden.');
+      });
+      heading.append(title, remove);
+      card.append(heading);
+      const hint = document.createElement('small');
+      hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
+      card.append(hint);
+      group.angleAssetIds.forEach(assetId => {
+        const asset = state.assets.find(item => item.id === assetId);
+        const row = document.createElement('label');
+        row.className = 'video-multicam-offset-row';
+        const name = document.createElement('span');
+        name.textContent = asset ? asset.name : 'Ontbrekende bron';
+        name.title = name.textContent;
+        const input = document.createElement('input');
+        input.type = 'number'; input.min = '-86400'; input.max = '86400'; input.step = '0.04';
+        input.value = String(Number(group.offsets?.[assetId]) || 0);
+        input.setAttribute('aria-label', 'Bron-offset ' + name.textContent);
+        input.addEventListener('change', () => {
+          const value = Number(input.value);
+          if (!Number.isFinite(value)) { input.value = String(Number(group.offsets?.[assetId]) || 0); return; }
+          api.pushHistory();
+          if (!group.offsets) group.offsets = {};
+          group.offsets[assetId] = clamp(value, -86400, 86400);
+          api.refresh();
+        });
+        row.append(name, input);
+        card.append(row);
+      });
+      host.append(card);
+    });
+    renderMulticamInspector();
+    updateMulticamSelectionControls();
+  }
+
+  function createMulticamGroup() {
+    const angleAssetIds = [...multicamAngleSelection].filter(id => state.assets.some(asset => asset.id === id && asset.type === 'video'));
+    if (angleAssetIds.length < 2) { api.notice('Kies minstens twee videobronnen als multicam-hoeken.'); return; }
+    if (state.multicamGroups.length >= 200) { api.notice('Er zijn maximaal 200 multicamgroepen toegestaan per project.'); return; }
+    api.pushHistory();
+    const group = {
+      id: api.uid('multicam'), name: 'Multicam ' + (state.multicamGroups.length + 1),
+      angleAssetIds: angleAssetIds.slice(0, 32),
+      offsets: Object.fromEntries(angleAssetIds.slice(0, 32).map(id => [id, 0])),
+      syncMode: 'manual-offset'
+    };
+    state.multicamGroups.push(group);
+    multicamAngleSelection.clear();
+    api.refresh();
+    $('video-multicam-group').value = group.id;
+    renderMulticamGroups();
+    api.notice('Multicamgroep gemaakt. Stel per hoek de bron-offset in om de synchronisatie te bepalen.');
+  }
+
+  function attachMulticamGroup() {
+    const clip = api.selected();
+    const group = groupForId($('video-multicam-group').value);
+    if (!clip || clip.type !== 'video' || !group) { api.notice('Selecteer een videoclip en multicamgroep.'); return; }
+    api.pushHistory();
+    clip.multicamGroupId = group.id;
+    if (!group.angleAssetIds.includes(clip.activeAngleAssetId)) {
+      clip.activeAngleAssetId = null;
+      clip.activeAngleIn = null;
+    }
+    api.refresh();
+    api.notice('Multicamgroep gekoppeld. Kies een hoek en maak een cut op de playhead.');
+  }
+
+  function clipLengthForMulticam(clip) {
+    return Math.max(0, Number(clip.out || 0) - Number(clip.in || 0)) / Math.max(0.1, Math.min(4, Number(clip.speed) || 1));
+  }
+
+  function cutToMulticamAngle() {
+    const clip = api.selected();
+    const group = groupForId($('video-multicam-group').value);
+    const asset = state.assets.find(item => item.id === $('video-multicam-angle').value);
+    if (!clip || clip.type !== 'video' || !group || !asset || !group.angleAssetIds.includes(asset.id)) {
+      api.notice('Selecteer een videoclip, multicamgroep en camerahoek.');
+      return;
+    }
+    if (!asset.url || asset.missing) { relinkAsset(asset.id); return; }
+    const elapsed = state.playhead - clip.start;
+    const clipLength = clipLengthForMulticam(clip);
+    if (elapsed < 0.05 || elapsed > clipLength - 0.05) {
+      api.notice('Zet de playhead binnen de geselecteerde videoclip om een hoekwissel te maken.');
+      return;
+    }
+    const speed = Math.max(0.1, Math.min(4, Number(clip.speed) || 1));
+    const offset = Number(group.offsets?.[asset.id]) || 0;
+    const angleIn = offset + state.playhead * speed;
+    const remainingSource = (clipLength - elapsed) * speed;
+    if (angleIn < 0 || angleIn + remainingSource > Number(asset.duration) + 0.02) {
+      api.notice('De gekozen hoek bevat niet genoeg bronmateriaal. Pas de sync-offset aan of koppel een langere bron.');
+      return;
+    }
+    clip.multicamGroupId = group.id;
+    const right = api.splitSelectedAtPlayhead({ silent: true });
+    if (!right) return;
+    right.multicamGroupId = group.id;
+    right.activeAngleAssetId = asset.id;
+    right.activeAngleIn = angleIn;
+    applyProxyPreview();
+    api.refresh(); api.renderPreview();
+    api.notice('Multicam-cut naar ' + asset.name + '. De bestaande audio blijft behouden.');
+  }
+
   function findAssetForClip(clip) {
     return state.assets.find(asset => clip.assetId && asset.id === clip.assetId) ||
       state.assets.find(asset => asset.file && clip.file && asset.file === clip.file) ||
@@ -443,9 +623,11 @@ void main() {
     for (const clip of state.clips) {
       if (clip.type !== 'video' || !clip.mediaEl || clip.missing) continue;
       const asset = findAssetForClip(clip);
-      const proxy = useProxyPreview && asset && asset.proxyUrl && !asset.proxyMissing ? asset.proxyUrl : null;
+      const angleAsset = clip.activeAngleAssetId ? state.assets.find(item => item.id === clip.activeAngleAssetId && item.url && !item.missing) : null;
+      const sourceAsset = angleAsset || asset;
+      const proxy = useProxyPreview && sourceAsset && sourceAsset.proxyUrl && !sourceAsset.proxyMissing ? sourceAsset.proxyUrl : null;
       if (proxy) linked++;
-      const target = proxy || clip.url;
+      const target = proxy || (angleAsset ? angleAsset.url : clip.url);
       if (!target || clip.mediaEl.dataset.fluxivoraActiveSource === target) continue;
       const media = clip.mediaEl;
       const currentTime = Number(media.currentTime) || 0;
@@ -456,7 +638,9 @@ void main() {
       media.dataset.fluxivoraActiveSource = target;
       media.load();
       media.addEventListener('loadedmetadata', () => {
-        try { media.currentTime = Math.max(0, Math.min(Number.isFinite(media.duration) ? media.duration : currentTime, currentTime)); } catch (_) {}
+        const elapsed = Math.max(0, state.playhead - clip.start) * Math.max(0.1, Math.min(4, Number(clip.speed) || 1));
+        const desiredTime = angleAsset && Number.isFinite(Number(clip.activeAngleIn)) ? Number(clip.activeAngleIn) + elapsed : currentTime;
+        try { media.currentTime = Math.max(0, Math.min(Number.isFinite(media.duration) ? media.duration : desiredTime, desiredTime)); } catch (_) {}
         if (wasPlaying && state.playing) media.play().catch(() => {});
         api.renderPreview();
       }, { once: true });
