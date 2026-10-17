@@ -149,7 +149,7 @@
             <div class="video-timeline-panel">
               <div class="video-timeline-toolbar">
                 <div class="video-timeline-title"><small>SEQUENCE 01</small><h3>Montagetijdlijn</h3><span id="video-track-count">5 tracks</span></div>
-                <div class="video-track-adders"><button id="video-add-track-video" class="button subtle compact">＋ Videotrack</button><button id="video-add-track-audio" class="button subtle compact">＋ Audiotrack</button><button id="video-add-track-title" class="button subtle compact">＋ Titeltrack</button></div>
+                <div class="video-track-adders"><button id="video-add-track-video" class="button subtle compact">＋ Videotrack</button><button id="video-add-track-audio" class="button subtle compact">＋ Audiotrack</button><button id="video-add-track-title" class="button subtle compact">＋ Titeltrack</button><button id="video-add-crossfade" class="button subtle compact">⇄ Crossfade</button></div>
                 <label class="video-zoom-control">ZOOM <input id="video-zoom" type="range" min="16" max="100" step="4" value="48" /><span id="video-zoom-label">48 px/s</span></label>
               </div>
               <div id="video-timeline-scroll" class="video-timeline-scroll">
@@ -175,6 +175,11 @@
                 <label class="video-field">PASSEND MAKEN <select id="video-fit"><option value="contain">Volledig beeld</option><option value="cover">Vullen / bijsnijden</option><option value="fill">Uitrekken</option></select></label>
                 <label class="video-field">SCHAAL <input id="video-scale" type="number" min="0.1" max="3" step="0.05" /></label>
                 <label class="video-field video-range-field">DEKKING <input id="video-opacity" type="range" min="0" max="1" step="0.05" /></label>
+              </div>
+              <div id="video-motion-controls" class="video-property-section"><h4>POSITIE & KEYFRAMES</h4>
+                <div class="video-property-grid"><label class="video-field">X-POSITIE (%)<input id="video-x" type="number" min="-100" max="100" step="1" /></label><label class="video-field">Y-POSITIE (%)<input id="video-y" type="number" min="-100" max="100" step="1" /></label></div>
+                <div class="video-keyframe-actions"><button id="video-add-keyframe" class="button subtle compact">◇ Keyframe op playhead</button><button id="video-clear-keyframes" class="button subtle compact">Wissen</button></div>
+                <small id="video-keyframe-count" class="video-keyframe-count">0 keyframes</small>
               </div>
               <div class="video-property-section video-audio-controls"><h4>AUDIO & OVERGANGEN</h4>
                 <label class="video-field video-range-field">VOLUME <input id="video-volume" type="range" min="0" max="2" step="0.05" /></label>
