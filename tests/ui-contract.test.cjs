@@ -1060,7 +1060,6 @@ test('Electron verwijdert gedeeltelijke proxybestanden bij fouten of annuleren',
     'Alleen een gevalideerde proxy mag naar de definitieve bestandsnaam worden verplaatst');
   assert.ok(handler.includes('catch (_) {}'),
     'Een mislukte of geannuleerde proxy moet het gedeeltelijke bestand opruimen');
-    'Een mislukte of geannuleerde proxy moet het gedeeltelijke bestand opruimen');
   assert.match(handler, /if \(session\.cancelled\) throw new Error\('Proxy-generatie is geannuleerd\.'\)/,
     'Een geannuleerde taak mag niet als geslaagde proxy worden gepubliceerd');
 });
