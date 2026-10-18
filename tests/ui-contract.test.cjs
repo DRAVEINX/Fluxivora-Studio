@@ -1048,3 +1048,19 @@ test('Motion Studio stopt proxy-batch veilig na annuleren en herstelt de interfa
     'Annuleren moet het actieve desktop-proxyverzoek stoppen');
 });
 
+test('Electron verwijdert gedeeltelijke proxybestanden bij fouten of annuleren', () => {
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  const start = main.indexOf("ipcMain.handle('video:create-proxy'");
+  const end = main.indexOf("\\nipcMain.handle('video:analyze-multicam-audio'", start);
+  assert.ok(start >= 0 && end > start, 'Proxy-generatiehandler ontbreekt');
+  const handler = main.slice(start, end);
+  assert.match(handler, /session\.partialPath = path\.join\(directoryToken\.directoryPath, '\.fluxivora-proxy-' \+ crypto\.randomUUID\(\) \+ '\.partial\.mp4'\)/,
+    'Proxy moet eerst naar een unieke tijdelijke bestandsnaam schrijven');
+  assert.match(handler, /await fs\.rename\(session\.partialPath, session\.outputPath\)/,
+    'Alleen een gevalideerde proxy mag naar de definitieve bestandsnaam worden verplaatst');
+  assert.match(handler, /catch \(error\) \{\s*if \(session\.partialPath\) \{\s*try \{ await fs\.rm\(session\.partialPath, \{ force: true \}\); \} catch \(_) \{\}/,
+    'Een mislukte of geannuleerde proxy moet het gedeeltelijke bestand opruimen');
+  assert.match(handler, /if \(session\.cancelled\) throw new Error\('Proxy-generatie is geannuleerd\.'\)/,
+    'Een geannuleerde taak mag niet als geslaagde proxy worden gepubliceerd');
+});
+
