@@ -1051,7 +1051,7 @@ test('Motion Studio stopt proxy-batch veilig na annuleren en herstelt de interfa
 test('Electron verwijdert gedeeltelijke proxybestanden bij fouten of annuleren', () => {
   const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
   const start = main.indexOf("ipcMain.handle('video:create-proxy'");
-  const end = main.indexOf("\\nipcMain.handle('video:analyze-multicam-audio'", start);
+  const end = main.indexOf("\nipcMain.handle('video:analyze-multicam-audio'", start);
   assert.ok(start >= 0 && end > start, 'Proxy-generatiehandler ontbreekt');
   const handler = main.slice(start, end);
   assert.match(handler, /session\.partialPath = path\.join\(directoryToken\.directoryPath, '\.fluxivora-proxy-' \+ crypto\.randomUUID\(\) \+ '\.partial\.mp4'\)/,
