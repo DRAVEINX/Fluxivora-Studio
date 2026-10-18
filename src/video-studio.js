@@ -987,6 +987,7 @@
     const dimensions = exportSize === '720p' ? [1280, 720] : exportSize === '4k' ? [3840, 2160] : [1920, 1080];
     let sessionId = null;
     state.offlineExportActive = true;
+    $('video-screen').classList.add('offline-rendering');
     state.offlineExportCancel = false;
     state.offlineSessionId = null;
     stopPlayback();
@@ -1054,6 +1055,7 @@
     } finally {
       state.offlineSessionId = null;
       state.offlineExportActive = false;
+      $('video-screen').classList.remove('offline-rendering');
       state.offlineExportCancel = false;
       canvas.width = originalWidth || 1920;
       canvas.height = originalHeight || 1080;
@@ -1122,7 +1124,7 @@
   }
   function saveSession() {
     const data = {
-      format: 'fluxivora-video-project', version: '0.5.0-beta.5', name: state.name,
+      format: 'fluxivora-video-project', version: '0.5.0-beta.6', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})) },
       tracks: state.tracks.map(t => ({...t})),
       assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
@@ -1378,7 +1380,9 @@
     $('video-save-session').addEventListener('click', saveSession);
     $('video-open-session').addEventListener('click', () => $('video-session-file').click());
     $('video-session-file').addEventListener('change', e => openSession(e.target.files?.[0]));
-    $('video-export').addEventListener('click', exportVideo);
+    $('video-export').addEventListener('click', exportOfflineMp4);
+    $('video-export-webm').addEventListener('click', exportRealtimeWebm);
+    $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
     $('video-add-title').addEventListener('click', addTitle);
     $('video-add-marker').addEventListener('click', addMarker);
     $('video-split-clip').addEventListener('click', splitSelectedAtPlayhead);
