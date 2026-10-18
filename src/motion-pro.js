@@ -503,14 +503,33 @@ void main() {
       const decoded = [];
       for (let index = 0; index < assets.length; index++) {
         if (status) status.textContent = 'Bron ' + (index + 1) + ' van ' + assets.length + ' analyseren…';
-        const buffer = await assets[index].file.arrayBuffer();
-        const audio = await audioContext.decodeAudioData(buffer.slice(0));
-        const channels = [];
-        for (let channel = 0; channel < audio.numberOfChannels; channel++) channels.push(audio.getChannelData(channel));
-        const frameSize = Math.max(64, Math.min(65536, Math.round(audio.sampleRate / 10)));
-        const envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize, maxSamples: 12000 });
-        const envelopeRate = envelope.length / audio.duration;
-        decoded.push({ asset: assets[index], envelope, sampleRate: envelopeRate, duration: audio.duration });
+        let envelope, duration;
+        if (typeof window.fluxivora?.analyzeMulticamAudioForFile === 'function') {
+          // Electron's bundled FFmpeg handles video containers that Web Audio may not decode.
+          const result = await window.fluxivora.analyzeMulticamAudioForFile(assets[index].file);
+          if (!result || typeof result.pcmBase64 !== 'string' || result.pcmBase64.length > 540000) {
+            throw new Error('De audioanalyse gaf geen geldige, begrensde PCM-data terug.');
+          }
+          const binary = atob(result.pcmBase64);
+          const bytes = new Uint8Array(binary.length);
+          for (let byteIndex = 0; byteIndex < binary.length; byteIndex++) bytes[byteIndex] = binary.charCodeAt(byteIndex);
+          if (bytes.byteLength < 1600 || bytes.byteLength % 2 !== 0) throw new Error('Deze video bevat geen bruikbare audiotrack.');
+          const pcm = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+          const normalized = new Float32Array(pcm.length);
+          for (let sampleIndex = 0; sampleIndex < pcm.length; sampleIndex++) normalized[sampleIndex] = pcm[sampleIndex] / 32768;
+          envelope = window.FluxivoraMulticamSync.createRmsEnvelope([normalized], { frameSize: 100, maxSamples: 12000 });
+          duration = pcm.length / Number(result.sampleRate || 1000);
+        } else {
+          const buffer = await assets[index].file.arrayBuffer();
+          const audio = await audioContext.decodeAudioData(buffer.slice(0));
+          const channels = [];
+          for (let channel = 0; channel < audio.numberOfChannels; channel++) channels.push(audio.getChannelData(channel));
+          const frameSize = Math.max(64, Math.min(65536, Math.round(audio.sampleRate / 10)));
+          envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize, maxSamples: 12000 });
+          duration = audio.duration;
+        }
+        const envelopeRate = envelope.length / duration;
+        decoded.push({ asset: assets[index], envelope, sampleRate: envelopeRate, duration });
       }
       const reference = decoded[0];
       const suggestions = [];
