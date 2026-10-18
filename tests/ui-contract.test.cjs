@@ -1076,6 +1076,14 @@ test('Motion Graphics bevat een interactieve compositielaagstapel', () => {
   assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-layer-panel/);
 });
 
+test('Motion Graphics laat bestaande composities bijwerken', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(motion, /compositionAction = 'update'/);
+  assert.match(motion, /button\.dataset\.compositionAction === 'update'/);
+  assert.match(motion, /Compositie bijgewerkt:/);
+  assert.match(motion, /items\.map\(entry => entry\.id === item\.id \? updated : entry\)/);
+});
+
 test('Motion Graphics kan herbruikbare grafische composities lokaal opslaan en invoegen', () => {
   assert.match(html, /id="motionfx-compositions"/);
   assert.match(html, /id="motionfx-composition-name"/);
