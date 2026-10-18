@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.6 (offline MP4-export in verificatie))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.7 (Bézier-keyframes in verificatie))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -63,14 +63,14 @@
 - GPU-versnelde filters waar stabiel, grote documenten, performance-profielen en crashherstel.
 - Toegankelijkheid, schaalbare UI, licht/donker thema, NL/EN en geautomatiseerde regressietests.
 
-## Motion Studio — professionele montage-uitbouw (beta.6 en volgende fases)
+## Motion Studio — professionele montage-uitbouw (beta.7 en volgende fases)
 
 ### Afgerond in beta.5
 - Afzonderlijke bronmonitor en programmamonitor, bronweergave met afspelen/scrubben, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
 - Mediabronnen blijven als metadata in het montageproject staan wanneer een timelineclip wordt verwijderd; het bronbestand wordt niet in het project-JSON ingebed en moet na heropenen gekoppeld worden.
 - Reversibele effectstack met in-/uitschakelen, volgorde aanpassen en verwijderen.
 - Clip-kleurinstellingen voor exposure, contrast, saturatie, temperatuur en tint, plus RGB-histogram en luma-waveform van de samengestelde programmamonitor.
-- Visuele keyframe-curve-editor met versleepbare punten voor tijd/waarde, plus lineair, ease-in, ease-out, ease-in-out en hold.
+- Visuele keyframe-curve-editor met versleepbare punten, Bézier-in/out-handles per eigenschap en lineaire/ease/hold-interpolatie; preview en offline audiovolume delen dezelfde cubic curve evaluator.
 - Gevalideerde 3D `.cube`-output-LUT, toegepast via WebGL2 op de samengestelde programmamonitor en opgeslagen in het montageproject.
 - Vooraf gegenereerde proxybestanden aan originele video's koppelen/herkoppelen; preview kan tussen proxy en origineel wisselen en export is geblokkeerd bij proxy-preview.
 - Multicamgroepen maken uit meerdere videobronnen, handmatige bron-offsets bij tijdlijn 00:00 instellen en hoekwisselingen als cuts op de playhead maken; oorspronkelijke audio blijft apart.
@@ -84,7 +84,7 @@
 - Bèta-limieten: maximaal 15 minuten per render en 256 MB per audio-decodebron; videocompositing blijft renderer-/canvas-gebaseerd.
 
 ### Volgende fase — kleur en keyframes
-- Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
+- Gekoppelde/spiegelbare tangenten, uitgebreider snelheids-/waarde-curves en per-segment keyframe-interpolatie voor alle animabele eigenschappen; beta.7 heeft onafhankelijke Bézier-in/out-handles.
 - Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.6-LUT is een sequence/output-LUT.
 - Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.6-scopes zijn indicatief en niet gekalibreerd.
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
