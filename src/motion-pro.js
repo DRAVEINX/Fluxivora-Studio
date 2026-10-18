@@ -1216,12 +1216,12 @@ void main() {
       api.notice('Meerdere bronbestanden hebben dezelfde naam. Clips zonder opgeslagen bron-ID zijn niet automatisch gekoppeld; controleer ze handmatig.');
     }
     const expectedDuration = Number(asset.duration) || 0;
+    api.pushHistory();
     asset.file = file;
     asset.url = URL.createObjectURL(file);
     asset.duration = asset.duration || 0;
     asset.missing = false;
     if (matches.length) {
-      api.pushHistory();
       matches.forEach(clip => {
         clip.url = URL.createObjectURL(file);
         clip.file = file;
@@ -1247,6 +1247,7 @@ void main() {
         }
         probe.removeAttribute('src'); probe.load();
       };
+      probe.onerror = () => api.notice('Bronbestand is gekoppeld, maar de videometadata konden niet worden gelezen. Controleer of het bestand geldig is.');
       probe.src = asset.url;
     } else {
       const probe = document.createElement('audio');
@@ -1262,6 +1263,7 @@ void main() {
         }
         probe.removeAttribute('src'); probe.load();
       };
+      probe.onerror = () => api.notice('Bronbestand is gekoppeld, maar de audiometadata konden niet worden gelezen. Controleer of het bestand geldig is.');
       probe.src = asset.url;
     }
     renderMediaBin();
