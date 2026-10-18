@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskSecondaryType','maskSecondarySize','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -488,11 +488,34 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     if (['rectangle','ellipse'].includes(c.maskType)) {
-      const maskScale = Math.max(10, Math.min(100, animatedValue(c, 'maskSize', c.maskSize || 90))) / 100;
-      ctx.beginPath();
-      if (c.maskType === 'ellipse') ctx.ellipse(W / 2, H / 2, W * maskScale / 2, H * maskScale / 2, 0, 0, Math.PI * 2);
-      else ctx.rect(W * (1 - maskScale) / 2, H * (1 - maskScale) / 2, W * maskScale, H * maskScale);
-      ctx.clip();
+      const maskPath = (type, percent) => {
+        const scale = Math.max(10, Math.min(100, Number(percent) || 90)) / 100;
+        const path = new Path2D();
+        if (type === 'ellipse') path.ellipse(W / 2, H / 2, W * scale / 2, H * scale / 2, 0, 0, Math.PI * 2);
+        else path.rect(W * (1 - scale) / 2, H * (1 - scale) / 2, W * scale, H * scale);
+        return path;
+      };
+      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90));
+      const secondaryType = c.maskSecondaryType;
+      if (!['rectangle','ellipse'].includes(secondaryType)) ctx.clip(primary);
+      else {
+        const secondary = maskPath(secondaryType, c.maskSecondarySize || 60);
+        if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
+        else if (c.maskOperation === 'subtract') {
+          ctx.beginPath(); ctx.rect(0, 0, W, H);
+          ctx.clip();
+          ctx.beginPath();
+          const combined = new Path2D();
+          combined.rect(0, 0, W, H);
+          combined.addPath(primary);
+          combined.addPath(secondary);
+          ctx.clip(combined, 'evenodd');
+        } else {
+          const combined = new Path2D();
+          combined.addPath(primary); combined.addPath(secondary);
+          ctx.clip(combined, 'nonzero');
+        }
+      }
     }
     ctx.fillStyle = c.color || '#ffffff';
     const x = W / 2 + animatedValue(c, 'x', c.x || 0) * W / 100;
@@ -718,6 +741,9 @@
     $('video-shape-stroke-width').value = String(Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)));
     $('video-mask-type').value = ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none';
     $('video-mask-size').value = String(Math.max(10, Math.min(100, Number(c.maskSize) || 90)));
+    $('video-mask-secondary').value = ['none','rectangle','ellipse'].includes(c.maskSecondaryType) ? c.maskSecondaryType : 'none';
+    $('video-mask-secondary-size').value = String(Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)));
+    $('video-mask-operation').value = ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add';
     $('video-shape-controls').classList.toggle('hidden', c.type !== 'title' || !['rectangle','ellipse'].includes(c.shapeType));
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
@@ -1333,6 +1359,9 @@
         strokeWidth: Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)),
         maskType: ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none',
         maskSize: Math.max(10, Math.min(100, Number(c.maskSize) || 90)),
+        maskSecondaryType: ['none','rectangle','ellipse'].includes(c.maskSecondaryType) ? c.maskSecondaryType : 'none',
+        maskSecondarySize: Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)),
+        maskOperation: ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add',
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
       })).map(c => {
         if (!track(c.trackId)) c.trackId = state.tracks.find(t => t.kind === c.type || (c.type === 'title' && t.kind === 'title'))?.id || state.tracks[0].id;
@@ -1491,6 +1520,9 @@
     binding('video-shape-stroke-width', 'strokeWidth', v => Math.max(0, Math.min(30, Number(v) || 0)));
     binding('video-mask-type', 'maskType', v => ['none','rectangle','ellipse'].includes(v) ? v : 'none');
     binding('video-mask-size', 'maskSize', v => Math.max(10, Math.min(100, Number(v) || 90)));
+    binding('video-mask-secondary', 'maskSecondaryType', v => ['none','rectangle','ellipse'].includes(v) ? v : 'none');
+    binding('video-mask-secondary-size', 'maskSecondarySize', v => Math.max(10, Math.min(100, Number(v) || 60)));
+    binding('video-mask-operation', 'maskOperation', v => ['add','subtract','intersect'].includes(v) ? v : 'add');
   }
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
