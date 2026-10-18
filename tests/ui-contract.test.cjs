@@ -834,3 +834,13 @@ test('Motion Studio can batch-relink missing proxies by exact filename without g
   assert.match(motion, /matches\.length === 1/);
   assert.match(motion, /matches\.length > 1/);
 });
+
+
+test('Vector Forge and Page Studio support a visible 40px alignment grid with magnetic snapping', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  assert.match(html, /id="vector-grid-button"/);
+  assert.match(app, /state\.vectorGridEnabled/);
+  assert.match(app, /const grid = 40/);
+  assert.match(app, /data-editor-grid/);
+  assert.match(app, /magnetisch uitlijnen/);
+});
