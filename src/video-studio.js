@@ -324,14 +324,15 @@
     notice('Titel toegevoegd; pas de tekst aan in Eigenschappen.');
     return c;
   }
-  function addShape() {
+  function addShape(shapeType = 'rectangle') {
     pushHistory();
     const t = state.tracks.find(x => x.id === state.activeTrack && x.kind === 'title') || state.tracks.find(x => x.kind === 'title');
-    const c = createClip({type: 'title', name: 'Vormlaag · rechthoek', duration: 5, trackId: t.id, start: state.playhead, text: ''});
-    c.shapeType = 'rectangle'; c.fontSize = 120; c.color = '#8b7cff'; c.bold = false;
+    const isEllipse = shapeType === 'ellipse';
+    const c = createClip({type: 'title', name: isEllipse ? 'Vormlaag · ellips' : 'Vormlaag · rechthoek', duration: 5, trackId: t.id, start: state.playhead, text: ''});
+    c.shapeType = isEllipse ? 'ellipse' : 'rectangle'; c.fontSize = 120; c.color = '#8b7cff'; c.bold = false;
     state.activeTrack = t.id;
     refresh(); renderPreview();
-    notice('Vormlaag toegevoegd. De laag is te animeren met positie, schaal en dekking.');
+    notice((isEllipse ? 'Ellips' : 'Rechthoek') + ' toegevoegd als vormlaag. De laag gebruikt de bestaande keyframe-animatie.');
     return c;
   }
   function seekTo(time) {
@@ -1482,7 +1483,8 @@
     $('video-export-webm').addEventListener('click', exportRealtimeWebm);
     $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
     $('video-add-title').addEventListener('click', addTitle);
-    $('video-add-shape').addEventListener('click', addShape);
+    $('video-add-shape').addEventListener('click', () => addShape('rectangle'));
+    $('video-add-ellipse').addEventListener('click', () => addShape('ellipse'));
     $('video-add-marker').addEventListener('click', addMarker);
     $('video-split-clip').addEventListener('click', splitSelectedAtPlayhead);
     $('video-ripple-delete').addEventListener('click', () => removeSelected(true));
