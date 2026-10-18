@@ -794,7 +794,7 @@ test('Motion Studio genereert proxies met batchbediening, voortgang en annuleren
 test('Motion Studio proxy-generation UI references existing HTML elements and keeps generated media separate', () => {
   const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
-  const references = [...motion.matchAll(/\$\('([^'\`$]+)'\)/g)].map(match => match[1]);
+  const references = [...motion.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
   const missing = [...new Set(references.filter(id => !ids.has(id)))];
   assert.deepEqual(missing, [], 'Motion Studio verwijst naar een proxy-UI-element dat ontbreekt');
   assert.match(motion, /function linkProxyFile\(file, assetId = selectedProxyAssetId\)/);
