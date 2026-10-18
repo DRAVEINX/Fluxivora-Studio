@@ -1109,6 +1109,9 @@ void main() {
       if (time <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
         const amount = clamp((time - left.time) / span, 0, 1);
+        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) {
+          return window.FluxivoraKeyframeCurves.bezierValue(left, right, property, amount);
+        }
         const ease = curveEase[right.ease] || curveEase.linear;
         const t = ease(amount);
         return (Number(left[property]) || 0) + ((Number(right[property]) || 0) - (Number(left[property]) || 0)) * t;
@@ -1172,6 +1175,23 @@ void main() {
         if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
+      if (window.FluxivoraKeyframeCurves) {
+        for (let i = 1; i < frames.length; i++) {
+          const left = frames[i - 1], right = frames[i];
+          if (right.ease !== 'bezier') continue;
+          const controls = window.FluxivoraKeyframeCurves.controlPoints(left, right, property);
+          const x0 = toX(left.time), y0 = toY(left[property]);
+          const x1 = toX(controls.x1), y1 = toY(controls.y1);
+          const x2 = toX(controls.x2), y2 = toY(controls.y2);
+          const x3 = toX(right.time), y3 = toY(right[property]);
+          ctx.strokeStyle = '#6c7197'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.moveTo(x3, y3); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = '#6de1cd'; ctx.strokeStyle = '#183f48'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(x1, y1, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#f6b7d5'; ctx.strokeStyle = '#543247';
+          ctx.beginPath(); ctx.arc(x2, y2, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      }
       frames.forEach(frame => {
         const x = toX(frame.time), y = toY(frame[property]);
         ctx.beginPath(); ctx.fillStyle = '#d6d0ff'; ctx.strokeStyle = '#6c5fd2'; ctx.lineWidth = 2;
@@ -1200,7 +1220,33 @@ void main() {
       const plot = { left: 34, right: 12, top: 12, bottom: 22 };
       const plotW = canvas.width - plot.left - plot.right, plotH = canvas.height - plot.top - plot.bottom;
       const limits = curveLimits[property];
-      const frames = Array.isArray(clip.keyframes) ? clip.keyframes : [];
+      const frames = Array.isArray(clip.keyframes) ? clip.keyframes.slice().sort((a,b)=>a.time-b.time) : [];
+      let nearestHandle = null, handleDistance = 13;
+      if (window.FluxivoraKeyframeCurves) {
+        for (let i = 1; i < frames.length; i++) {
+          const left = frames[i - 1], right = frames[i];
+          if (right.ease !== 'bezier') continue;
+          const controls = window.FluxivoraKeyframeCurves.controlPoints(left, right, property);
+          const points = [
+            { frame: left, other: right, side: 'out', x: plot.left + clamp(controls.x1 / durationForCurve, 0, 1) * plotW, y: plot.top + (1 - (clamp(controls.y1, limits[0], limits[1]) - limits[0]) / (limits[1] - limits[0])) * plotH },
+            { frame: right, other: left, side: 'in', x: plot.left + clamp(controls.x2 / durationForCurve, 0, 1) * plotW, y: plot.top + (1 - (clamp(controls.y2, limits[0], limits[1]) - limits[0]) / (limits[1] - limits[0])) * plotH }
+          ];
+          points.forEach(point => {
+            const distance = Math.hypot(point.x - position.x, point.y - position.y);
+            if (distance < handleDistance) { nearestHandle = point; handleDistance = distance; }
+          });
+        }
+      }
+      if (nearestHandle) {
+        event.preventDefault();
+        api.pushHistory();
+        draggedCurveFrame = {
+          kind: 'handle', clip, frame: nearestHandle.frame, other: nearestHandle.other,
+          side: nearestHandle.side, property, limits, plot, plotW, plotH, duration: durationForCurve
+        };
+        canvas.setPointerCapture?.(event.pointerId);
+        return;
+      }
       let nearest = null, distance = 14;
       frames.forEach(frame => {
         if (!Number.isFinite(frame.time) || !Number.isFinite(frame[property])) return;
@@ -1212,7 +1258,7 @@ void main() {
       if (!nearest) return;
       event.preventDefault();
       api.pushHistory();
-      draggedCurveFrame = { clip, frame: nearest, property, limits, plot, plotW, plotH, duration: durationForCurve };
+      draggedCurveFrame = { kind: 'point', clip, frame: nearest, property, limits, plot, plotW, plotH, duration: durationForCurve };
       canvas.setPointerCapture?.(event.pointerId);
     });
     canvas.addEventListener('pointermove', event => {
@@ -1221,9 +1267,27 @@ void main() {
       const point = curvePointerPosition(event, canvas);
       const x = clamp((point.x - drag.plot.left) / drag.plotW, 0, 1);
       const y = clamp((point.y - drag.plot.top) / drag.plotH, 0, 1);
-      drag.frame.time = x * drag.duration;
-      drag.frame[drag.property] = drag.limits[0] + (1 - y) * (drag.limits[1] - drag.limits[0]);
-      drag.clip.keyframes.sort((a,b)=>a.time-b.time);
+      const value = drag.limits[0] + (1 - y) * (drag.limits[1] - drag.limits[0]);
+      if (drag.kind === 'point') {
+        drag.frame.time = x * drag.duration;
+        drag.frame[drag.property] = value;
+        drag.clip.keyframes.sort((a,b)=>a.time-b.time);
+      } else {
+        const frame = drag.frame, other = drag.other;
+        if (drag.side === 'out') {
+          const span = Math.max(0.0001, other.time - frame.time);
+          const fraction = clamp((x * drag.duration - frame.time) / span, 0.02, 0.48);
+          frame.outHandle = frame.outHandle && typeof frame.outHandle === 'object' ? frame.outHandle : {};
+          frame.outHandle.time = fraction;
+          frame.outHandle[drag.property] = value - frame[drag.property];
+        } else {
+          const span = Math.max(0.0001, frame.time - other.time);
+          const fraction = clamp((frame.time - x * drag.duration) / span, 0.02, 0.48);
+          frame.inHandle = frame.inHandle && typeof frame.inHandle === 'object' ? frame.inHandle : {};
+          frame.inHandle.time = fraction;
+          frame.inHandle[drag.property] = value - frame[drag.property];
+        }
+      }
       event.preventDefault();
       api.renderPreview();
       renderCurveEditor(true);
