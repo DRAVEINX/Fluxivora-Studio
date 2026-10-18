@@ -672,9 +672,9 @@
     $('video-title-size').value = String(c.fontSize || 72);
     $('video-title-color').value = c.color || '#ffffff';
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
-    $('video-video-controls').classList.toggle('hidden', c.type !== 'video');
+    document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
     $('video-motion-controls').classList.toggle('hidden', c.type === 'audio');
-    $('video-audio-controls').classList.toggle('hidden', c.type === 'title');
+    document.querySelectorAll('.video-audio-controls').forEach(element => element.classList.toggle('hidden', c.type === 'title');
     ['video-in','video-out','video-speed','video-volume'].forEach(id => { $(id).disabled = c.missing; });
   }
   function refresh() {
