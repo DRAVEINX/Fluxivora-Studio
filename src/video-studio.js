@@ -189,13 +189,28 @@
     state.activeTrack = t.id;
     return c;
   }
+  function isCompatibleMediaFile(file, type) {
+    if (!file || typeof file.name !== 'string') return false;
+    const mime = String(file.type || '').toLowerCase().split(';')[0].trim();
+    if (mime.startsWith(type + '/')) return true;
+    // Some Windows pickers and browser wrappers return an empty or generic MIME type.
+    // Only use the extension fallback for generic/unknown MIME values, not a conflicting known type.
+    const genericMime = !mime || ['application/octet-stream', 'binary/octet-stream', 'application/x-unknown', 'application/unknown'].includes(mime);
+    if (!genericMime) return false;
+    const extension = file.name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || '';
+    const extensions = type === 'video'
+      ? ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'mpeg', 'mpg', 'mpe', 'm2v', '3gp', 'ogv', 'ts', 'mts', 'm2ts']
+      : ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac', 'aif', 'aiff', 'wma', 'weba'];
+    return extensions.includes(extension);
+  }
+
   function importFiles(fileList, kind) {
     const files = [...(fileList || [])];
     if (!files.length) return;
     for (const file of files) {
       const type = kind === 'audio' ? 'audio' : 'video';
-      if (type === 'video' && !file.type.startsWith('video/')) { notice('Kies een geldig videobestand.'); continue; }
-      if (type === 'audio' && !file.type.startsWith('audio/')) { notice('Kies een geldig audiobestand.'); continue; }
+      if (type === 'video' && !isCompatibleMediaFile(file, 'video')) { notice('Kies een geldig videobestand.'); continue; }
+      if (type === 'audio' && !isCompatibleMediaFile(file, 'audio')) { notice('Kies een geldig audiobestand.'); continue; }
       const missing = state.clips.find(c => c.missing && c.type === type && c.name.toLowerCase() === file.name.toLowerCase());
       const url = URL.createObjectURL(file);
       const probe = document.createElement(type === 'audio' ? 'audio' : 'video');
