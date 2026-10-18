@@ -66,3 +66,18 @@ test('lagen worden ouder-eerst geordend en cycli worden geweigerd', () => {
     { id: 'a', parentId: 'b' }, { id: 'b', parentId: 'a' }
   ]), /Circulaire/);
 });
+
+test('evaluateert de volledige laagtransformatie op een gekozen frame', () => {
+  const layer = {
+    transform: { x: 100, y: 50, scaleX: 1, scaleY: 1, opacity: 0.8 },
+    keyframes: [
+      { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+      { frame: 20, property: 'x', value: 200, interpolation: 'linear' },
+      { frame: 0, property: 'opacity', value: 0, interpolation: 'linear' },
+      { frame: 20, property: 'opacity', value: 1.5, interpolation: 'linear' }
+    ]
+  };
+  assert.deepEqual(Eval.evaluateLayerTransform(layer, 10), {
+    x: 100, y: 50, anchorX: 0, anchorY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.75
+  });
+});
