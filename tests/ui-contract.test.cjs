@@ -1025,3 +1025,26 @@ test('Motion Studio valt bij een onleesbare proxy-preview terug op de originele 
   assert.match(preview, /Proxy kon niet worden gelezen; voorbeeld schakelt terug naar het origineel/,
     'De gebruiker moet een duidelijke melding krijgen');
 });
+
+test('Motion Studio stopt proxy-batch veilig na annuleren en herstelt de interface', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const start = motion.indexOf('async function runProxyGeneration(');
+  const end = motion.indexOf('\n  async function cancelProxyGeneration()', start);
+  assert.ok(start >= 0 && end > start, 'Proxy-batch- en annuleerfuncties ontbreken');
+  const batch = motion.slice(start, end);
+  const cancelStart = end + 1;
+  const cancelEnd = motion.indexOf('\n  function ', cancelStart);
+  const cancel = motion.slice(cancelStart, cancelEnd);
+  assert.match(batch, /for \(let index = 0; index < candidates\.length; index\+\+\) \{\s*if \(proxyCancelRequested\) break;/,
+    'Een geannuleerde batch mag niet aan een volgende bron beginnen');
+  assert.match(batch, /else if \(proxyCancelRequested\) break;/,
+    'Een geannuleerde huidige proxy mag geen volgende bron starten');
+  assert.match(batch, /finally \{[\s\S]*?proxyBatchRunning = false;[\s\S]*?activeProxyRequestId = null;[\s\S]*?proxyCancelRequested = false;/,
+    'Annuleren moet altijd de batchstatus en het actieve verzoek opruimen');
+  assert.match(batch, /video-proxy-cancel'\)\.classList\.add\('hidden'\)/);
+  assert.match(batch, /video-proxy-progress'\)\.hidden = true/);
+  assert.match(cancel, /proxyCancelRequested = true/);
+  assert.match(cancel, /window\.fluxivora\.cancelVideoProxy\(\{ requestId: activeProxyRequestId \}\)/,
+    'Annuleren moet het actieve desktop-proxyverzoek stoppen');
+});
+
