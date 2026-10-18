@@ -1777,7 +1777,7 @@
     const time = Math.max(0, Math.min(clipLength(c), state.playhead - c.start));
     const frame = {
       time, opacity: Number(c.opacity == null ? 1 : c.opacity), scale: Number(c.scale || 1),
-      x: Number(c.x || 0), y: Number(c.y || 0), volume: Number(c.volume == null ? 1 : c.volume)
+      x: Number(c.x || 0), y: Number(c.y || 0), rotation: Number(c.rotation || 0), volume: Number(c.volume == null ? 1 : c.volume)
     };
     if (!Array.isArray(c.keyframes)) c.keyframes = [];
     const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);

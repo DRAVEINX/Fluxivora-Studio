@@ -23,8 +23,8 @@ test('Bezier control handles change the animated curve and preserve exact endpoi
 });
 
 test('Bezier control points stay monotonic in time and clamp to each property range', () => {
-  const left = { time: 2, opacity: 0.5, scale: 1, x: 0, y: 0, volume: 1, outHandle: { time: 0.48, opacity: 100, scale: 100, x: 500, y: -500, volume: 100 } };
-  const right = { time: 3, opacity: 0.8, scale: 2, x: 80, y: -30, volume: 1.5, inHandle: { time: 0.48, opacity: -100, scale: -100, x: -500, y: 500, volume: -100 } };
+  const left = { time: 2, opacity: 0.5, scale: 1, rotation: 0, x: 0, y: 0, volume: 1, outHandle: { time: 0.48, opacity: 100, scale: 100, rotation: 99999, x: 500, y: -500, volume: 100 } };
+  const right = { time: 3, opacity: 0.8, scale: 2, rotation: 180, x: 80, y: -30, volume: 1.5, inHandle: { time: 0.48, opacity: -100, scale: -100, rotation: -99999, x: -500, y: 500, volume: -100 } };
   for (const property of Object.keys(curves.PROPERTIES)) {
     const cp = curves.controlPoints(left, right, property);
     assert.ok(cp.x1 > left.time && cp.x1 < cp.x2, 'first handle should remain left of the second');
@@ -38,13 +38,14 @@ test('Bezier control points stay monotonic in time and clamp to each property ra
 });
 
 test('untrusted handle values are normalized and invalid handle objects are ignored', () => {
-  const frame = { opacity: 0.5, scale: 1, x: 0, y: 0, volume: 1 };
+  const frame = { opacity: 0.5, scale: 1, rotation: 90, x: 0, y: 0, volume: 1 };
   assert.equal(curves.normaliseHandle(null, frame), null);
   assert.equal(curves.normaliseHandle([], frame), null);
-  const handle = curves.normaliseHandle({ time: 9, opacity: 9, scale: -99, x: 999, y: -999, volume: 99 }, frame);
+  const handle = curves.normaliseHandle({ time: 9, opacity: 9, scale: -99, rotation: 99999, x: 999, y: -999, volume: 99 }, frame);
   assert.equal(handle.time, 0.48);
   assert.equal(handle.opacity, 0.5);
   assert.equal(handle.scale, -0.9);
+  assert.equal(handle.rotation, 90);
   assert.equal(handle.x, 100);
   assert.equal(handle.y, -100);
   assert.equal(handle.volume, 1);
