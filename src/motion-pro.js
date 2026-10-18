@@ -478,6 +478,85 @@ void main() {
     $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
   }
 
+  async function readAudioForMulticamSync(asset) {
+    if (!asset || asset.type !== 'video' || asset.missing || !asset.file) {
+      throw new Error('Koppel eerst alle videobronnen aan lokale bestanden.');
+    }
+    if (Number(asset.duration) > 600 || asset.file.size > 300 * 1024 * 1024) {
+      throw new Error('Automatische sync is begrensd tot bronnen van maximaal 10 minuten en 300 MB.');
+    }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Deze omgeving ondersteunt geen lokale audio-analyse.');
+    const context = new AudioContextClass();
+    try {
+      const decoded = await context.decodeAudioData(await asset.file.arrayBuffer());
+      if (!decoded.length || decoded.duration > 600) throw new Error('De audiobron is leeg of langer dan 10 minuten.');
+      const targetRate = 8000;
+      const outputLength = Math.floor(decoded.length * targetRate / decoded.sampleRate);
+      if (outputLength < 120) throw new Error('De bron bevat te weinig audio om betrouwbaar te synchroniseren.');
+      const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) => decoded.getChannelData(index));
+      const mono = new Float32Array(outputLength);
+      const ratio = decoded.sampleRate / targetRate;
+      for (let i = 0; i < outputLength; i += 1) {
+        const start = Math.floor(i * ratio);
+        const end = Math.max(start + 1, Math.min(decoded.length, Math.floor((i + 1) * ratio)));
+        let total = 0;
+        for (const channel of channels) {
+          let channelTotal = 0;
+          for (let j = start; j < end; j += 1) channelTotal += channel[j];
+          total += channelTotal / (end - start);
+        }
+        mono[i] = total / channels.length;
+      }
+      return { samples: mono, sampleRate: targetRate };
+    } finally {
+      await context.close().catch(() => {});
+    }
+  }
+
+  async function syncMulticamGroupFromAudio(group, button) {
+    if (!window.FluxivoraAudioSync) {
+      api.notice('De audio-syncmodule is niet geladen. Herlaad Fluxivora Studio en probeer opnieuw.');
+      return;
+    }
+    const assets = group.angleAssetIds.map(id => state.assets.find(asset => asset.id === id));
+    if (assets.length < 2 || assets.some(asset => !asset || asset.type !== 'video' || asset.missing || !asset.file)) {
+      api.notice('Koppel eerst minstens twee lokale videobronnen aan deze multicamgroep.');
+      return;
+    }
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Audio analyseren…';
+    try {
+      api.notice('Audio-sync gestart. De eerste camerahoek is de referentie; bronnen worden lokaal geanalyseerd.');
+      const reference = await readAudioForMulticamSync(assets[0]);
+      const updates = [];
+      for (const asset of assets.slice(1)) {
+        button.textContent = 'Analyse: ' + asset.name;
+        const candidate = await readAudioForMulticamSync(asset);
+        const result = window.FluxivoraAudioSync.synchronize(reference.samples, candidate.samples, reference.sampleRate, { windowMs: 20, maxOffsetSeconds: 30 });
+        if (!result.ok || result.confidence < 0.45) {
+          throw new Error('Onvoldoende overeenkomst met ' + asset.name + '. Er is niets gewijzigd; stel deze hoek handmatig in.');
+        }
+        // Multicam offsets represent the source time used at timeline zero, so invert the suggested timeline correction.
+        updates.push({ id: asset.id, offset: -result.offsetSeconds, confidence: result.confidence });
+      }
+      api.pushHistory();
+      if (!group.offsets) group.offsets = {};
+      group.offsets[assets[0].id] = 0;
+      updates.forEach(item => { group.offsets[item.id] = clamp(item.offset, -86400, 86400); });
+      group.syncMode = 'audio-correlation';
+      api.refresh();
+      renderMulticamGroups();
+      api.notice('Audio-sync voltooid voor ' + updates.length + ' camerahoek(en). Controleer de uitlijning in de preview.');
+    } catch (error) {
+      api.notice(error?.message || 'Audio-sync is mislukt. Je bestaande offsets zijn behouden.');
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
+
   function renderMulticamGroups() {
     const host = $('video-multicam-groups');
     if (!host) return;
@@ -510,6 +589,13 @@ void main() {
       const hint = document.createElement('small');
       hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
       card.append(hint);
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.className = 'button subtle compact';
+      syncButton.textContent = 'Audio automatisch synchroniseren';
+      syncButton.title = 'Analyseer lokale audio en stel bron-offsets voor; handmatige offsets blijven beschikbaar.';
+      syncButton.addEventListener('click', () => syncMulticamGroupFromAudio(group, syncButton));
+      card.append(syncButton);
       group.angleAssetIds.forEach(assetId => {
         const asset = state.assets.find(item => item.id === assetId);
         const row = document.createElement('label');
