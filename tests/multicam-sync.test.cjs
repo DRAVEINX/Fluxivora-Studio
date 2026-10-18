@@ -25,6 +25,15 @@ test('waveform correlation validates limits and input values', () => {
   assert.throws(() => estimateWaveformOffset([1, 2, 3, 4, 5, 6, 7, Infinity], Array(8).fill(1), { sampleRate: 25, maxLagSamples: 1 }), TypeError);
 });
 
+test('waveform correlation ignores misleading matches with too little overlap', () => {
+  const reference = [0.1, 0.8, 0.2, 0.9, 0.4, 0.3, 0.7, 0.5, 0.6, 0.2, 0.95, 0.15, 0.75, 0.35, 0.55, 0.25];
+  const candidate = [0.99, 0.98, 0.97, 0.96, ...reference.slice(0, 8)];
+  const result = estimateWaveformOffset(reference, candidate, { sampleRate: 25, maxLagSamples: 8, minConfidence: 0.2 });
+  assert.equal(result.lagSamples, 4);
+  assert.ok(result.confidence > 0.99);
+  assert.throws(() => estimateWaveformOffset(reference, candidate, { sampleRate: 25, maxLagSamples: 8, minOverlapRatio: 0.1 }), RangeError);
+});
+
 test('waveform correlation refuses inputs that could freeze the editor', () => {
   const largeEnvelope = Array(200000).fill(0).map((_, index) => Math.sin(index / 9));
   assert.throws(
