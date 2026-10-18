@@ -892,3 +892,16 @@ test('multicam-audio markeert afkappen op basis van de gedecodeerde audiolengte'
   assert.match(main, /truncated: pcm\.length \/ 2 >= 180000/);
   assert.doesNotMatch(main, /truncated: sourceStat\.size > 0/);
 });
+
+
+test('Motion Studio maakt bronherkoppeling ongedaanbaar en meldt metadatafouten', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const start = motion.indexOf('function applyRelink(file)');
+  const end = motion.indexOf('\n  function renderEffectStack()', start);
+  assert.ok(start >= 0 && end > start, 'applyRelink-functie ontbreekt');
+  const relink = motion.slice(start, end);
+  assert.ok(relink.indexOf('api.pushHistory();') < relink.indexOf('asset.file = file;'),
+    'herstelgeschiedenis moet vóór het wijzigen van het asset worden opgeslagen');
+  assert.match(relink, /probe\.onerror = \(\) => api\.notice\('Bronbestand is gekoppeld, maar de videometadata konden niet worden gelezen/);
+  assert.match(relink, /probe\.onerror = \(\) => api\.notice\('Bronbestand is gekoppeld, maar de audiometadata konden niet worden gelezen/);
+});
