@@ -425,6 +425,7 @@
     if ($('page-format-select')) $('page-format-select').value = PAGE_FORMATS[state.project?.layout?.pageFormat] ? state.project.layout.pageFormat : 'a4-portrait';
     if ($('page-margin-input')) $('page-margin-input').value = String(state.project?.layout?.pageMargins ?? 40);
     if ($('page-columns-select')) $('page-columns-select').value = String(state.project?.layout?.pageColumns ?? 1);
+    if ($('page-safe-area-input')) $('page-safe-area-input').value = String(state.project?.layout?.pageSafeArea ?? 60);
     document.querySelectorAll('.rail-button[data-workspace]').forEach(btn => btn.classList.toggle('active', btn.dataset.workspace === state.activeWorkspace));
     $('page-status').classList.toggle('hidden', state.activeWorkspace !== 'layout');
     $('import-image-button').textContent = state.activeWorkspace === 'pixel' ? '＋ Afbeelding openen' : state.activeWorkspace === 'layout' ? '＋ Afbeelding plaatsen' : '＋ Afbeelding';
@@ -637,6 +638,10 @@
         let d = '';
         for (let c = 1; c < columns; c++) { const x = margin + usable * c / columns; d += `M ${x} ${margin} V ${size.height - margin} `; }
         overlay.push(svgEl('path', { d, fill: 'none', stroke: '#0ea5e9', 'stroke-dasharray': '4 5', 'stroke-width': 1, 'pointer-events': 'none', 'data-page-column-guides': 'true' }));
+      }
+      const safeArea = Math.max(0, Math.min(300, Number(layout.pageSafeArea ?? 60) || 0));
+      if (safeArea > 0 && size.width > safeArea * 2 && size.height > safeArea * 2) {
+        overlay.push(svgEl('rect', { x: safeArea, y: safeArea, width: size.width - safeArea * 2, height: size.height - safeArea * 2, fill: 'none', stroke: '#16a34a', 'stroke-dasharray': '3 5', 'stroke-width': 1.5, 'pointer-events': 'none', 'data-page-safe-area-guide': 'true' }));
       }
       if (overlay.length) svg.append(...overlay);
     }
@@ -1398,6 +1403,7 @@
     if (!state.project || state.activeWorkspace !== 'layout') return;
     const margin = Number($('page-margin-input').value);
     const columns = Number($('page-columns-select').value);
+    const safeArea = Number($('page-safe-area-input').value);
     const page = state.project.layout.pages[state.project.layout.currentPage];
     if (!Number.isFinite(margin) || margin < 0 || margin > 300 || margin * 2 >= Math.min(page.width, page.height)) {
       notify('Kies een marge tussen 0 en 300 px die kleiner is dan de halve paginazijde.', 'error');
@@ -1405,9 +1411,15 @@
       return;
     }
     if (!Number.isInteger(columns) || columns < 1 || columns > 12) { notify('Kies 1 tot en met 12 kolommen.', 'error'); return; }
+    if (!Number.isFinite(safeArea) || safeArea < 0 || safeArea > 300 || safeArea * 2 >= Math.min(page.width, page.height)) {
+      notify('Kies een veilige zone tussen 0 en 300 px, kleiner dan de halve paginazijde.', 'error');
+      $('page-safe-area-input').value = String(state.project.layout.pageSafeArea ?? 60);
+      return;
+    }
     checkpoint();
     state.project.layout.pageMargins = margin;
     state.project.layout.pageColumns = columns;
+    state.project.layout.pageSafeArea = safeArea;
     markDirty('Pagina-hulplijnen gewijzigd');
     renderAll();
     notify('Marges en kolomhulplijnen bijgewerkt. Hulplijnen worden niet afgedrukt.', 'success');
