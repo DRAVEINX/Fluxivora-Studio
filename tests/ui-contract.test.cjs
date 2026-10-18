@@ -743,3 +743,14 @@ test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt real
   assert.ok(pkg.build.files.includes('THIRD-PARTY-NOTICES.md'));
   assert.match(fs.readFileSync(path.join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8'), /GPL-3\.0-or-later/);
 });
+
+
+test('Motion Studio toggles all shared video and audio inspector sections without missing ID lookups', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /querySelectorAll\('\.video-video-controls'\)/);
+  assert.match(video, /querySelectorAll\('\.video-audio-controls'\)/);
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  const idRefs = [...video.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
+  const missing = [...new Set(idRefs.filter(id => !ids.has(id)))];
+  assert.deepEqual(missing, [], 'Een Motion Studio ID wordt gebruikt maar ontbreekt in de HTML');
+});
