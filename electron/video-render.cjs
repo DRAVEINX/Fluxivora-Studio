@@ -46,6 +46,64 @@ function validateRenderRequest(payload) {
   });
 }
 
+const PROXY_PRESETS = Object.freeze({
+  '540p': Object.freeze({ width: 960, height: 540, maxRate: '1400k', bufferSize: '2800k', audioBitrate: '96k' }),
+  '720p': Object.freeze({ width: 1280, height: 720, maxRate: '2400k', bufferSize: '4800k', audioBitrate: '128k' })
+});
+const MAX_PROXY_READ_CHUNK_BYTES = 2 * 1024 * 1024;
+const MAX_PROXY_OUTPUT_BYTES = 350 * 1024 * 1024;
+const MAX_PROXY_SOURCE_BYTES = 20 * 1024 * 1024 * 1024;
+const VIDEO_SOURCE_EXTENSIONS = Object.freeze([
+  '.3gp', '.avi', '.flv', '.m2ts', '.m2v', '.m4v', '.mkv', '.mov',
+  '.mp4', '.mpeg', '.mpg', '.mts', '.mxf', '.ogv', '.ts', '.vob',
+  '.webm', '.wmv'
+]);
+
+function validateProxyRequest(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new TypeError('Ongeldige proxy-aanvraag.');
+  }
+  const preset = PROXY_PRESETS[payload.preset];
+  if (!preset) throw new RangeError('Kies 540p of 720p voor proxy-generatie.');
+  const requestId = String(payload.requestId || '');
+  if (!/^[a-z0-9_-]{1,80}$/i.test(requestId)) throw new TypeError('Ongeldige proxy-taak-ID.');
+  const durationSeconds = payload.durationSeconds == null ? 0 : Number(payload.durationSeconds);
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0 || durationSeconds > 24 * 60 * 60) {
+    throw new RangeError('De bronduur voor proxy-generatie is ongeldig.');
+  }
+  return Object.freeze({
+    requestId,
+    preset: payload.preset,
+    ...preset,
+    durationSeconds,
+    sourceName: safeFileStem(payload.sourceName || 'Fluxivora-video')
+  });
+}
+
+function buildProxyArgs(options) {
+  const { inputPath, outputPath, preset } = options || {};
+  const target = PROXY_PRESETS[preset];
+  if (typeof inputPath !== 'string' || !inputPath.trim() || inputPath.length > 4096 ||
+      typeof outputPath !== 'string' || !outputPath.trim() || outputPath.length > 4096 ||
+      !target || !/\.mp4$/i.test(outputPath) ||
+      path.resolve(inputPath).toLowerCase() === path.resolve(outputPath).toLowerCase()) {
+    throw new TypeError('Ongeldige FFmpeg-proxy-instellingen.');
+  }
+  const scale = "scale=w='min(" + target.width + ",iw)':h='min(" + target.height + ",ih)':force_original_aspect_ratio=decrease:force_divisible_by=2";
+  return [
+    '-hide_banner', '-loglevel', 'error', '-y', '-nostdin',
+    '-i', inputPath,
+    '-map', '0:v:0', '-map', '0:a?',
+    '-vf', scale,
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '27',
+    '-maxrate', target.maxRate, '-bufsize', target.bufferSize,
+    '-c:a', 'aac', '-b:a', target.audioBitrate, '-ac', '2',
+    '-map_metadata', '-1', '-movflags', '+faststart',
+    '-progress', 'pipe:1', '-nostats',
+    outputPath
+  ];
+}
+
 function decodeBase64(value, maxBytes, label) {
   if (typeof value !== 'string' || value.length < 4 || value.length > Math.ceil(maxBytes / 3) * 4 + 8 ||
       value.length % 4 !== 0 || !/^[a-z0-9+/]*={0,2}$/i.test(value)) {
@@ -112,5 +170,7 @@ function buildFfmpegArgs(options) {
 module.exports = Object.freeze({
   FPS, SAMPLE_RATE, MAX_DURATION_SECONDS, MAX_FRAMES,
   MAX_FRAME_BYTES, MAX_AUDIO_CHUNK_BYTES, MAX_STREAM_BYTES, OUTPUTS,
-  safeFileStem, validateRenderRequest, decodeJpegFrame, decodeFloatAudioChunk, buildFfmpegArgs
+  PROXY_PRESETS, MAX_PROXY_READ_CHUNK_BYTES, MAX_PROXY_OUTPUT_BYTES, MAX_PROXY_SOURCE_BYTES, VIDEO_SOURCE_EXTENSIONS,
+  safeFileStem, validateRenderRequest, validateProxyRequest, buildProxyArgs,
+  decodeJpegFrame, decodeFloatAudioChunk, buildFfmpegArgs
 });
