@@ -7,7 +7,7 @@
     project: null, filePath: null, activeWorkspace: 'home', currentTool: 'select', selectedId: null,
     draftObject: null, pointerStart: null, movingObject: null, lastPointer: null,
     undoStack: [], redoStack: [], clipboardObject: null, dirty: false, zoom: 0, inspector: 'properties', modalWorkspace: 'pixel',
-    dragMode: null, drawing: false, dragHistoryRecorded: false, dragHasMoved: false, startSnapshot: null, bezierPointIndex: null, bezierHandleType: null, selectedBezierPointIndex: null, spaceHeld: false, panDrag: null, vectorGridEnabled: false
+    dragMode: null, drawing: false, dragHistoryRecorded: false, dragHasMoved: false, startSnapshot: null, bezierPointIndex: null, bezierHandleType: null, selectedBezierPointIndex: null, spaceHeld: false, panDrag: null, vectorGridEnabled: false, vectorGridSize: 40
   };
 
   const POLYGON_TOOLS = new Set(['triangle', 'star', 'pentagon', 'hexagon', 'diamond', 'arrow', 'octagon', 'speech']);
@@ -621,8 +621,9 @@
     svg.append(svgEl('rect', { x: 0, y: 0, width: size.width, height: size.height, fill: '#ffffff', 'data-background': 'true' }));
     if (state.vectorGridEnabled && ['vector', 'layout'].includes(workspace)) {
       let gridPath = '';
-      for (let x = 0; x <= size.width; x += 40) gridPath += `M ${x} 0 V ${size.height} `;
-      for (let y = 0; y <= size.height; y += 40) gridPath += `M 0 ${y} H ${size.width} `;
+      const gridSize = Math.max(10, Math.min(100, Number(state.vectorGridSize) || 40));
+      for (let x = 0; x <= size.width; x += gridSize) gridPath += `M ${x} 0 V ${size.height} `;
+      for (let y = 0; y <= size.height; y += gridSize) gridPath += `M 0 ${y} H ${size.width} `;
       svg.append(svgEl('path', { d: gridPath, fill: 'none', stroke: '#94a3b8', 'stroke-opacity': '0.22', 'stroke-width': 1, 'pointer-events': 'none', 'data-editor-grid': 'true' }));
     }
     if (workspace === 'layout') {
@@ -843,7 +844,7 @@
     let x = (event.clientX - rect.left) * size.width / rect.width;
     let y = (event.clientY - rect.top) * size.height / rect.height;
     if (state.vectorGridEnabled && ['vector', 'layout'].includes(state.activeWorkspace) && element.namespaceURI === NS) {
-      const grid = 40;
+      const grid = Math.max(10, Math.min(100, Number(state.vectorGridSize) || 40));
       x = Math.round(x / grid) * grid;
       y = Math.round(y / grid) * grid;
     }
@@ -1857,6 +1858,13 @@
   $('apply-page-guides-button').addEventListener('click', applyPageGuides);
   $('add-layer-button').addEventListener('click', () => setTool(state.activeWorkspace === 'pixel' ? 'brush' : state.activeWorkspace === 'vector' ? 'rect' : 'text'));
   $('help-button').addEventListener('click', showHelp); $('menu-button').addEventListener('click', handleMenu); $('stage-menu-button').addEventListener('click', () => showModal({ title: 'Canvasopties', description: 'Stel het zichtbare canvas opnieuw in of pas de documentafmetingen aan in Eigenschappen.', confirmText: 'Oké', cancelText: 'Sluiten', body: (body) => { const p = document.createElement('p'); p.className = 'muted-note'; p.textContent = 'De knop “Aanpassen aan scherm” zoomt uit of in totdat de volledige pagina zichtbaar is. De afmetingen in Eigenschappen wijzigen de documentruimte.'; body.append(p); } }));
+  $('vector-grid-size').addEventListener('change', () => {
+    const size = Number($('vector-grid-size').value);
+    if (![10, 20, 40, 80, 100].includes(size)) { $('vector-grid-size').value = String(state.vectorGridSize); notify('Kies een geldige rasterafstand.', 'error'); return; }
+    state.vectorGridSize = size;
+    renderSvgWorkspace('vector'); renderSvgWorkspace('layout');
+    notify(`Rasterafstand ingesteld op ${size} px${state.vectorGridEnabled ? ' en magnetisch uitlijnen bijgewerkt' : ''}.`, 'success');
+  });
   $('vector-grid-button').addEventListener('click', () => {
     if (!['vector', 'layout'].includes(state.activeWorkspace)) { notify('Het raster is beschikbaar in Vector Forge en Page Studio.'); return; }
     state.vectorGridEnabled = !state.vectorGridEnabled;
@@ -1864,7 +1872,7 @@
     $('vector-grid-button').textContent = state.vectorGridEnabled ? 'Raster aan' : 'Raster uit';
     $('vector-grid-button').setAttribute('aria-pressed', String(state.vectorGridEnabled));
     renderSvgWorkspace('vector'); renderSvgWorkspace('layout');
-    notify(state.vectorGridEnabled ? 'Raster en magnetisch uitlijnen ingeschakeld (40 px).' : 'Raster en magnetisch uitlijnen uitgeschakeld.');
+    notify(state.vectorGridEnabled ? 'Raster en magnetisch uitlijnen ingeschakeld (${state.vectorGridSize} px).' : 'Raster en magnetisch uitlijnen uitgeschakeld.');
   });
     $('project-name').addEventListener('change', () => {
     if (!state.project) return;
