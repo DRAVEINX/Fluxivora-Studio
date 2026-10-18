@@ -7,6 +7,15 @@ Deze checklist hoort bij `feature/beta10-proxy-recovery`. Een groene CI-build is
 - [ ] Maak een testmap met minimaal drie korte videobestanden; bewaar de originelen buiten de proxy-map.
 - [ ] Noteer de oorspronkelijke bestandsgroottes en controleer dat de testbestanden afspeelbaar zijn.
 
+## Installatie en starten
+- [ ] Voer de installer uit als gewone gebruiker en controleer dat de installatiemap correct wordt aangemaakt.
+- [ ] Start Fluxivora Studio direct na installatie en controleer dat het hoofdvenster zichtbaar wordt zonder foutmelding.
+- [ ] Sluit de app en start opnieuw via de bureaubladsnelkoppeling.
+- [ ] Start opnieuw via het Startmenu; controleer dat beide snelkoppelingen de app openen.
+- [ ] Sluit de app normaal af en controleer dat er geen achtergebleven Fluxivora-proces blijft draaien.
+- [ ] Verwijder de app via Windows Instellingen > Geïnstalleerde apps en controleer dat de app-installatie en snelkoppelingen worden verwijderd.
+- [ ] Installeer de app opnieuw voordat je de overige tests uitvoert.
+
 ## Proxy's maken en annuleren
 - [ ] Importeer meerdere clips en genereer proxy's voor alle clips.
 - [ ] Controleer voortgang en bevestig dat elke voltooide proxy leesbaar is.
