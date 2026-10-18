@@ -50,7 +50,7 @@
   function metaClip(c) {
     const result = {};
     ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
-      if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame})) : [];
+      if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
       else if (c[k] !== undefined) result[k] = c[k];
@@ -353,6 +353,7 @@
       if (t <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
         const raw = (t - left.time) / span;
+        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, raw);
         const alpha = (curves[right.ease] || curves.linear)(raw);
         return left[key] + (right[key] - left[key]) * alpha;
       }
@@ -869,6 +870,7 @@
       const left = frames[i - 1], right = frames[i];
       if (relativeTime <= right.time) {
         const amount = Math.max(0, Math.min(1, (relativeTime - left.time) / Math.max(0.0001, right.time - left.time)));
+        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, amount);
         const t = (curves[right.ease] || curves.linear)(amount);
         return left[key] + (right[key] - left[key]) * t;
       }
@@ -1262,7 +1264,7 @@
           temperature: Math.max(-100, Math.min(100, Number(c.colorAdjustments?.temperature) || 0)),
           tint: Math.max(-100, Math.min(100, Number(c.colorAdjustments?.tint) || 0))
         },
-        keyframeEase: ['linear','easeIn','easeOut','easeInOut','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut',
+        keyframeEase: ['linear','easeIn','easeOut','easeInOut','bezier','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut',
         fadeIn: Math.max(0, Math.min(10, Number(c.fadeIn) || 0)), fadeOut: Math.max(0, Math.min(10, Number(c.fadeOut) || 0)),
         keyframes: Array.isArray(c.keyframes) ? c.keyframes.slice(0, 200).map(f => ({
           time: Math.max(0, Math.min(86400, Number(f.time) || 0)),
@@ -1271,7 +1273,10 @@
           x: Math.max(-100, Math.min(100, Number(f.x) || 0)),
           y: Math.max(-100, Math.min(100, Number(f.y) || 0)),
           volume: Math.max(0, Math.min(2, Number(f.volume) || 0)),
-          ease: ['linear','easeIn','easeOut','easeInOut','hold'].includes(f.ease) ? f.ease : 'linear'
+          id: String(f.id || uid('keyframe')),
+          outHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.outHandle, f) || null,
+          inHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.inHandle, f) || null,
+          ease: ['linear','easeIn','easeOut','easeInOut','bezier','hold'].includes(f.ease) ? f.ease : 'linear'
         })) : [],
         text: String(c.text || '').slice(0, 1000), fontSize: Math.max(18, Math.min(180, Number(c.fontSize) || 72)),
         color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffffff', bold: c.bold !== false,
@@ -1371,8 +1376,19 @@
     };
     if (!Array.isArray(c.keyframes)) c.keyframes = [];
     const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);
-    if (existing >= 0) c.keyframes[existing] = frame; else c.keyframes.push(frame);
-    frame.ease = ['linear','easeIn','easeOut','easeInOut','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut';
+    if (existing >= 0) {
+      const previous = c.keyframes[existing];
+      frame.id = previous.id || uid('keyframe');
+      frame.outHandle = previous.outHandle ? {...previous.outHandle} : null;
+      frame.inHandle = previous.inHandle ? {...previous.inHandle} : null;
+      c.keyframes[existing] = frame;
+    } else {
+      frame.id = uid('keyframe');
+      frame.outHandle = null;
+      frame.inHandle = null;
+      c.keyframes.push(frame);
+    }
+    frame.ease = ['linear','easeIn','easeOut','easeInOut','bezier','hold'].includes(c.keyframeEase) ? c.keyframeEase : 'easeInOut';
     c.keyframes.sort((a, b) => a.time - b.time);
     refresh(); renderPreview();
     notice('Keyframe opgeslagen (' + frame.ease + ') op ' + tc(time) + ' binnen de clip.');
