@@ -875,3 +875,13 @@ test('Vector Forge and Page Studio can close and reopen editable Bézier paths',
   assert.match(app, /selected\.closed = !selected\.closed/);
   assert.match(app, /Bézier-pad gesloten/);
 });
+
+
+test('Page Studio persists and renders a safe-area guide independently from margins and columns', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  assert.match(html, /id="page-safe-area-input"/);
+  assert.match(app, /layout\.pageSafeArea = safeArea/);
+  assert.match(app, /state\.project\?\.layout\?\.pageSafeArea \?\? 60/);
+  assert.match(app, /data-page-safe-area-guide/);
+  assert.match(app, /safeArea \* 2 >= Math\.min\(page\.width, page\.height\)/);
+});
