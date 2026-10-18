@@ -940,3 +940,21 @@ test('Motion Studio houdt proxy-preview gescheiden van de uiteindelijke MP4-expo
   assert.match(previewFunction, /const target = proxy \|\| \(angleAsset \? angleAsset\.url : clip\.url\)/,
     'Zonder proxy-preview moet de preview terugvallen op de originele bron');
 });
+
+test('Motion Studio heropent bron- en proxybestanden expliciet als ontbrekend zonder tijdelijke URLs', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const start = video.indexOf('async function openSession(file)');
+  const end = video.indexOf('\n  function ', start + 1);
+  assert.ok(start >= 0 && end > start, 'openSession-functie ontbreekt');
+  const open = video.slice(start, end);
+  assert.match(open, /url: null, file: null, missing: true/,
+    'Bronmedia moeten na het heropenen expliciet als ontbrekend worden gemarkeerd');
+  assert.match(open, /proxyFile: null, proxyUrl: null, proxyDuration: 0, proxyMissing: !!a\.proxyName/,
+    'Proxy-media mogen na heropenen geen verlopen tijdelijke URL of File bewaren');
+  assert.match(open, /proxySize: Number\.isSafeInteger\(Number\(a\.proxySize\)\)/,
+    'Proxy-herstelmetadata moet worden gevalideerd en behouden');
+  assert.match(open, /clip\.missing = clip\.type !== 'title' \|\| !clip\.url/,
+    'Clips zonder herstelde bron moeten zichtbaar ontbrekend blijven');
+  assert.match(open, /Koppel alle ontbrekende bronbestanden voordat je exporteert|missing/,
+    'Heropenen mag ontbrekende bronmedia niet stilzwijgend als beschikbaar behandelen');
+});
