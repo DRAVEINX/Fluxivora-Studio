@@ -466,7 +466,7 @@ test('photo-adjustmentsliders bewaren undo en markeren echte live-wijzigingen al
   assert.ok(app.includes('if (state.project.pixel[key] === nextValue) return;'));
   assert.ok(app.includes('commitEditorEdit(id, beforeProject);'));
   assert.ok(app.includes("$('reset-adjustments-button').addEventListener('click', () => {"));
-  assert.ok(app.includes('if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100 && !doc.blur) return;'));
+  assert.ok(app.includes("if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100 && !doc.blur && (!doc.filterPreset || doc.filterPreset === 'original')) return;"));
 });
 
 
