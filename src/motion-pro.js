@@ -428,6 +428,7 @@ void main() {
   const PROXY_READ_CHUNK_SIZE = 2 * 1024 * 1024;
 
   const multicamAngleSelection = new Set();
+  const multicamSyncSuggestions = new Map();
 
   function groupForId(id) {
     return state.multicamGroups.find(group => group.id === id) || null;
@@ -476,6 +477,88 @@ void main() {
     $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
   }
 
+  async function analyzeMulticamGroup(group) {
+    if (!window.FluxivoraMulticamSync || typeof window.FluxivoraMulticamSync.createRmsEnvelope !== 'function') {
+      api.notice('De golfvormmodule is niet beschikbaar. Herlaad Fluxivora Studio en probeer opnieuw.');
+      return;
+    }
+    const assets = group.angleAssetIds.map(id => state.assets.find(asset => asset.id === id));
+    if (assets.length < 2 || assets.some(asset => !asset || !asset.file || asset.missing)) {
+      api.notice('Koppel eerst alle videobronnen opnieuw. Synchronisatieanalyse gebruikt momenteel alleen lokaal beschikbare bestanden.');
+      return;
+    }
+    if (assets.some(asset => Number(asset.file.size) > 300 * 1024 * 1024)) {
+      api.notice('Een bestand is groter dan 300 MB. Gebruik voorlopig kortere mediabestanden om geheugenproblemen te voorkomen.');
+      return;
+    }
+    const button = $('video-multicam-sync-' + group.id);
+    const status = $('video-multicam-sync-status-' + group.id);
+    if (button) { button.disabled = true; button.textContent = 'Audio analyseren…'; }
+    if (status) status.textContent = 'Lokale analyse voorbereiden…';
+    let audioContext;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Deze browser ondersteunt geen lokale audioanalyse.');
+      audioContext = new AudioContextClass();
+      const decoded = [];
+      for (let index = 0; index < assets.length; index++) {
+        if (status) status.textContent = 'Bron ' + (index + 1) + ' van ' + assets.length + ' analyseren…';
+        const buffer = await assets[index].file.arrayBuffer();
+        const audio = await audioContext.decodeAudioData(buffer.slice(0));
+        const channels = [];
+        for (let channel = 0; channel < audio.numberOfChannels; channel++) channels.push(audio.getChannelData(channel));
+        const envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize: 2048, maxSamples: 12000 });
+        decoded.push({ asset: assets[index], envelope, sampleRate: audio.sampleRate / 2048 });
+      }
+      const reference = decoded[0];
+      const suggestions = [];
+      for (const candidate of decoded.slice(1)) {
+        const sampleRate = Math.min(reference.sampleRate, candidate.sampleRate);
+        const refStride = Math.max(1, Math.round(reference.sampleRate / sampleRate));
+        const candStride = Math.max(1, Math.round(candidate.sampleRate / sampleRate));
+        const refEnvelope = reference.envelope.filter((_, index) => index % refStride === 0);
+        const candEnvelope = candidate.envelope.filter((_, index) => index % candStride === 0);
+        const maxLagSamples = Math.min(10000, Math.floor(sampleRate * 15));
+        const result = window.FluxivoraMulticamSync.estimateWaveformOffset(refEnvelope, candEnvelope, {
+          sampleRate, maxLagSamples, minConfidence: 0.25, minOverlapRatio: 0.5
+        });
+        suggestions.push({ assetId: candidate.asset.id, assetName: candidate.asset.name, ...result });
+      }
+      multicamSyncSuggestions.set(group.id, { referenceAssetId: reference.asset.id, suggestions, createdAt: Date.now() });
+      renderMulticamGroups();
+      const accepted = suggestions.filter(item => item.accepted).length;
+      api.notice('Analyse voltooid: ' + accepted + ' van ' + suggestions.length + ' offsets hebben voldoende vertrouwen. Controleer de voorstellen vóór toepassing.');
+    } catch (error) {
+      if (status) status.textContent = 'Analyse mislukt: ' + (error && error.message ? error.message : 'onbekende fout');
+      api.notice('Audioanalyse kon niet worden uitgevoerd. Controleer of de bestanden een ondersteund audiokanaal bevatten.');
+    } finally {
+      if (audioContext && typeof audioContext.close === 'function') {
+        try { await audioContext.close(); } catch (_) {}
+      }
+      const currentButton = $('video-multicam-sync-' + group.id);
+      if (currentButton) { currentButton.disabled = false; currentButton.textContent = 'Analyseer audio-sync'; }
+    }
+  }
+
+  function applyMulticamSyncSuggestions(group) {
+    const preview = multicamSyncSuggestions.get(group.id);
+    if (!preview || !Array.isArray(preview.suggestions)) {
+      api.notice('Voer eerst een audioanalyse uit.');
+      return;
+    }
+    const accepted = preview.suggestions.filter(item => item.accepted && Number.isFinite(item.offsetSeconds));
+    if (!accepted.length) {
+      api.notice('Er zijn geen betrouwbare offsets om toe te passen. Stel de synchronisatie handmatig in.');
+      return;
+    }
+    api.pushHistory();
+    if (!group.offsets) group.offsets = {};
+    accepted.forEach(item => { group.offsets[item.assetId] = clamp(item.offsetSeconds, -86400, 86400); });
+    api.refresh();
+    renderMulticamGroups();
+    api.notice(accepted.length + ' offset(s) toegepast. De overige hoeken zijn ongewijzigd gebleven.');
+  }
+
   function renderMulticamGroups() {
     const host = $('video-multicam-groups');
     if (!host) return;
@@ -508,6 +591,39 @@ void main() {
       const hint = document.createElement('small');
       hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
       card.append(hint);
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.id = 'video-multicam-sync-' + group.id;
+      syncButton.className = 'button subtle compact';
+      syncButton.textContent = 'Analyseer audio-sync';
+      syncButton.addEventListener('click', () => analyzeMulticamGroup(group));
+      card.append(syncButton);
+      const syncStatus = document.createElement('small');
+      syncStatus.id = 'video-multicam-sync-status-' + group.id;
+      syncStatus.textContent = 'Analyseert lokaal waar mogelijk; voorgestelde offsets worden niet automatisch toegepast.';
+      card.append(syncStatus);
+      const syncPreview = multicamSyncSuggestions.get(group.id);
+      if (syncPreview) {
+        const summary = document.createElement('div');
+        summary.className = 'video-multicam-sync-results';
+        const referenceAsset = state.assets.find(item => item.id === syncPreview.referenceAssetId);
+        const summaryHeading = document.createElement('strong');
+        summaryHeading.textContent = 'Referentie: ' + (referenceAsset ? referenceAsset.name : 'onbekende bron');
+        summary.append(summaryHeading);
+        syncPreview.suggestions.forEach(item => {
+          const line = document.createElement('p');
+          const seconds = Number(item.offsetSeconds);
+          line.textContent = item.assetName + ': ' + (item.accepted && Number.isFinite(seconds) ? (seconds >= 0 ? '+' : '') + seconds.toFixed(3) + ' s · vertrouwen ' + Math.round(item.confidence * 100) + '%' : 'geen betrouwbaar voorstel (' + item.reason + ')');
+          summary.append(line);
+        });
+        const apply = document.createElement('button');
+        apply.type = 'button';
+        apply.className = 'button primary compact';
+        apply.textContent = 'Betrouwbare offsets toepassen';
+        apply.addEventListener('click', () => applyMulticamSyncSuggestions(group));
+        summary.append(apply);
+        card.append(summary);
+      }
       group.angleAssetIds.forEach(assetId => {
         const asset = state.assets.find(item => item.id === assetId);
         const row = document.createElement('label');
