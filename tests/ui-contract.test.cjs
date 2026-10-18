@@ -822,3 +822,15 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   assert.match(shared, /function controlPoints\(/);
   assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.7');
 });
+
+
+test('Motion Studio can batch-relink missing proxies by exact filename without guessing duplicate matches', () => {
+  const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(html, /id="video-proxy-files-relink"[^>]*multiple/);
+  assert.match(html, /id="video-proxy-relink-batch"/);
+  assert.match(motion, /function linkProxyFile\(file, assetId = selectedProxyAssetId\)/);
+  assert.match(motion, /asset\.proxyName\.toLocaleLowerCase\(\) === file\.name\.toLocaleLowerCase\(\)/);
+  assert.match(motion, /matches\.length === 1/);
+  assert.match(motion, /matches\.length > 1/);
+});
