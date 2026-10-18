@@ -969,6 +969,10 @@
 
   async function exportOfflineMp4() {
     if (state.offlineExportActive || state.exportActive) return;
+    if (window.FluxivoraMotionStudio?.hasProxyPreview?.()) {
+      notice('Zet Proxy preview uit voordat je exporteert. MP4 gebruikt anders onbedoeld proxykwaliteit.');
+      return;
+    }
     if (!window.fluxivora?.beginVideoRender || !window.fluxivora?.writeVideoFrame ||
         !window.fluxivora?.writeVideoAudio || !window.fluxivora?.finishVideoRender) {
       notice('Offline MP4-export is beschikbaar in de desktopinstallatie van Fluxivora Studio.');
