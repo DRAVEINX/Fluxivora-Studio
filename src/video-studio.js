@@ -366,7 +366,7 @@
     const frames = Array.isArray(c.keyframes) ? c.keyframes : [];
     const t = Math.max(0, state.playhead - c.start);
     const bezierValue = window.FluxivoraKeyframeCurves && typeof window.FluxivoraKeyframeCurves.bezierValue === 'function'
-      ? (left, right, property, progress) => window.FluxivoraKeyframeCurves.bezierValue(left, right, property, progress)
+      ? (left, right, key, raw) => window.FluxivoraKeyframeCurves.bezierValue(left, right, key, raw)
       : null;
     // Keep one shared keyframe path for preview and offline rendering.
     // The browser-safe runtime mirrors the legacy seconds-based keyframe format.
