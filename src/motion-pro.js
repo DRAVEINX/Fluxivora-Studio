@@ -825,7 +825,8 @@ void main() {
       const sourceAsset = angleAsset || asset;
       const proxy = useProxyPreview && sourceAsset && sourceAsset.proxyUrl && !sourceAsset.proxyMissing ? sourceAsset.proxyUrl : null;
       if (proxy) linked++;
-      const target = proxy || (angleAsset ? angleAsset.url : clip.url);
+      const originalSource = angleAsset ? angleAsset.url : clip.url;
+      const target = proxy || originalSource;
       if (!target || clip.mediaEl.dataset.fluxivoraActiveSource === target) continue;
       const media = clip.mediaEl;
       const currentTime = Number(media.currentTime) || 0;
@@ -842,12 +843,12 @@ void main() {
         if (wasPlaying && state.playing) media.play().catch(() => {});
         api.renderPreview();
       }, { once: true });
-      if (proxy && clip.url && clip.url !== proxy) {
+      if (proxy && originalSource && originalSource !== proxy) {
         media.addEventListener('error', () => {
           if (media.dataset.fluxivoraActiveSource !== proxy) return;
           sourceAsset.proxyMissing = true;
-          media.src = clip.url;
-          media.dataset.fluxivoraActiveSource = clip.url;
+          media.src = originalSource;
+          media.dataset.fluxivoraActiveSource = originalSource;
           media.load();
           updateProxyControls();
           api.notice('Proxy kon niet worden gelezen; voorbeeld schakelt terug naar het origineel.');
