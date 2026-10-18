@@ -1,3 +1,10 @@
+## 0.5.0-beta.10 — proxy recovery (in ontwikkeling)
+
+- Beta 10 werkt verder op de door de gebruiker goedgekeurde Beta 9.
+- Nieuw geïsoleerd werkpad: `feature/beta10-proxy-recovery`; Beta 9 blijft behouden en `main` wordt niet aangepast.
+- Toegevoegd: `docs/BETA10-PROXY-RECOVERY-PLAN.md` met herstel-, relink-, exportveiligheids- en acceptatiecriteria.
+- Status: voorbereiding en code-audit gestart; nog geen Beta 10-release en nog geen nieuwe installer als goedgekeurd gemarkeerd.
+
 ## 0.5.0-beta.7 — automated proxy generation
 
 - Added local FFmpeg H.264/AAC proxy generation at 540p and 720p from the Motion Studio media bin.
