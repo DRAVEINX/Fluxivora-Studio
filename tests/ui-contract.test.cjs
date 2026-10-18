@@ -885,3 +885,13 @@ test('Page Studio persists and renders a safe-area guide independently from marg
   assert.match(app, /data-page-safe-area-guide/);
   assert.match(app, /safeArea \* 2 >= Math\.min\(page\.width, page\.height\)/);
 });
+
+
+test('Page Studio persists and renders an adjustable non-printing baseline grid', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  assert.match(html, /id="page-baseline-grid-input"/);
+  assert.match(app, /layout\.pageBaselineGrid = baselineGrid/);
+  assert.match(app, /data-page-baseline-grid/);
+  assert.match(app, /baselineGrid < 0 \|\| baselineGrid > 100/);
+  assert.match(app, /for \(let y = baselineGrid; y < size\.height; y \+= baselineGrid\)/);
+});
