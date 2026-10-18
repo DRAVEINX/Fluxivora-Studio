@@ -1676,7 +1676,7 @@
         : state.project.layout.width === 794 && state.project.layout.height === 1123 && state.project.layout.pages[state.project.layout.currentPage].width === 794 && state.project.layout.pages[state.project.layout.currentPage].height === 1123;
     if (alreadyDefault) return;
     checkpoint();
-    if (state.activeWorkspace === 'pixel') Object.assign(state.project.pixel, { width: 1200, height: 800, brightness: 100, contrast: 100, saturation: 100 });
+    if (state.activeWorkspace === 'pixel') Object.assign(state.project.pixel, { width: 1200, height: 800, brightness: 100, contrast: 100, saturation: 100, blur: 0, filterPreset: 'original' });
     if (state.activeWorkspace === 'vector') Object.assign(state.project.vector, { width: 1000, height: 700 });
     if (state.activeWorkspace === 'layout') {
       state.project.layout.width = 794; state.project.layout.height = 1123;
