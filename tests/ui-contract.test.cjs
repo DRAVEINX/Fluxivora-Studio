@@ -1001,3 +1001,23 @@ test('Motion Studio heropent bron- en proxybestanden expliciet als ontbrekend zo
   assert.match(open, /Koppel alle ontbrekende bronbestanden voordat je exporteert|missing/,
     'Heropenen mag ontbrekende bronmedia niet stilzwijgend als beschikbaar behandelen');
 });
+
+test('Motion Studio valt bij een onleesbare proxy-preview terug op de originele bron', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const start = motion.indexOf('function applyProxyPreview()');
+  const end = motion.indexOf('\n  function relinkKnownProxyFiles', start);
+  assert.ok(start >= 0 && end > start, 'Proxy-previewfunctie ontbreekt');
+  const preview = motion.slice(start, end);
+  assert.match(preview, /if \(proxy && clip\.url && clip\.url !== proxy\)/,
+    'Fallback mag alleen worden ingesteld wanneer de originele bron beschikbaar is');
+  assert.match(preview, /media\.addEventListener\('error', \(\) =>/,
+    'Een proxy-fout moet worden afgehandeld');
+  assert.match(preview, /media\.dataset\.fluxivoraActiveSource !== proxy/,
+    'Een late proxy-fout mag een nieuwere bron niet overschrijven');
+  assert.match(preview, /sourceAsset\.proxyMissing = true/,
+    'Een onleesbare proxy moet als ontbrekend worden gemarkeerd');
+  assert.match(preview, /media\.src = clip\.url/,
+    'De preview moet terugschakelen naar de originele bron');
+  assert.match(preview, /Proxy kon niet worden gelezen; voorbeeld schakelt terug naar het origineel/,
+    'De gebruiker moet een duidelijke melding krijgen');
+});
