@@ -11,7 +11,7 @@
 - De gegenereerde preview wordt chunkgewijs ingelezen zodat de volledige MP4 niet als één IPC-bericht hoeft te worden verstuurd.
 - Limieten: bronbestand maximaal 20 GB en gegenereerde proxy maximaal 350 MB. Projecten bewaren de proxybestandsnaam, niet de proxy-inhoud; na heropenen kan het proxybestand opnieuw gekoppeld moeten worden.
 - Motion Studio ondersteunt nu kubische Bézier-keyframecurves: schakel de Bézier-interpolatie in en sleep de uit-/in-handles in de curve-editor om het verloop nauwkeurig te sturen. Dezelfde curve-evaluator wordt gebruikt in de preview en offline MP4-export.
-- Automatische multicam-audiosynchronisatie gebruikt nu de meegeleverde lokale FFmpeg-decoder om audio uit ondersteunde videocontainers te halen; analyseert maximaal 180 seconden per bron en weigert offsets te wijzigen wanneer de match onvoldoende betrouwbaar is. Maximaal 256 MB per bron. Controleer de uitlijning altijd handmatig; niet elk formaat of elke codec bevat leesbare audio.
+- Automatische multicam-audiosynchronisatie gebruikt de meegeleverde lokale FFmpeg-decoder om audio uit ondersteunde videocontainers te halen; analyseert maximaal 180 seconden per bron en weigert offsets te wijzigen bij een lage matchscore of meerdere even sterke matchpieken. Maximaal 256 MB per bron. Controleer de uitlijning altijd handmatig; niet elk formaat of elke codec bevat leesbare audio.
 
 ### Nieuw in bèta.6 — offline MP4-render
 
