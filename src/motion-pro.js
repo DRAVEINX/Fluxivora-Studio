@@ -1063,12 +1063,12 @@ void main() {
       return;
     }
     const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
+    api.pushHistory();
     asset.file = file;
     asset.url = URL.createObjectURL(file);
     asset.duration = asset.duration || 0;
     asset.missing = false;
     if (matches.length) {
-      api.pushHistory();
       matches.forEach(clip => {
         clip.url = URL.createObjectURL(file);
         clip.file = file;
@@ -1109,6 +1109,7 @@ void main() {
     api.refresh();
     api.renderPreview();
     if (!quiet) api.notice('Bronbestand gekoppeld aan bibliotheek en bijpassende clips.');
+    return true;
   }
 
 
