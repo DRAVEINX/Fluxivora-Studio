@@ -840,7 +840,10 @@ test('Vector Forge and Page Studio support a visible 40px alignment grid with ma
   const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
   assert.match(html, /id="vector-grid-button"/);
   assert.match(app, /state\.vectorGridEnabled/);
-  assert.match(app, /const grid = 40/);
+  assert.match(html, /id="vector-grid-size"/);
+  assert.match(app, /vectorGridSize: 40/);
+  assert.match(app, /const grid = Math\.max\(10, Math\.min\(100, Number\(state\.vectorGridSize\) \|\| 40\)\)/);
+  assert.match(app, /gridSize = Math\.max\(10, Math\.min\(100, Number\(state\.vectorGridSize\) \|\| 40\)\)/);
   assert.match(app, /data-editor-grid/);
   assert.match(app, /magnetisch uitlijnen/);
 });
