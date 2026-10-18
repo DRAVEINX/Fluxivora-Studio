@@ -1375,7 +1375,7 @@
         maskSecondarySize: Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)),
         maskSecondaryX: Math.max(-50, Math.min(50, Number(c.maskSecondaryX) || 0)),
         maskSecondaryY: Math.max(-50, Math.min(50, Number(c.maskSecondaryY) || 0)),
-        maskOperation: ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add',
+        maskOperation: ['add','subtract','intersect','xor'].includes(c.maskOperation) ? c.maskOperation : 'add',
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
       })).map(c => {
         if (!track(c.trackId)) c.trackId = state.tracks.find(t => t.kind === c.type || (c.type === 'title' && t.kind === 'title'))?.id || state.tracks[0].id;
@@ -1540,7 +1540,7 @@
     binding('video-mask-secondary-size', 'maskSecondarySize', v => Math.max(10, Math.min(100, Number(v) || 60)));
     binding('video-mask-secondary-x', 'maskSecondaryX', v => Math.max(-50, Math.min(50, Number(v) || 0)));
     binding('video-mask-secondary-y', 'maskSecondaryY', v => Math.max(-50, Math.min(50, Number(v) || 0)));
-    binding('video-mask-operation', 'maskOperation', v => ['add','subtract','intersect'].includes(v) ? v : 'add');
+    binding('video-mask-operation', 'maskOperation', v => ['add','subtract','intersect','xor'].includes(v) ? v : 'add');
   }
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
