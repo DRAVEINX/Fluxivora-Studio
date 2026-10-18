@@ -614,7 +614,6 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
     sendProxyProgress(session, 100, settings.durationSeconds);
     return {
       readToken,
-      filePath: session.outputPath,
       name: filename,
       size: stat.size,
       preset: settings.preset,
