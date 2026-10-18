@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -487,6 +487,13 @@
     ctx.font = (c.bold ? '700 ' : '400 ') + size + 'px Arial, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
+    if (['rectangle','ellipse'].includes(c.maskType)) {
+      const maskScale = Math.max(10, Math.min(100, Number(c.maskSize) || 90)) / 100;
+      ctx.beginPath();
+      if (c.maskType === 'ellipse') ctx.ellipse(W / 2, H / 2, W * maskScale / 2, H * maskScale / 2, 0, 0, Math.PI * 2);
+      else ctx.rect(W * (1 - maskScale) / 2, H * (1 - maskScale) / 2, W * maskScale, H * maskScale);
+      ctx.clip();
+    }
     ctx.fillStyle = c.color || '#ffffff';
     const x = W / 2 + animatedValue(c, 'x', c.x || 0) * W / 100;
     if (c.shapeType === 'rectangle' || c.shapeType === 'ellipse') {
@@ -709,6 +716,8 @@
     $('video-title-color').value = c.color || '#ffffff';
     $('video-shape-stroke-color').value = /^#[0-9a-f]{6}$/i.test(c.strokeColor || '') ? c.strokeColor : '#ffffff';
     $('video-shape-stroke-width').value = String(Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)));
+    $('video-mask-type').value = ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none';
+    $('video-mask-size').value = String(Math.max(10, Math.min(100, Number(c.maskSize) || 90)));
     $('video-shape-controls').classList.toggle('hidden', c.type !== 'title' || !['rectangle','ellipse'].includes(c.shapeType));
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
@@ -1322,6 +1331,8 @@
         shapeType: ['rectangle','ellipse'].includes(c.shapeType) ? c.shapeType : null,
         strokeColor: /^#[0-9a-f]{6}$/i.test(c.strokeColor || '') ? c.strokeColor : '#ffffff',
         strokeWidth: Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)),
+        maskType: ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none',
+        maskSize: Math.max(10, Math.min(100, Number(c.maskSize) || 90)),
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
       })).map(c => {
         if (!track(c.trackId)) c.trackId = state.tracks.find(t => t.kind === c.type || (c.type === 'title' && t.kind === 'title'))?.id || state.tracks[0].id;
@@ -1478,6 +1489,8 @@
     binding('video-title-color', 'color', String);
     binding('video-shape-stroke-color', 'strokeColor', v => /^#[0-9a-f]{6}$/i.test(v) ? v : '#ffffff');
     binding('video-shape-stroke-width', 'strokeWidth', v => Math.max(0, Math.min(30, Number(v) || 0)));
+    binding('video-mask-type', 'maskType', v => ['none','rectangle','ellipse'].includes(v) ? v : 'none');
+    binding('video-mask-size', 'maskSize', v => Math.max(10, Math.min(100, Number(v) || 90)));
   }
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
