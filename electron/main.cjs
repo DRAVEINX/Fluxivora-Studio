@@ -492,6 +492,47 @@ ipcMain.handle('video:choose-proxy-directory', async (event) => {
   return { token, name: path.basename(directoryPath) };
 });
 
+ipcMain.handle('video:decode-audio-for-sync', async (event, payload = {}) => {
+  const sourcePath = typeof payload.sourcePath === 'string' && payload.sourcePath.length <= 4096 ? payload.sourcePath : '';
+  if (!sourcePath || !path.isAbsolute(sourcePath) || !VIDEO_SOURCE_EXTENSIONS.includes(path.extname(sourcePath).toLowerCase())) {
+    throw new Error('De bron is geen ondersteund videobestand op schijf.');
+  }
+  const sourceStat = await fs.stat(sourcePath);
+  if (!sourceStat.isFile() || sourceStat.size < 1 || sourceStat.size > 256 * 1024 * 1024) {
+    throw new Error('De bron moet een bestand zijn van maximaal 256 MB voor automatische synchronisatie.');
+  }
+  const ffmpegPath = resolvedFfmpegPath();
+  await fs.access(ffmpegPath);
+  const maxOutputBytes = 180 * 8000 * 4;
+  const child = spawn(ffmpegPath, [
+    '-hide_banner', '-loglevel', 'error', '-nostdin',
+    '-i', sourcePath, '-vn', '-ac', '1', '-ar', '8000',
+    '-t', '180', '-f', 'f32le', 'pipe:1'
+  ], { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  const chunks = [];
+  let outputBytes = 0;
+  let stderr = '';
+  let processError = null;
+  child.stdout.on('data', chunk => {
+    outputBytes += chunk.length;
+    if (outputBytes > maxOutputBytes) {
+      processError = new Error('De audiodecoder overschreed de veilige analysegrootte.');
+      try { child.kill(); } catch (_) {}
+      return;
+    }
+    chunks.push(chunk);
+  });
+  child.stderr.on('data', chunk => { stderr = (stderr + chunk.toString('utf8')).slice(-4000); });
+  child.once('error', error => { processError = error; });
+  const result = await new Promise(resolve => child.once('close', (code, signal) => resolve({ code, signal })));
+  if (processError) throw processError;
+  if (result.code !== 0) {
+    throw new Error('FFmpeg kon geen audio uit deze bron lezen' + (stderr.trim() ? ': ' + stderr.trim().slice(-1200) : '.'));
+  }
+  if (outputBytes < 8000 * 4 * 2) throw new Error('Er is minder dan twee seconden bruikbare audio in deze bron.');
+  return { base64Data: Buffer.concat(chunks, outputBytes).toString('base64'), sampleRate: 8000, sampleCount: outputBytes / 4 };
+});
+
 ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
   const settings = validateProxyRequest(payload);
   const jobKey = proxyJobKey(event.sender.id, settings.requestId);
