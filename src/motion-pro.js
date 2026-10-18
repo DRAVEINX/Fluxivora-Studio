@@ -861,7 +861,14 @@ void main() {
     const claimedAssetIds = new Set();
     for (const file of candidates) {
       const key = normalize(file.name);
-      const matches = assetsByProxyName.get(key) || [];
+      const namedMatches = assetsByProxyName.get(key) || [];
+      // When saved metadata includes a size, do not attach a same-name file with different contents.
+      const matches = namedMatches.filter(asset => !Number.isSafeInteger(Number(asset.proxySize)) ||
+        Number(asset.proxySize) <= 0 || Number(asset.proxySize) === Number(file.size));
+      if (namedMatches.length && !matches.length) {
+        unmatched++;
+        continue;
+      }
       // Never guess which file is correct when the user selected duplicate names.
       if (candidateCounts.get(key) > 1) {
         ambiguous++;
@@ -897,6 +904,7 @@ void main() {
     asset.proxyFile = file;
     asset.proxyUrl = URL.createObjectURL(file);
     asset.proxyName = file.name;
+    asset.proxySize = Number.isSafeInteger(Number(file.size)) && Number(file.size) > 0 ? Number(file.size) : 0;
     asset.proxyMissing = false;
     const probe = document.createElement('video');
     probe.preload = 'metadata';
