@@ -140,7 +140,7 @@
             <input id="video-files" type="file" accept="video/*" multiple hidden />
             <input id="video-audio-files" type="file" accept="audio/*" multiple hidden />
             <input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden />
-            <input id="video-relink-files" type="file" accept="video/*,audio/*" hidden />
+            <input id="video-relink-files" type="file" accept="video/*,audio/*" hidden /><input id="video-relink-batch-files" type="file" accept="video/*,audio/*" multiple hidden />
             <input id="video-proxy-file" type="file" accept="video/*" hidden />
             <input id="video-proxy-files-relink" type="file" accept="video/*" multiple hidden />
             <div class="video-proxy-controls">
@@ -161,7 +161,7 @@
               <div id="video-multicam-groups"></div>
             </div>
             <div class="video-bin-tools"><input id="video-bin-search" type="search" placeholder="Zoek in media…" aria-label="Zoek projectmedia" /><select id="video-bin-filter" aria-label="Filter projectmedia"><option value="all">Alle media</option><option value="video">Video</option><option value="audio">Audio</option></select></div>
-            <div id="video-media" class="video-media-bin" aria-label="Mediabibliotheek"></div>
+            <button id="video-relink-all" type="button" class="button subtle compact">Ontbrekende bronnen automatisch koppelen</button><div id="video-media" class="video-media-bin" aria-label="Mediabibliotheek"></div>
             <div id="video-media-empty" class="video-media-empty">Importeer video of audio om bronnen hier te bekijken.</div>
             <div class="video-media-footer"><span class="video-accent-dot"></span><p>Je bestanden worden lokaal verwerkt. Montagebestanden bewaren bewerkingsinformatie, niet de originele media.</p></div>
           </aside>
