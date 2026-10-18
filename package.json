@@ -11,7 +11,7 @@
     "test": "node --test",
     "dist:win": "electron-builder --win nsis --x64",
     "dist:dir": "electron-builder --dir",
-    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check src/app.js && node --check src/core.js && node --check src/video-studio.js && node --check src/motion-pro.js && node --check electron/video-render.cjs && node --check src/keyframe-curves.js"
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check src/app.js && node --check src/core.js && node --check src/video-studio.js && node --check src/motion-pro.js && node --check electron/video-render.cjs && node --check src/keyframe-curves.js && node --check src/timecode.js"
   },
   "devDependencies": {
     "electron": "44.9.0",
