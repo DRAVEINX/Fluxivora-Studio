@@ -1059,3 +1059,19 @@ test('Motion Graphics heeft een eigen navigatie-ingang en gebruikt de gedeelde a
   assert.match(motion, /b\.dataset\.workspace === 'motionfx'/);
   assert.match(motion, /Animatie, compositing en bewegende vormgeving/);
 });
+
+
+test('Motion Graphics bevat een interactieve compositielaagstapel', () => {
+  assert.match(html, /id="motionfx-layer-panel"/);
+  assert.match(html, /id="motionfx-layer-list"/);
+  assert.match(html, /id="motionfx-layer-count"/);
+  const motion = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(motion, /function renderMotionLayers\(\)/);
+  assert.match(motion, /function handleMotionLayerAction\(event\)/);
+  assert.match(motion, /data-layer-action/);
+  assert.match(motion, /state\.tracks\[index\], state\.tracks\[next\]/);
+  assert.match(motion, /document\.body\.classList\.toggle\('motionfx-mode', motionGraphics\)/);
+  const styles = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
+  assert.match(styles, /\.motionfx-layer-row\.active/);
+  assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-layer-panel/);
+});
