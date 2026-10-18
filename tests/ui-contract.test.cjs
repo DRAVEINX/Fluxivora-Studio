@@ -696,6 +696,17 @@ test('Motion Studio kan proxybestanden koppelen zonder de originele media te ver
   assert.match(motion, /video-proxy-preview/);
 });
 
+test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op unieke bestandsnaam', () => {
+  const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
+  assert.match(html, /id="video-proxy-relink-all"/);
+  assert.match(html, /id="video-proxy-relink-files" type="file" accept="video\/\*" multiple/);
+  assert.match(motion, /function relinkKnownProxyFiles\(files\)/);
+  assert.match(motion, /assetsByProxyName/);
+  assert.match(motion, /matches\.length === 1/);
+  assert.match(motion, /matches\.length > 1/);
+  assert.match(motion, /linkProxyFile\(file, matches\[0\]\.id, \{ silent: true \}\)/);
+});
+
 
 test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
   for (const id of ['video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut']) {
