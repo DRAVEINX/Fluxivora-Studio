@@ -830,7 +830,7 @@
     if (!file) throw new Error('Een audiobron ontbreekt in het project.');
     if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
     if (file.size > 256 * 1024 * 1024) {
-      throw new Error('Deze bron is groter dan 256 MB en past niet veilig in de offline audiodecoder van beta.6. Gebruik een kleinere audio-extractie.');
+      throw new Error('Deze bron is groter dan 256 MB en past niet veilig in de offline audiodecoder van beta.7. Gebruik een kleinere audio-extractie.');
     }
     if (offlineAudioBufferCache.has(file)) return offlineAudioBufferCache.get(file);
     const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -1173,7 +1173,7 @@
   }
   function saveSession() {
     const data = {
-      format: 'fluxivora-video-project', version: '0.5.0-beta.6', name: state.name,
+      format: 'fluxivora-video-project', version: '0.5.0-beta.7', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})) },
       tracks: state.tracks.map(t => ({...t})),
       assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
