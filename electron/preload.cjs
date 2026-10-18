@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('fluxivora', Object.freeze({
       sourceName: typeof options.sourceName === 'string' ? options.sourceName : file.name
     });
   },
+  analyzeMulticamAudioForFile: (file) => {
+    let sourcePath = '';
+    try { sourcePath = webUtils.getPathForFile(file); } catch (_) {}
+    if (!sourcePath) return Promise.reject(new Error('Dit mediabestand heeft geen lokaal bronpad.'));
+    return ipcRenderer.invoke('video:analyze-multicam-audio', { sourcePath });
+  },
   cancelVideoProxy: (payload) => ipcRenderer.invoke('video:cancel-proxy', payload),
   readVideoProxyChunk: (payload) => ipcRenderer.invoke('video:read-proxy-chunk', payload),
   releaseVideoProxyRead: (payload) => ipcRenderer.invoke('video:release-proxy-read', payload),
