@@ -898,3 +898,18 @@ test('Page Studio persists and renders an adjustable non-printing baseline grid'
   assert.match(app, /baselineGrid < 0 \|\| baselineGrid > 100/);
   assert.match(app, /for \(let y = baselineGrid; y < size\.height; y \+= baselineGrid\)/);
 });
+
+
+test('Pixel Lab provides persistent non-destructive filter presets', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  for (const preset of ['original', 'mono', 'warm', 'cool', 'vintage']) {
+    assert.match(html, new RegExp(`<option value="${preset}"`));
+  }
+  assert.match(html, /id="pixel-filter-preset"/);
+  assert.match(app, /function pixelPresetFilter\(preset\)/);
+  assert.match(app, /grayscale\(100%\)/);
+  assert.match(app, /sepia\(35%\) contrast\(92%\) saturate\(82%\)/);
+  assert.match(app, /doc\.filterPreset = preset/);
+  assert.match(app, /pixelPresetFilter\(doc\.filterPreset\)/);
+  assert.match(app, /filterPreset: 'original'/);
+});
