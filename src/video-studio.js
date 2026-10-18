@@ -413,7 +413,7 @@
     if (exposure) parts.push('brightness(' + Math.pow(2, exposure).toFixed(3) + ')');
     if (contrast !== 1) parts.push('contrast(' + contrast.toFixed(3) + ')');
     if (saturation !== 1) parts.push('saturate(' + saturation.toFixed(3) + ')');
-    const effectMap = { grayscale: 'grayscale(1)', sepia: 'sepia(1)', blur: 'blur(2px)', soften: 'blur(1px)', boost: 'contrast(1.15) saturate(1.2)', desaturate: 'saturate(.35)' };
+    const effectMap = { grayscale: 'grayscale(1)', sepia: 'sepia(1)', blur: 'blur(2px)', soften: 'blur(1px)', boost: 'contrast(1.15) saturate(1.2)', desaturate: 'saturate(.35)', invert: 'invert(1)', hue: 'hue-rotate(90deg)', brighten: 'brightness(1.2)', crush: 'contrast(1.4)' };
     (clip && Array.isArray(clip.effects) ? clip.effects : []).filter(e => e && e.enabled !== false).forEach(e => { if (effectMap[e.type]) parts.push(effectMap[e.type]); });
     return parts.join(' ') || 'none';
   }
