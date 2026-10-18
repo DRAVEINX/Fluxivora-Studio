@@ -1126,3 +1126,16 @@ test('keyframe-curve-editor exposes all supported mask position properties', () 
     assert.ok(motion.includes(property + ':'), 'Motion curve support missing: ' + property);
   }
 });
+
+
+test('Motion Studio keyframes capture, persist, and animate both mask positions and sizes', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /maskSize: Number\(c\.maskSize \|\| 90\)/);
+  assert.match(video, /maskSecondarySize: Number\(c\.maskSecondarySize \|\| 60\)/);
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.match(video, new RegExp(property + ': Number\\(c\\.' + property + ' \\|\\| 0\\)'));
+    assert.match(video, new RegExp(property + ': Math\\.max\\(-50, Math\\.min\\(50, Number\\(f\\.' + property + '\\) \\|\\| 0\\)'));
+    assert.match(video, new RegExp("animatedValue\\(c, '" + property + "'"));
+  }
+  assert.match(video, /rotation: Math\.max\(-3600, Math\.min\(3600, Number\(f\.rotation\) \|\| 0\)\)/);
+});

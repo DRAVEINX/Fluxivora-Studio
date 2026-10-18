@@ -568,11 +568,11 @@
         else path.rect(centerX - W * scale / 2, centerY - H * scale / 2, W * scale, H * scale);
         return path;
       };
-      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90), c.maskX, c.maskY);
+      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90), animatedValue(c, 'maskX', c.maskX || 0), animatedValue(c, 'maskY', c.maskY || 0));
       const secondaryType = c.maskSecondaryType;
       if (!['rectangle','roundRect','ellipse'].includes(secondaryType)) ctx.clip(primary);
       else {
-        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), c.maskSecondaryX, c.maskSecondaryY);
+        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), animatedValue(c, 'maskSecondaryX', c.maskSecondaryX || 0), animatedValue(c, 'maskSecondaryY', c.maskSecondaryY || 0));
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'xor') {
           const exclusive = new Path2D();
@@ -1656,9 +1656,16 @@
           time: Math.max(0, Math.min(86400, Number(f.time) || 0)),
           opacity: Math.max(0, Math.min(1, Number(f.opacity) || 0)),
           scale: Math.max(0.1, Math.min(3, Number(f.scale) || 1)),
+          rotation: Math.max(-3600, Math.min(3600, Number(f.rotation) || 0)),
           x: Math.max(-100, Math.min(100, Number(f.x) || 0)),
           y: Math.max(-100, Math.min(100, Number(f.y) || 0)),
           volume: Math.max(0, Math.min(2, Number(f.volume) || 0)),
+          maskSize: Math.max(10, Math.min(100, Number(f.maskSize) || 90)),
+          maskSecondarySize: Math.max(10, Math.min(100, Number(f.maskSecondarySize) || 60)),
+          maskX: Math.max(-50, Math.min(50, Number(f.maskX) || 0)),
+          maskY: Math.max(-50, Math.min(50, Number(f.maskY) || 0)),
+          maskSecondaryX: Math.max(-50, Math.min(50, Number(f.maskSecondaryX) || 0)),
+          maskSecondaryY: Math.max(-50, Math.min(50, Number(f.maskSecondaryY) || 0)),
           id: String(f.id || uid('keyframe')),
           outHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.outHandle, f) || null,
           inHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.inHandle, f) || null,
@@ -1777,7 +1784,10 @@
     const time = Math.max(0, Math.min(clipLength(c), state.playhead - c.start));
     const frame = {
       time, opacity: Number(c.opacity == null ? 1 : c.opacity), scale: Number(c.scale || 1),
-      x: Number(c.x || 0), y: Number(c.y || 0), rotation: Number(c.rotation || 0), volume: Number(c.volume == null ? 1 : c.volume)
+      x: Number(c.x || 0), y: Number(c.y || 0), rotation: Number(c.rotation || 0), volume: Number(c.volume == null ? 1 : c.volume),
+      maskSize: Number(c.maskSize || 90), maskSecondarySize: Number(c.maskSecondarySize || 60),
+      maskX: Number(c.maskX || 0), maskY: Number(c.maskY || 0),
+      maskSecondaryX: Number(c.maskSecondaryX || 0), maskSecondaryY: Number(c.maskSecondaryY || 0)
     };
     if (!Array.isArray(c.keyframes)) c.keyframes = [];
     const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);
