@@ -538,7 +538,12 @@ void main() {
         });
         suggestions.push({ assetId: candidate.asset.id, assetName: candidate.asset.name, ...result });
       }
-      multicamSyncSuggestions.set(group.id, { referenceAssetId: reference.asset.id, suggestions, createdAt: Date.now() });
+      const sourceSignatures = Object.fromEntries(decoded.map(item => [item.asset.id, {
+        name: String(item.asset.file && item.asset.file.name || ''),
+        size: Number(item.asset.file && item.asset.file.size || 0),
+        lastModified: Number(item.asset.file && item.asset.file.lastModified || 0)
+      }]));
+      multicamSyncSuggestions.set(group.id, { referenceAssetId: reference.asset.id, sourceSignatures, suggestions, createdAt: Date.now() });
       renderMulticamGroups();
       const accepted = suggestions.filter(item => item.accepted).length;
       api.notice('Analyse voltooid: ' + accepted + ' van ' + suggestions.length + ' offsets hebben voldoende vertrouwen. Controleer de voorstellen vóór toepassing.');
@@ -561,8 +566,15 @@ void main() {
       return;
     }
     const currentAngleIds = new Set(group.angleAssetIds || []);
-    if (!currentAngleIds.has(preview.referenceAssetId) ||
-        !state.assets.some(asset => asset.id === preview.referenceAssetId && asset.type === 'video' && asset.file && !asset.missing)) {
+    const sourceStillMatches = assetId => {
+      const expected = preview.sourceSignatures && preview.sourceSignatures[assetId];
+      const asset = state.assets.find(item => item.id === assetId && item.type === 'video' && item.file && !item.missing);
+      return Boolean(expected && asset &&
+        String(asset.file.name || '') === expected.name &&
+        Number(asset.file.size || 0) === expected.size &&
+        Number(asset.file.lastModified || 0) === expected.lastModified);
+    };
+    if (!currentAngleIds.has(preview.referenceAssetId) || !sourceStillMatches(preview.referenceAssetId)) {
       multicamSyncSuggestions.delete(group.id);
       api.notice('De bron van deze analyse is gewijzigd of niet meer beschikbaar. Voer de analyse opnieuw uit.');
       renderMulticamGroups();
@@ -573,7 +585,7 @@ void main() {
       Number.isFinite(item.offsetSeconds) &&
       item.assetId !== preview.referenceAssetId &&
       currentAngleIds.has(item.assetId) &&
-      state.assets.some(asset => asset.id === item.assetId && asset.type === 'video' && asset.file && !asset.missing)
+      sourceStillMatches(item.assetId)
     );
     if (!accepted.length) {
       api.notice('Er zijn geen actuele, betrouwbare offsets om toe te passen. Stel de synchronisatie handmatig in of voer de analyse opnieuw uit.');
