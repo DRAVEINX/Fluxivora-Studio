@@ -2,7 +2,7 @@ name: Fluxivora Studio — Windows CI
 
 on:
   push:
-    branches: [main, master, feature/beta9-proxy-workflow-multicam]
+    branches: [main, master, feature/beta9-proxy-workflow-multicam, feature/beta10-proxy-recovery]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
