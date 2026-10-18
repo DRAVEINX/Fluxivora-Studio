@@ -914,7 +914,7 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(html, /id="video-mask-type"/);
   assert.match(html, /id="video-mask-size"/);
   assert.match(video, /ctx\.clip\(primary\)/);
-  assert.match(video, /ctx\.clip\(combined, 'evenodd'\)/);
+  assert.match(video, /ctx\.clip\(outsideSecondary, 'evenodd'\)/);
   assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
   assert.match(video, /maskType: \['none','rectangle','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
   assert.match(video, /binding\('video-mask-size', 'maskSize'/);
@@ -992,8 +992,8 @@ test('Motion Studio persists and renders two-mask combination operations', () =>
 
 test('Motion Studio subtract mode cuts the second mask from the first mask', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
-  assert.match(video, /else if \(c\.maskOperation === 'subtract'\) \{\s*const combined = new Path2D\(\);\s*combined\.addPath\(primary\);\s*combined\.addPath\(secondary\);\s*ctx\.clip\(combined, 'evenodd'\);/);
-  assert.doesNotMatch(video, /ctx\.clip\(combined, 'evenodd'\);[\s\S]{0,80}ctx\.clip\(combined, 'nonzero'\)/);
+  assert.match(video, /else if \(c\.maskOperation === 'subtract'\) \{[\s\S]*?ctx\.clip\(primary\);[\s\S]*?outsideSecondary\.rect\(0, 0, W, H\);[\s\S]*?outsideSecondary\.addPath\(secondary\);[\s\S]*?ctx\.clip\(outsideSecondary, 'evenodd'\);/);
+  assert.match(video, /A minus B even when B/);
 });
 
 
