@@ -1079,10 +1079,14 @@ test('alle drie grafische werkruimtes publiceren een niet-lege, testbare gereeds
   const match = app.match(/const toolsets = \{([\s\S]*?)\n  \};/);
   assert.ok(match, 'Toolsets ontbreken in de app');
   const block = match[1];
-  for (const workspace of ['pixel', 'vector', 'layout']) {
-    const workspaceMatch = block.match(new RegExp(workspace + ': \\[([\\s\\S]*?)\\n    \\](?:,|\\n  \\})'));
-    assert.ok(workspaceMatch, 'Gereedschapsset ontbreekt: ' + workspace);
-    const entries = [...workspaceMatch[1].matchAll(/\['([^']+)',\s*'[^']*',\s*'([^']+)',\s*'([^']+)'\]/g)];
+  const workspaceNames = ['pixel', 'vector', 'layout'];
+  for (let index = 0; index < workspaceNames.length; index++) {
+    const workspace = workspaceNames[index];
+    const start = block.indexOf(workspace + ': [');
+    assert.ok(start >= 0, 'Gereedschapsset ontbreekt: ' + workspace);
+    const next = workspaceNames.slice(index + 1).map(name => block.indexOf(name + ': [', start + workspace.length + 3)).filter(position => position >= 0);
+    const workspaceBlock = block.slice(start, next.length ? Math.min(...next) : block.length);
+    const entries = [...workspaceBlock.matchAll(/\['([^']+)',\s*'[^']*',\s*'([^']+)',\s*'([^']+)'\]/g)];
     assert.ok(entries.length >= 15, workspace + ' heeft onverwacht weinig gereedschappen: ' + entries.length);
     assert.ok(entries.every(entry => entry[1] && entry[2] && entry[3]),
       workspace + ' bevat een gereedschap zonder id, label of uitleg');
