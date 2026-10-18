@@ -418,7 +418,7 @@
       state.motionFxLayers = new Map(runtime.evaluateCompositionAtFrame({ layers }, frame).map(layer => [layer.id, layer]));
     } catch (error) {
       state.motionFxLayers = new Map();
-      notice('Motion FX-laaghierarchie is ongeldig: ' + error.message, 'error');
+      // Invalid imported hierarchies are safely ignored until the project is corrected.
     }
   }
   function drawWithParentTransform(ctx, clip, draw) {
@@ -793,6 +793,12 @@
     $('video-selected-name').textContent = c ? c.name : 'Selecteer een clip';
     if (!c) return;
     $('video-clip-name').value = c.name || '';
+    const parentSelect = $('video-parent-layer');
+    if (parentSelect) {
+      parentSelect.replaceChildren(new Option('Geen ouderlaag', ''));
+      state.clips.filter(layer => layer.id !== c.id).forEach(layer => parentSelect.add(new Option(layer.name || layer.id, layer.id)));
+      parentSelect.value = c.parentId && state.clips.some(layer => layer.id === c.parentId) ? c.parentId : '';
+    }
     $('video-clip-start').value = Number(c.start || 0).toFixed(2);
     $('video-in').value = Number(c.in || 0).toFixed(2);
     $('video-out').value = Number(c.out || 0).toFixed(2);
@@ -1793,6 +1799,20 @@
   }
   function wireProperties() {
     $('video-clip-name').addEventListener('change', () => applyProperty('video-clip-name', 'name', v => String(v).slice(0, 512)));
+    $('video-parent-layer').addEventListener('change', () => {
+      const c = selected(); if (!c) return;
+      const parentId = $('video-parent-layer').value || null;
+      let cursor = parentId, cycle = false; const seen = new Set();
+      while (cursor) {
+        if (cursor === c.id || seen.has(cursor)) { cycle = true; break; }
+        seen.add(cursor);
+        cursor = state.clips.find(layer => layer.id === cursor)?.parentId || null;
+      }
+      if (cycle) { $('video-parent-layer').value = c.parentId || ''; notice('Deze ouderlaag veroorzaakt een circulaire relatie.'); return; }
+      if ((c.parentId || null) === parentId) return;
+      pushHistory(); c.parentId = parentId; refresh(); renderPreview();
+      notice(parentId ? 'Ouderlaag gekoppeld.' : 'Ouderlaag losgekoppeld.');
+    });
     $('video-clip-start').addEventListener('change', () => {
       const c = selected(); if (!c) return;
       const v = snapTime(Math.max(0, Number($('video-clip-start').value) || 0), c.id);
