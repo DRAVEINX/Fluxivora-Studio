@@ -1131,23 +1131,44 @@ void main() {
     if (!candidates.length) return;
     const key = value => String(value || '').trim().toLocaleLowerCase();
     const missing = state.assets.filter(asset => asset.missing || !asset.url || !asset.file);
+    const usedFiles = new Set();
+    const ambiguousNames = new Set();
     let linked = 0;
-    const unmatched = [];
+    let unmatched = 0;
+
     missing.forEach(asset => {
-      const index = candidates.findIndex(file => key(file.name) === key(asset.name) &&
-        isCompatibleMediaFile(file, asset.type));
-      if (index < 0) { unmatched.push(asset.name); return; }
-      if (applyRelinkToAsset(asset, candidates[index], true)) {
+      const name = key(asset.name);
+      const matchingAssets = missing.filter(item => item.type === asset.type && key(item.name) === name);
+      const matchingFiles = candidates.filter(file => !usedFiles.has(file) &&
+        key(file.name) === name && isCompatibleMediaFile(file, asset.type));
+
+      // Never guess when duplicate asset names make a filename-only match unsafe.
+      if (matchingAssets.length > 1 || matchingFiles.length > 1) {
+        ambiguousNames.add(asset.name);
+        return;
+      }
+      if (!matchingFiles.length) {
+        unmatched++;
+        return;
+      }
+      const file = matchingFiles[0];
+      if (applyRelinkToAsset(asset, file, true)) {
         linked++;
-        candidates.splice(index, 1);
+        usedFiles.add(file);
+      } else {
+        unmatched++;
       }
     });
+
     renderMediaBin();
     api.refresh();
     api.renderPreview();
+    const details = [];
+    if (ambiguousNames.size) details.push(ambiguousNames.size + ' dubbele bestandsnaam(en) overgeslagen; koppel deze afzonderlijk.');
+    if (unmatched) details.push(unmatched + ' bron(nen) niet gekoppeld.');
     api.notice(linked
-      ? linked + ' ontbrekende bron' + (linked === 1 ? '' : 'nen') + ' automatisch gekoppeld op bestandsnaam.' + (unmatched.length ? ' Niet gevonden: ' + unmatched.length + '.' : '')
-      : 'Geen overeenkomende ontbrekende bronnen gevonden. Bestandsnamen en media-types moeten overeenkomen.');
+      ? linked + ' ontbrekende bron' + (linked === 1 ? '' : 'nen') + ' automatisch gekoppeld op unieke bestandsnaam.' + (details.length ? ' ' + details.join(' ') : '')
+      : 'Geen veilige, unieke overeenkomst gevonden.' + (details.length ? ' ' + details.join(' ') : ' Controleer bestandsnamen en media-types.'));
   }
   function renderEffectStack() {
     const container = $('video-effect-stack');
