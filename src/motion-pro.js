@@ -420,6 +420,12 @@ void main() {
 
   let selectedProxyAssetId = null;
   let useProxyPreview = false;
+  let proxyDirectoryToken = null;
+  let proxyBatchRunning = false;
+  let proxyCancelRequested = false;
+  let activeProxyRequestId = null;
+  let proxyStatusOverride = null;
+  const PROXY_READ_CHUNK_SIZE = 2 * 1024 * 1024;
 
   const multicamAngleSelection = new Set();
 
@@ -614,9 +620,13 @@ void main() {
     const checkbox = $('video-proxy-preview');
     checkbox.disabled = assetsWithProxy.length === 0;
     checkbox.checked = useProxyPreview;
-    $('video-proxy-status').textContent = assetsWithProxy.length
+    const missingCount = state.assets.filter(asset => asset.type === 'video' && asset.file && !asset.missing && !(asset.proxyUrl && !asset.proxyMissing)).length;
+    $('video-proxy-batch').disabled = proxyBatchRunning || missingCount === 0;
+    $('video-proxy-batch').textContent = missingCount ? 'Genereer ontbrekende proxies (' + missingCount + ')' : 'Alle proxies gekoppeld';
+    if (proxyStatusOverride) $('video-proxy-status').textContent = proxyStatusOverride;
+    else $('video-proxy-status').textContent = assetsWithProxy.length
       ? assetsWithProxy.length + (assetsWithProxy.length === 1 ? ' proxy gekoppeld' : ' proxies gekoppeld') + (useProxyPreview ? ' · voorbeeld gebruikt proxy-media' : ' · voorbeeld gebruikt originelen')
-      : (state.assets.some(asset => asset.proxyName) ? 'Koppel proxybestanden opnieuw na het openen van dit project.' : 'Koppel een proxy aan een videobron om deze optie te gebruiken.');
+      : (state.assets.some(asset => asset.proxyName) ? 'Koppel proxybestanden opnieuw na het openen van dit project.' : 'Koppel een proxy of genereer lichtere previewbestanden voor je videobronnen.');
   }
 
   function applyProxyPreview() {
@@ -652,8 +662,8 @@ void main() {
     return linked;
   }
 
-  async function linkProxyFile(file) {
-    const asset = state.assets.find(item => item.id === selectedProxyAssetId);
+  async function linkProxyFile(file, assetId = selectedProxyAssetId) {
+    const asset = state.assets.find(item => item.id === assetId);
     if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
       api.notice('Kies een videobestand als proxy.');
       return;
@@ -692,6 +702,177 @@ void main() {
     if (useProxyPreview) applyProxyPreview();
     api.notice('Proxy gekoppeld: ' + file.name);
     $('video-proxy-file').value = '';
+  }
+
+  function setProxyJobStatus(text, progress = null) {
+    proxyStatusOverride = text || null;
+    $('video-proxy-status').textContent = proxyStatusOverride || '';
+    $('video-proxy-progress').hidden = progress == null;
+    if (progress != null) $('video-proxy-progress').value = Math.max(0, Math.min(100, Number(progress) || 0));
+    $('video-proxy-cancel').classList.toggle('hidden', !proxyBatchRunning);
+    $('video-proxy-batch').disabled = proxyBatchRunning;
+    if (!proxyBatchRunning) $('video-proxy-cancel').classList.add('hidden');
+  }
+
+  async function ensureProxyDirectory() {
+    if (proxyDirectoryToken) return proxyDirectoryToken;
+    if (!window.fluxivora?.chooseVideoProxyDirectory) {
+      throw new Error('Automatische proxygeneratie is alleen beschikbaar in de geïnstalleerde Fluxivora-desktopapp.');
+    }
+    const chosen = await window.fluxivora.chooseVideoProxyDirectory();
+    if (!chosen?.token) return null;
+    proxyDirectoryToken = chosen.token;
+    return proxyDirectoryToken;
+  }
+
+  function decodeBase64Chunk(base64Data) {
+    if (typeof base64Data !== 'string' || !base64Data.length) throw new Error('De gegenereerde proxy bevat een lege gegevenschunk.');
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function readGeneratedProxy(result) {
+    if (!window.fluxivora?.readVideoProxyChunk || !result?.readToken ||
+        !Number.isSafeInteger(result.size) || result.size < 1024 || result.size > 350 * 1024 * 1024) {
+      throw new Error('De gegenereerde proxy heeft een ongeldige grootte of leessessie.');
+    }
+    const chunks = [];
+    let offset = 0;
+    let calls = 0;
+    try {
+      while (offset < result.size) {
+        if (proxyCancelRequested) throw new Error('Proxy-generatie is geannuleerd.');
+        if (++calls > Math.ceil(result.size / PROXY_READ_CHUNK_SIZE) + 2) {
+          throw new Error('De proxy is niet volledig gelezen; het chunkbudget is overschreden.');
+        }
+        const part = await window.fluxivora.readVideoProxyChunk({ readToken: result.readToken, offset });
+        if (!part || part.totalBytes !== result.size || !Number.isInteger(part.bytesRead) ||
+            part.bytesRead < 1 || part.bytesRead > result.size - offset) {
+          throw new Error('De proxy-leesstream is ongeldig of onvolledig.');
+        }
+        const bytes = decodeBase64Chunk(part.base64Data);
+        if (bytes.byteLength !== part.bytesRead) throw new Error('De proxy-chunkgrootte komt niet overeen.');
+        chunks.push(bytes);
+        offset += part.bytesRead;
+        if (proxyBatchRunning) {
+          const fraction = offset / result.size;
+          setProxyJobStatus('Proxy laden voor preview: ' + Math.round(fraction * 100) + '%', fraction * 100);
+        }
+      }
+      if (offset !== result.size) throw new Error('De proxy is niet volledig gelezen.');
+      return new File(chunks, result.name || 'Fluxivora-proxy.mp4', { type: 'video/mp4', lastModified: Date.now() });
+    } finally {
+      try { await window.fluxivora.releaseVideoProxyRead({ readToken: result.readToken }); } catch (_) {}
+    }
+  }
+
+  async function generateProxyForAsset(asset, index, total, directoryToken, preset) {
+    if (!asset || asset.type !== 'video' || asset.missing || !asset.file) {
+      throw new Error('Deze videobron ontbreekt of is niet meer aan een lokaal bestand gekoppeld.');
+    }
+    if (!window.fluxivora?.createVideoProxyForFile) {
+      throw new Error('Automatische proxygeneratie is alleen beschikbaar in de geïnstalleerde Fluxivora-desktopapp.');
+    }
+    const requestId = api.uid('proxyjob');
+    activeProxyRequestId = requestId;
+    setProxyJobStatus((index + 1) + '/' + total + ' · Proxy maken: ' + asset.name, 0);
+    try {
+      const result = await window.fluxivora.createVideoProxyForFile(asset.file, {
+        requestId,
+        preset,
+        sourceName: asset.name,
+        durationSeconds: Number(asset.duration) || 0,
+        directoryToken
+      });
+      if (!result) return false;
+      if (proxyCancelRequested) {
+        try { await window.fluxivora.releaseVideoProxyRead({ readToken: result.readToken }); } catch (_) {}
+        return false;
+      }
+      setProxyJobStatus((index + 1) + '/' + total + ' · Proxy lezen: ' + result.name, 100);
+      const proxyFile = await readGeneratedProxy(result);
+      if (proxyCancelRequested) return false;
+      await linkProxyFile(proxyFile, asset.id);
+      api.notice('Proxy gemaakt en gekoppeld: ' + result.name);
+      return true;
+    } finally {
+      if (activeProxyRequestId === requestId) activeProxyRequestId = null;
+    }
+  }
+
+  async function runProxyGeneration(requestedAssets = null) {
+    if (proxyBatchRunning) return;
+    const allCandidates = state.assets.filter(asset =>
+      asset.type === 'video' && asset.file && !asset.missing && !(asset.proxyUrl && !asset.proxyMissing)
+    );
+    const wanted = requestedAssets
+      ? requestedAssets.filter(asset => asset && asset.type === 'video' && asset.file && !asset.missing)
+      : allCandidates;
+    const candidates = [...new Map(wanted.map(asset => [asset.id, asset])).values()];
+    if (!candidates.length) {
+      api.notice('Er zijn geen gekoppelde videobronnen die een proxy nodig hebben.');
+      return;
+    }
+    let directoryToken;
+    try {
+      directoryToken = await ensureProxyDirectory();
+    } catch (error) {
+      api.notice('Proxygeneratie niet gestart: ' + error.message);
+      return;
+    }
+    if (!directoryToken) return;
+    proxyBatchRunning = true;
+    proxyCancelRequested = false;
+    $('video-proxy-cancel').classList.remove('hidden');
+    $('video-proxy-batch').disabled = true;
+    const preset = $('video-proxy-preset').value === '720p' ? '720p' : '540p';
+    let succeeded = 0;
+    let wasCancelled = false;
+    const failures = [];
+    try {
+      for (let index = 0; index < candidates.length; index++) {
+        if (proxyCancelRequested) break;
+        const asset = candidates[index];
+        try {
+          const ok = await generateProxyForAsset(asset, index, candidates.length, directoryToken, preset);
+          if (ok) succeeded++;
+          else if (proxyCancelRequested) break;
+        } catch (error) {
+          if (proxyCancelRequested || /geannuleerd/i.test(error.message || '')) break;
+          failures.push(asset.name + ': ' + (error?.message || 'onbekende fout'));
+          setProxyJobStatus((index + 1) + '/' + candidates.length + ' · Mislukt: ' + asset.name, 0);
+        }
+      }
+    } finally {
+      wasCancelled = proxyCancelRequested;
+      proxyBatchRunning = false;
+      activeProxyRequestId = null;
+      $('video-proxy-cancel').classList.add('hidden');
+      $('video-proxy-progress').hidden = true;
+      proxyCancelRequested = false;
+      proxyStatusOverride = null;
+      renderMediaBin();
+    }
+    const message = (succeeded ? succeeded + (succeeded === 1 ? ' proxy gemaakt' : ' proxies gemaakt') : 'Geen proxy voltooid') +
+      (wasCancelled ? ' · geannuleerd' : '') +
+      (failures.length ? ' · ' + failures.length + ' mislukt' : '') + '.';
+    if (failures.length) {
+      const first = failures.slice(0, 2).join(' | ');
+      api.notice(message + ' ' + first);
+    } else {
+      api.notice(message);
+    }
+  }
+
+  async function cancelProxyGeneration() {
+    if (!proxyBatchRunning) return;
+    proxyCancelRequested = true;
+    setProxyJobStatus('Annuleren… huidige proxy wordt gestopt.', null);
+    if (activeProxyRequestId && window.fluxivora?.cancelVideoProxy) {
+      try { await window.fluxivora.cancelVideoProxy({ requestId: activeProxyRequestId }); } catch (_) {}
+    }
   }
 
   function renderMediaBin() {
@@ -754,6 +935,14 @@ void main() {
           $('video-proxy-file').click();
         });
         card.append(proxy);
+        const generate = document.createElement('button');
+        generate.type = 'button';
+        generate.className = 'video-media-proxy-generate';
+        generate.textContent = asset.proxyUrl && !asset.proxyMissing ? 'Proxy opnieuw genereren' : 'Genereer proxy';
+        generate.disabled = proxyBatchRunning || asset.missing || !asset.file;
+        generate.title = 'Maak een lagere-resolutie H.264-proxy met de lokale FFmpeg-encoder';
+        generate.addEventListener('click', () => runProxyGeneration([asset]));
+        card.append(generate);
       }
       bin.append(card);
     });
@@ -1183,6 +1372,14 @@ void main() {
   $('video-proxy-file').addEventListener('change', event => {
     linkProxyFile(event.target.files?.[0]);
     event.target.value = '';
+  });
+  $('video-proxy-batch').addEventListener('click', () => runProxyGeneration());
+  $('video-proxy-cancel').addEventListener('click', cancelProxyGeneration);
+  window.fluxivora?.onVideoProxyProgress?.(payload => {
+    if (!proxyBatchRunning || payload?.requestId !== activeProxyRequestId) return;
+    const pct = Math.max(0, Math.min(100, Number(payload.progress) || 0));
+    const time = Number(payload.outTimeSeconds) || 0;
+    setProxyJobStatus('Proxy maken… ' + Math.round(pct) + '%' + (time ? ' · ' + formatDuration(time) : ''), pct);
   });
   $('video-proxy-preview').addEventListener('change', event => {
     useProxyPreview = event.target.checked;

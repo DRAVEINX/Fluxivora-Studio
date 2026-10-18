@@ -1,6 +1,6 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.6
+# Testresultaten — Fluxivora Studio 0.5.0-beta.7
 
-Controles bijgewerkt op 17 oktober 2026.
+Controles bijgewerkt op 18 oktober 2026.
 
 - De beta.1-testkandidaat behoudt de geautomatiseerde regressietests voor undo/redo, slepen, projectnaamwijzigingen, afbeeldingsinvoeging, selectiebehoud en lege geschiedenisstappen; de actuele uitkomst staat in [GitHub Actions](https://github.com/DRAVEINX/Fluxivora-Studio/actions).
 - Extra Windows-regressiecontrole: opslagacties naar hetzelfde doelbestand worden geserialiseerd wanneer meerdere schrijfacties tegelijk binnenkomen.
@@ -8,6 +8,14 @@ Controles bijgewerkt op 17 oktober 2026.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
 - Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
+
+## Motion Studio beta.7 — automatische proxygeneratie
+
+- De tests controleren proxy-presets 540p/720p, gevalideerde aanvraagvelden, bron-/uitvoerlimieten, veilige FFmpeg-argumenten en de ondersteunde video-extensies.
+- De Windows-encoder-smoketest maakt een korte synthetische bronvideo en controleert dat FFmpeg hieruit een leesbare H.264/AAC-proxy maakt.
+- UI-contracttests controleren de batchknop, kwaliteitskeuze, voortgang, annuleren, de preload-API, sender-eigendom van IPC-sessies en chunkgewijze proxy-inleesstroom.
+- De huidige branch bevat nieuwe controles; de actuele geslaagde/mislukte uitkomst wordt bepaald door de gekoppelde GitHub Actions-run voor de laatste commit.
+- Limieten in deze bèta: bronvideo maximaal 20 GB, gegenereerde proxy maximaal 350 MB; proxybestanden blijven los van het montageproject en kunnen na heropenen opnieuw gekoppeld moeten worden.
 
 ## Motion Studio beta.6 — offline MP4-render
 

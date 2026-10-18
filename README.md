@@ -1,6 +1,15 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.6 — frame-voor-frame offline MP4-export met H.264-video en AAC-audio.**
+**Huidige ontwikkelversie: 0.5.0-beta.7 — automatische proxy-generatie met FFmpeg voor Motion Studio.**
+
+### Nieuw in bèta.7 — proxygeneratie en batchworkflow
+
+- Genereer voor elke videobron een lichtere H.264-proxy in 540p of 720p met de meegeleverde lokale FFmpeg-encoder.
+- Genereer proxies voor meerdere video-assets achter elkaar vanuit de mediabibliotheek, met voortgang en annuleren.
+- De proxy wordt direct gekoppeld aan de originele bron en kan worden gebruikt met de bestaande Proxy preview-schakelaar. De originele media wordt niet vervangen.
+- Kies één uitvoermap voor de gemaakte MP4-proxybestanden; bestaande bestandsnamen worden niet overschreven.
+- De gegenereerde preview wordt chunkgewijs ingelezen zodat de volledige MP4 niet als één IPC-bericht hoeft te worden verstuurd.
+- Limieten: bronbestand maximaal 20 GB en gegenereerde proxy maximaal 350 MB. Projecten bewaren de proxybestandsnaam, niet de proxy-inhoud; na heropenen kan het proxybestand opnieuw gekoppeld moeten worden.
 
 ### Nieuw in bèta.6 — offline MP4-render
 
@@ -23,7 +32,7 @@
 - Multicamgroepen met meerdere videobronnen, handmatige sync-offsets per hoek en cuts naar een gekozen camerahoek op de playhead; de bestaande audiotrack blijft behouden.
 - De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De offline MP4-render is frame-voor-frame en encodeert H.264/AAC, maar de visuele compositing gebeurt nog in de browser-renderer en er gelden limieten van 15 minuten en 256 MB per audiobron. De scopes zijn indicatief en de output-LUT geldt op sequentieniveau, niet per clip. Automatische proxy-generatie, automatische multicam-sync op waveform/tijdcode, een live-multiviewer en volledige Bézier-handles moeten nog worden gebouwd. De WebM-export blijft als realtime alternatief beschikbaar. Bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moeten bronnen opnieuw worden gekoppeld.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De offline MP4-render is frame-voor-frame en encodeert H.264/AAC, maar de visuele compositing gebeurt nog in de browser-renderer en er gelden limieten van 15 minuten en 256 MB per audiobron. De scopes zijn indicatief en de output-LUT geldt op sequentieniveau, niet per clip. Automatische proxy-generatie is nu beschikbaar. Automatische multicam-sync op waveform/tijdcode, een live-multiviewer, volledig instelbare Bézier-handles en verder projectbewuste proxybeheer moeten nog worden gebouwd. De WebM-export blijft als realtime alternatief beschikbaar. Bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moeten bronnen opnieuw worden gekoppeld.
 
 **Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 

@@ -7,7 +7,14 @@ const FFMPEG_PACKAGE_PATH = require('ffmpeg-static');
 const {
   SAMPLE_RATE,
   MAX_STREAM_BYTES,
+  MAX_PROXY_READ_CHUNK_BYTES,
+  MAX_PROXY_OUTPUT_BYTES,
+  MAX_PROXY_SOURCE_BYTES,
+  VIDEO_SOURCE_EXTENSIONS,
+  safeFileStem,
   validateRenderRequest,
+  validateProxyRequest,
+  buildProxyArgs,
   decodeJpegFrame,
   decodeFloatAudioChunk,
   buildFfmpegArgs
@@ -18,6 +25,9 @@ const IMAGE_FILTER = [{ name: 'Afbeeldingen', extensions: ['png', 'jpg', 'jpeg',
 const MAX_IMAGE_BYTES = 60 * 1024 * 1024;
 const MAX_EXPORT_BYTES = 220 * 1024 * 1024;
 const videoRenderSessions = new Map();
+const videoProxyJobs = new Map();
+const videoProxyReadTokens = new Map();
+const videoProxyDirectoryTokens = new Map();
 
 function resolvedFfmpegPath() {
   if (typeof FFMPEG_PACKAGE_PATH !== 'string' || !FFMPEG_PACKAGE_PATH) {
@@ -25,6 +35,71 @@ function resolvedFfmpegPath() {
   }
   if (!app.isPackaged) return FFMPEG_PACKAGE_PATH;
   return FFMPEG_PACKAGE_PATH.replace(/app\.asar([\\/])/i, 'app.asar.unpacked$1');
+}
+
+function proxyJobKey(ownerId, requestId) {
+  return String(ownerId) + ':' + String(requestId);
+}
+
+function sendProxyProgress(session, progress, outTimeSeconds) {
+  if (!session || !session.sender || session.sender.isDestroyed()) return;
+  try {
+    session.sender.send('video:proxy-progress', {
+      requestId: session.requestId,
+      progress: Math.max(0, Math.min(100, Number(progress) || 0)),
+      outTimeSeconds: Math.max(0, Number(outTimeSeconds) || 0),
+      durationSeconds: session.durationSeconds
+    });
+  } catch (_) {}
+}
+
+async function abortVideoProxy(session) {
+  if (!session) return;
+  session.cancelled = true;
+  if (session.child && !session.closed && !session.child.killed) {
+    try { session.child.kill(); } catch (_) {}
+  }
+  if (session.done) await Promise.race([
+    session.done,
+    new Promise(resolve => setTimeout(resolve, 4000))
+  ]);
+  try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
+}
+
+async function uniqueProxyOutputPath(directoryPath, sourceName, preset) {
+  const parsed = path.parse(String(sourceName || 'Fluxivora-video'));
+  const stem = safeFileStem(parsed.name || sourceName || 'Fluxivora-video').slice(0, 72);
+  const base = stem + '.proxy-' + preset;
+  for (let index = 1; index <= 1000; index++) {
+    const filename = base + (index === 1 ? '' : '-' + index) + '.mp4';
+    const candidate = path.join(directoryPath, filename);
+    try {
+      await fs.access(candidate);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return { filePath: candidate, filename };
+      throw error;
+    }
+  }
+  throw new Error('Er kunnen geen unieke proxybestandsnamen meer worden gemaakt in deze map.');
+}
+
+function cleanupExpiredProxyReadTokens() {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [token, record] of videoProxyReadTokens) {
+    if (record.createdAt < cutoff) videoProxyReadTokens.delete(token);
+  }
+}
+
+function cleanupProxyOwner(ownerId) {
+  for (const [token, record] of videoProxyDirectoryTokens) {
+    if (record.ownerId === ownerId) videoProxyDirectoryTokens.delete(token);
+  }
+  for (const [token, record] of videoProxyReadTokens) {
+    if (record.ownerId === ownerId) videoProxyReadTokens.delete(token);
+  }
+  for (const session of videoProxyJobs.values()) {
+    if (session.ownerId === ownerId) void abortVideoProxy(session);
+  }
 }
 
 function getVideoRenderSession(event, sessionId) {
@@ -415,6 +490,183 @@ ipcMain.handle('video:cancel-render', async (event, payload = {}) => {
   if (!session || session.ownerId !== event.sender.id) return { cancelled: false };
   await abortVideoRender(session);
   return { cancelled: true };
+});
+
+ipcMain.handle('video:choose-proxy-directory', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Motion Studio — map voor proxybestanden',
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const directoryPath = await fs.realpath(result.filePaths[0]);
+  const stat = await fs.stat(directoryPath);
+  if (!stat.isDirectory()) throw new Error('Kies een geldige map voor proxybestanden.');
+  const token = crypto.randomUUID();
+  videoProxyDirectoryTokens.set(token, { ownerId: event.sender.id, directoryPath });
+  event.sender.once('destroyed', () => cleanupProxyOwner(event.sender.id));
+  return { token, name: path.basename(directoryPath) };
+});
+
+ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
+  const settings = validateProxyRequest(payload);
+  const jobKey = proxyJobKey(event.sender.id, settings.requestId);
+  if (videoProxyJobs.has(jobKey)) throw new Error('Deze proxytaak loopt al.');
+  const directoryToken = typeof payload.directoryToken === 'string' ? videoProxyDirectoryTokens.get(payload.directoryToken) : null;
+  if (!directoryToken || directoryToken.ownerId !== event.sender.id) {
+    throw new Error('Kies eerst via Fluxivora een map voor de gegenereerde proxybestanden.');
+  }
+  const sourcePath = typeof payload.sourcePath === 'string' && payload.sourcePath.length <= 4096 ? payload.sourcePath : '';
+  if (!sourcePath || !path.isAbsolute(sourcePath) || !VIDEO_SOURCE_EXTENSIONS.includes(path.extname(sourcePath).toLowerCase())) {
+    throw new Error('De bron is geen ondersteund videobestand op schijf.');
+  }
+  const session = {
+    requestId: settings.requestId,
+    ownerId: event.sender.id,
+    sender: event.sender,
+    outputPath: null,
+    partialPath: null,
+    durationSeconds: settings.durationSeconds,
+    child: null,
+    done: null,
+    closed: false,
+    cancelled: false,
+    processError: null,
+    stderr: '',
+    progressBuffer: ''
+  };
+  videoProxyJobs.set(jobKey, session);
+  event.sender.once('destroyed', () => { void abortVideoProxy(session); });
+
+  try {
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const sourceStat = await fs.stat(sourcePath);
+    if (!sourceStat.isFile() || sourceStat.size < 1 || sourceStat.size > MAX_PROXY_SOURCE_BYTES) {
+      throw new Error('De videobron is leeg of groter dan de limiet van 20 GB.');
+    }
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const ffmpegPath = resolvedFfmpegPath();
+    await fs.access(ffmpegPath);
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const { filePath: outputPath, filename } = await uniqueProxyOutputPath(directoryToken.directoryPath, settings.sourceName, settings.preset);
+    session.outputPath = outputPath;
+    session.partialPath = path.join(directoryToken.directoryPath, '.fluxivora-proxy-' + crypto.randomUUID() + '.partial.mp4');
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const args = buildProxyArgs({ inputPath: sourcePath, outputPath: session.partialPath, preset: settings.preset });
+    const child = spawn(ffmpegPath, args, { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    session.child = child;
+    session.done = new Promise(resolve => {
+      child.once('close', (code, signal) => {
+        session.closed = true;
+        resolve({ code, signal });
+      });
+    });
+    child.once('error', error => { session.processError = error; });
+    child.stderr.on('data', data => {
+      session.stderr = (session.stderr + data.toString('utf8')).slice(-12000);
+    });
+    child.stdout.on('data', data => {
+      session.progressBuffer += data.toString('utf8');
+      const lines = session.progressBuffer.split(/\r?\n/);
+      session.progressBuffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('out_time_us=')) {
+          const seconds = Number(line.slice('out_time_us='.length)) / 1000000;
+          if (Number.isFinite(seconds)) {
+            const progress = session.durationSeconds > 0 ? seconds / session.durationSeconds * 100 : 0;
+            sendProxyProgress(session, progress, seconds);
+          }
+        } else if (line.startsWith('out_time_ms=')) {
+          const seconds = Number(line.slice('out_time_ms='.length)) / 1000000;
+          if (Number.isFinite(seconds)) {
+            const progress = session.durationSeconds > 0 ? seconds / session.durationSeconds * 100 : 0;
+            sendProxyProgress(session, progress, seconds);
+          }
+        } else if (line === 'progress=end') {
+          sendProxyProgress(session, 100, session.durationSeconds);
+        }
+      }
+    });
+    if (session.cancelled) {
+      try { child.kill(); } catch (_) {}
+    }
+    const result = await session.done;
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    if (session.processError) throw session.processError;
+    if (result.code !== 0) {
+      const detail = session.stderr.trim();
+      throw new Error('FFmpeg kon de proxy niet maken' + (detail ? ': ' + detail.slice(-2000) : ' (code ' + result.code + ').'));
+    }
+    const stat = await fs.stat(session.partialPath);
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    if (!stat.isFile() || stat.size < 1024) throw new Error('FFmpeg heeft geen geldige proxy geschreven.');
+    if (stat.size > MAX_PROXY_OUTPUT_BYTES) throw new Error('De proxy is groter dan de toegestane limiet van 350 MB. Kies een lagere resolutie.');
+    await fs.rename(session.partialPath, session.outputPath);
+    session.partialPath = null;
+    cleanupExpiredProxyReadTokens();
+    const readToken = crypto.randomUUID();
+    videoProxyReadTokens.set(readToken, {
+      ownerId: event.sender.id,
+      filePath: session.outputPath,
+      size: stat.size,
+      createdAt: Date.now()
+    });
+    sendProxyProgress(session, 100, settings.durationSeconds);
+    return {
+      readToken,
+      name: filename,
+      size: stat.size,
+      preset: settings.preset,
+      durationSeconds: settings.durationSeconds
+    };
+  } catch (error) {
+    if (session.partialPath) {
+      try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
+    }
+    throw error;
+  } finally {
+    videoProxyJobs.delete(jobKey);
+  }
+});
+
+ipcMain.handle('video:cancel-proxy', async (event, payload = {}) => {
+  const requestId = typeof payload.requestId === 'string' ? payload.requestId : '';
+  if (!/^[a-z0-9_-]{1,80}$/i.test(requestId)) return { cancelled: false };
+  const session = videoProxyJobs.get(proxyJobKey(event.sender.id, requestId));
+  if (!session) return { cancelled: false };
+  session.cancelled = true;
+  if (session.child && !session.closed && !session.child.killed) {
+    try { session.child.kill(); } catch (_) {}
+  }
+  return { cancelled: true };
+});
+
+ipcMain.handle('video:read-proxy-chunk', async (event, payload = {}) => {
+  const token = typeof payload.readToken === 'string' ? videoProxyReadTokens.get(payload.readToken) : null;
+  if (!token || token.ownerId !== event.sender.id) throw new Error('De proxy-leessessie bestaat niet meer of hoort bij een ander venster.');
+  const offset = Number(payload.offset);
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= token.size) throw new RangeError('Ongeldige proxy-chunk-offset.');
+  const length = Math.min(MAX_PROXY_READ_CHUNK_BYTES, token.size - offset);
+  const handle = await fs.open(token.filePath, 'r');
+  try {
+    const buffer = Buffer.allocUnsafe(length);
+    const { bytesRead } = await handle.read(buffer, 0, length, offset);
+    if (!bytesRead) throw new Error('Het proxybestand kon niet volledig worden gelezen.');
+    return {
+      base64Data: buffer.subarray(0, bytesRead).toString('base64'),
+      bytesRead,
+      totalBytes: token.size
+    };
+  } finally {
+    await handle.close();
+  }
+});
+
+ipcMain.handle('video:release-proxy-read', async (event, payload = {}) => {
+  const tokenId = typeof payload.readToken === 'string' ? payload.readToken : '';
+  const token = videoProxyReadTokens.get(tokenId);
+  if (token && token.ownerId === event.sender.id) videoProxyReadTokens.delete(tokenId);
+  return { released: !!token && token.ownerId === event.sender.id };
 });
 
 ipcMain.handle('file:export', async (_event, payload = {}) => {

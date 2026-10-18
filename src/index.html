@@ -141,7 +141,13 @@
             <input id="video-proxy-file" type="file" accept="video/*" hidden />
             <div class="video-proxy-controls">
               <label><input id="video-proxy-preview" type="checkbox" disabled /> Proxy preview</label>
-              <small id="video-proxy-status">Koppel een proxy aan een videobron om deze optie te gebruiken.</small>
+              <div class="video-proxy-tools">
+                <label for="video-proxy-preset">KWALITEIT <select id="video-proxy-preset"><option value="540p">540p · compact</option><option value="720p">720p · scherper</option></select></label>
+                <button id="video-proxy-batch" type="button" class="button subtle compact">Genereer ontbrekende proxies</button>
+                <button id="video-proxy-cancel" type="button" class="button subtle compact hidden">Annuleren</button>
+              </div>
+              <progress id="video-proxy-progress" max="100" value="0" hidden aria-label="Voortgang proxy-generatie"></progress>
+              <small id="video-proxy-status">Koppel een proxy of genereer lichtere previewbestanden voor je videobronnen.</small>
             </div>
             <div class="video-multicam-bin">
               <div class="video-multicam-heading"><strong>MULTICAM ANGLES</strong><small id="video-multicam-selection-count">0 hoeken gekozen</small></div>
@@ -262,7 +268,7 @@
       </section>
 
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.6</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.7</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>

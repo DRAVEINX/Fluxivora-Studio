@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.6');
+  assert.equal(pkg.version, '0.5.0-beta.7');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -741,7 +741,7 @@ test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt real
   assert.match(helper, /-f', 'f32le'/);
   assert.match(helper, /'libx264'/);
   assert.match(helper, /'aac'/);
-  assert.equal(pkg.version, '0.5.0-beta.6');
+  assert.equal(pkg.version, '0.5.0-beta.7');
   assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
   assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
   assert.ok(pkg.build.files.includes('node_modules/ffmpeg-static/**/*'));
@@ -758,4 +758,47 @@ test('Motion Studio toggles all shared video and audio inspector sections withou
   const idRefs = [...video.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
   const missing = [...new Set(idRefs.filter(id => !ids.has(id)))];
   assert.deepEqual(missing, [], 'Een Motion Studio ID wordt gebruikt maar ontbreekt in de HTML');
+});
+
+
+test('Motion Studio genereert proxies met batchbediening, voortgang en annuleren', () => {
+  for (const id of ['video-proxy-preset','video-proxy-batch','video-proxy-cancel','video-proxy-progress','video-proxy-status','video-proxy-file','video-proxy-preview']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend proxy-element: ' + id);
+  }
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
+  const helper = fs.readFileSync(path.join(root, 'electron', 'video-render.cjs'), 'utf8');
+  const ffmpegTests = fs.readFileSync(path.join(root, 'tests', 'ffmpeg.test.cjs'), 'utf8');
+  for (const fn of ['function runProxyGeneration(', 'function generateProxyForAsset(', 'function readGeneratedProxy(', 'function cancelProxyGeneration(']) {
+    assert.ok(motion.includes(fn), 'Ontbrekende proxyfunctie: ' + fn);
+  }
+  assert.match(motion, /window\.fluxivora\.createVideoProxyForFile/);
+  assert.match(motion, /window\.fluxivora\.readVideoProxyChunk/);
+  assert.match(motion, /onVideoProxyProgress/);
+  for (const route of ['video:choose-proxy-directory','video:create-proxy','video:cancel-proxy','video:read-proxy-chunk','video:release-proxy-read']) {
+    assert.ok(main.includes("ipcMain.handle('" + route + "'"), 'Ontbrekende proxy IPC-route: ' + route);
+  }
+  for (const api of ['chooseVideoProxyDirectory','createVideoProxyForFile','cancelVideoProxy','readVideoProxyChunk','releaseVideoProxyRead','onVideoProxyProgress']) {
+    assert.ok(preload.includes(api + ':'), 'Ontbrekende proxy preload-API: ' + api);
+  }
+  assert.match(preload, /webUtils\.getPathForFile\(file\)/);
+  assert.match(main, /shell: false/);
+  assert.match(main, /MAX_PROXY_OUTPUT_BYTES/);
+  assert.match(helper, /function validateProxyRequest\(/);
+  assert.match(helper, /function buildProxyArgs\(/);
+  assert.match(ffmpegTests, /lower-resolution H\.264\/AAC proxy/);
+  assert.match(JSON.stringify(require(path.join(root, 'package.json'))), /0\.5\.0-beta\.7/);
+});
+
+test('Motion Studio proxy-generation UI references existing HTML elements and keeps generated media separate', () => {
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const references = [...motion.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
+  const missing = [...new Set(references.filter(id => !ids.has(id)))];
+  assert.deepEqual(missing, [], 'Motion Studio verwijst naar een proxy-UI-element dat ontbreekt');
+  assert.match(motion, /function linkProxyFile\(file, assetId = selectedProxyAssetId\)/);
+  assert.match(motion, /proxyName = file\.name/);
+  assert.match(motion, /new File\(chunks, result\.name/);
+  assert.match(motion, /video-proxy-batch/);
 });

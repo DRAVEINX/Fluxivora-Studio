@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, execFileSync } = require('node:child_process');
 const ffmpegPath = require('ffmpeg-static');
-const { buildFfmpegArgs } = require('../electron/video-render.cjs');
+const { buildFfmpegArgs, buildProxyArgs } = require('../electron/video-render.cjs');
 
 test('bundled FFmpeg is present and provides the required H.264 and AAC encoders', () => {
   assert.ok(typeof ffmpegPath === 'string' && ffmpegPath.length > 0, 'ffmpeg-static returned no binary path');
@@ -43,6 +43,36 @@ test('FFmpeg combines JPEG frames from stdin and stereo float audio from pipe 3 
     const stat = await fs.stat(outputPath);
     assert.ok(stat.size > 1000, 'MP4 output unexpectedly small');
     execFileSync(ffmpegPath, ['-hide_banner', '-v', 'error', '-i', outputPath, '-f', 'null', '-'], { timeout: 15000 });
+  } finally {
+    await fs.rm(folder, { recursive: true, force: true });
+  }
+});
+
+
+test('FFmpeg generates a lower-resolution H.264/AAC proxy from a local video source', async () => {
+  const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'fluxivora-proxy-smoke-'));
+  const sourcePath = path.join(folder, 'source.mp4');
+  const proxyPath = path.join(folder, 'source.proxy-540p.mp4');
+  try {
+    execFileSync(ffmpegPath, [
+      '-hide_banner', '-loglevel', 'error', '-y',
+      '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=25',
+      '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000',
+      '-t', '0.4', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '96k', sourcePath
+    ], { timeout: 30000 });
+    const args = buildProxyArgs({ inputPath: sourcePath, outputPath: proxyPath, preset: '540p' });
+    const result = await new Promise((resolve, reject) => {
+      const child = spawn(ffmpegPath, args, { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+      let stderr = '';
+      child.stderr.on('data', data => { stderr = (stderr + data.toString('utf8')).slice(-8000); });
+      child.once('error', reject);
+      child.once('close', (code, signal) => resolve({ code, signal, stderr }));
+    });
+    assert.equal(result.code, 0, 'FFmpeg proxy smoke test failed: ' + result.stderr);
+    const stat = await fs.stat(proxyPath);
+    assert.ok(stat.size > 1000, 'Proxy output unexpectedly small');
+    execFileSync(ffmpegPath, ['-hide_banner', '-v', 'error', '-i', proxyPath, '-f', 'null', '-'], { timeout: 15000 });
   } finally {
     await fs.rm(folder, { recursive: true, force: true });
   }

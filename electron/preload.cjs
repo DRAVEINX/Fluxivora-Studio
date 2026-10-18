@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('fluxivora', Object.freeze({
   openProject: () => ipcRenderer.invoke('project:open'),
@@ -10,6 +10,26 @@ contextBridge.exposeInMainWorld('fluxivora', Object.freeze({
   writeVideoAudio: (payload) => ipcRenderer.invoke('video:write-audio', payload),
   finishVideoRender: (payload) => ipcRenderer.invoke('video:finish-render', payload),
   cancelVideoRender: (payload) => ipcRenderer.invoke('video:cancel-render', payload),
+  chooseVideoProxyDirectory: () => ipcRenderer.invoke('video:choose-proxy-directory'),
+  createVideoProxyForFile: (file, options = {}) => {
+    let sourcePath = '';
+    try { sourcePath = webUtils.getPathForFile(file); } catch (_) {}
+    if (!sourcePath) return Promise.reject(new Error('Selecteer een videobestand dat op schijf staat; dit item heeft geen lokaal bronpad.'));
+    return ipcRenderer.invoke('video:create-proxy', {
+      ...options,
+      sourcePath,
+      sourceName: typeof options.sourceName === 'string' ? options.sourceName : file.name
+    });
+  },
+  cancelVideoProxy: (payload) => ipcRenderer.invoke('video:cancel-proxy', payload),
+  readVideoProxyChunk: (payload) => ipcRenderer.invoke('video:read-proxy-chunk', payload),
+  releaseVideoProxyRead: (payload) => ipcRenderer.invoke('video:release-proxy-read', payload),
+  onVideoProxyProgress: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('video:proxy-progress', listener);
+    return () => ipcRenderer.removeListener('video:proxy-progress', listener);
+  },
   readRecovery: () => ipcRenderer.invoke('recovery:read'),
   writeRecovery: (payload) => ipcRenderer.invoke('recovery:write', payload),
   clearRecovery: () => ipcRenderer.invoke('recovery:clear'),

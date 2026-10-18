@@ -1,3 +1,13 @@
+## 0.5.0-beta.7 — automated proxy generation
+
+- Added local FFmpeg H.264/AAC proxy generation at 540p and 720p from the Motion Studio media bin.
+- Added per-source and sequential batch generation, progress updates, cancellation and automatic linking of generated proxies to the original media asset.
+- Added a native folder picker for proxy output; generated filenames are safe and collision-resistant, so existing files are not overwritten.
+- Added bounded chunked reads to import a generated proxy into the existing Blob-based preview workflow without sending one giant IPC payload.
+- Added request validation, sender-owned IPC sessions, supported-source extension checks, 20 GB source / 350 MB output caps, and cleanup of partial files after cancellation or errors.
+- Added an actual bundled-FFmpeg proxy-generation smoke test and UI/native contract tests.
+- Limitations: generated proxies are persisted as separate MP4 files; montage projects store proxy names rather than embedded proxy data and may require relinking after reopening. Automatic multicam waveform/timecode synchronization and a live multiviewer remain future work.
+
 ## 0.5.0-beta.6 — offline MP4 rendering
 
 - Added frame-by-frame Motion Studio rendering that no longer depends on real-time playback or MediaRecorder.
