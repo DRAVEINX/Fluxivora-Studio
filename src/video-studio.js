@@ -1014,11 +1014,18 @@
       setOfflineProgress('Audiotracks voorbereiden', 'Bronaudio wordt gedecodeerd en in tijdlijnvolgorde gemixt.', 0);
       const audio = await prepareOfflineAudio(totalSamples / 48000);
       if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+      let audioProgress = 0, videoProgress = 0;
+      const updateCombinedProgress = () => {
+        const audioPercent = Math.round(audioProgress * 100);
+        const videoPercent = Math.round(videoProgress * 100);
+        setOfflineProgress('Offline MP4 renderen',
+          'Video ' + videoPercent + '% · audio ' + audioPercent + '%' +
+          (audio.skippedVideoAudio ? ' · ' + audio.skippedVideoAudio + ' videobron(nen) zonder decodeerbare audio' : ''),
+          audioProgress * 0.20 + videoProgress * 0.75);
+      };
       const audioTask = streamOfflineAudio(sessionId, audio.entries, totalSamples, (progress, chunkIndex) => {
-        if (chunkIndex % 4 === 0 || progress >= 1) {
-          const percent = Math.round(progress * 100);
-          setOfflineProgress('Audio offline renderen', percent + '% van de audiotijdlijn verwerkt.', progress * 0.2);
-        }
+        audioProgress = progress;
+        if (chunkIndex % 4 === 0 || progress >= 1) updateCombinedProgress();
       });
       let audioError = null;
       audioTask.catch(error => { audioError = error; state.offlineExportCancel = true; });
@@ -1032,16 +1039,13 @@
         const base64Data = url.slice(url.indexOf(',') + 1);
         await window.fluxivora.writeVideoFrame({ sessionId, index, base64Data });
         if (index % SEQUENCE_FPS === 0 || index === frameCount - 1) {
-          const progress = (index + 1) / frameCount;
-          setOfflineProgress('Video beeld voor beeld renderen',
-            'Frame ' + (index + 1).toLocaleString('nl-NL') + ' van ' + frameCount.toLocaleString('nl-NL') +
-            (audio.skippedVideoAudio ? ' · ' + audio.skippedVideoAudio + ' videobron(nen) zonder decodeerbare audio' : ''),
-            progress * 0.75);
+          videoProgress = (index + 1) / frameCount;
+          updateCombinedProgress();
         }
       }
       await audioTask;
       if (state.offlineExportCancel) throw audioError || new Error('MP4-export geannuleerd.');
-      setOfflineProgress('MP4 encoderen', 'H.264-video en AAC-audio worden samengevoegd.', 0.9);
+      setOfflineProgress('MP4 encoderen', 'H.264-video en AAC-audio worden samengevoegd.', 0.95);
       const result = await window.fluxivora.finishVideoRender({ sessionId });
       sessionId = null;
       state.offlineSessionId = null;
