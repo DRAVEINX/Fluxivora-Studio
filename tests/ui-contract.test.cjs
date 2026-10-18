@@ -223,7 +223,7 @@ test('Page Studio heeft papierformaten voor consistente PDF-export', () => {
 
 
 test('PDF-export ruimt de printweergave en tijdelijke paginastijlen op na afdrukken', () => {
-  assert.match(app, /function exportLayoutPdf\(\)/);
+  assert.match(app, /function exportLayoutPdf\(skipPreflight = false\)/);
   assert.match(app, /window\.addEventListener\('afterprint', cleanupPrintExport\)/);
   assert.match(app, /print\.replaceChildren\(\)/);
   assert.match(app, /printStyle\.remove\(\)/);
