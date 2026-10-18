@@ -264,7 +264,8 @@
               <div class="video-property-section video-video-controls"><h4>VIDEO-SCOPES</h4><div class="video-scopes-grid"><div><small>RGB-HISTOGRAM</small><canvas id="video-scope-histogram" width="240" height="88" aria-label="RGB kleurhistogram"></canvas></div><div><small>LUMA-WAVEFORM</small><canvas id="video-scope-waveform" width="240" height="88" aria-label="Luma waveform monitor"></canvas></div></div><p class="video-scope-note">Scopes tonen een analyse van het samengestelde voorbeeld, niet van een gekalibreerde hardware-uitgang.</p></div>
               <div id="video-title-controls" class="video-property-section hidden"><h4>TITEL / LOWER THIRD</h4>
                 <label class="video-field">TEKST <textarea id="video-title-text" rows="3" maxlength="1000"></textarea></label>
-                <div class="video-property-grid"><label class="video-field">LETTERGROOTTE<input id="video-title-size" type="number" min="18" max="180" step="2" /></label><label class="video-field">KLEUR<input id="video-title-color" type="color" /></label></div>
+                <div class="video-property-grid"><label class="video-field">LETTERGROOTTE / VORMMAAT<input id="video-title-size" type="number" min="18" max="180" step="2" /></label><label class="video-field">KLEUR / VULLING<input id="video-title-color" type="color" /></label></div>
+                <div id="video-shape-controls" class="hidden"><h4>VORMSTIJL</h4><div class="video-property-grid"><label class="video-field">LIJNKLEUR<input id="video-shape-stroke-color" type="color" value="#ffffff" /></label><label class="video-field">LIJNDIKTE<input id="video-shape-stroke-width" type="number" min="0" max="30" step="1" value="0" /></label></div><small>Gebruik lijndikte 0 voor geen omlijning.</small></div>
               </div>
             </div>
             <div id="video-media-engine" class="video-media-engine" aria-hidden="true"><video id="video-preview" playsinline preload="metadata"></video></div>
