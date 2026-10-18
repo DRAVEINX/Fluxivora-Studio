@@ -1,6 +1,6 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.7 — automatische proxy-generatie met FFmpeg voor Motion Studio.**
+**Huidige ontwikkelversie: 0.5.0-beta.8 — automatische proxy-generatie met FFmpeg voor Motion Studio.**
 
 ### Nieuw in bèta.7 — proxygeneratie en batchworkflow
 
