@@ -84,7 +84,7 @@
 - Bèta-limieten: maximaal 15 minuten per render en 256 MB per audio-decodebron; videocompositing blijft renderer-/canvas-gebaseerd.
 
 ### Volgende fase — kleur en keyframes
-- Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
+- Verdere keyframe-uitbreiding: Bézier-snelheids-/waarde-curves, tangents voor meer eigenschappen en animatiepresets; basis Bézier-handles zijn toegevoegd in beta.7.
 - Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.6-LUT is een sequence/output-LUT.
 - Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.6-scopes zijn indicatief en niet gekalibreerd.
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.

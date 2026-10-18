@@ -802,3 +802,23 @@ test('Motion Studio proxy-generation UI references existing HTML elements and ke
   assert.match(motion, /new File\(chunks, result\.name/);
   assert.match(motion, /video-proxy-batch/);
 });
+
+
+test('Motion Studio beta.7 has draggable cubic Bezier handles with the same interpolation in preview and export', () => {
+  assert.match(html, /src="keyframe-curves\.js"/);
+  assert.match(html, /<option value="bezier">Bézier-handles<\/option>/);
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const shared = fs.readFileSync(path.join(root, 'src', 'keyframe-curves.js'), 'utf8');
+  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, raw\)/);
+  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, amount\)/);
+  assert.match(video, /outHandle: frame\.outHandle \? \{\.\.\.frame\.outHandle\}/);
+  assert.match(video, /ease: \['linear','easeIn','easeOut','easeInOut','bezier','hold'\]/);
+  assert.match(motion, /FluxivoraKeyframeCurves\.controlPoints\(left, right, property\)/);
+  assert.match(motion, /kind: 'handle'/);
+  assert.match(motion, /frame\.outHandle\[drag\.property\] = value - frame\[drag\.property\]/);
+  assert.match(motion, /frame\.inHandle\[drag\.property\] = value - frame\[drag\.property\]/);
+  assert.match(shared, /function bezierValue\(/);
+  assert.match(shared, /function controlPoints\(/);
+  assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.7');
+});

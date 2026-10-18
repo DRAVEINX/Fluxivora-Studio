@@ -17,6 +17,13 @@ Controles bijgewerkt op 18 oktober 2026.
 - De huidige branch bevat nieuwe controles; de actuele geslaagde/mislukte uitkomst wordt bepaald door de gekoppelde GitHub Actions-run voor de laatste commit.
 - Limieten in deze bèta: bronvideo maximaal 20 GB, gegenereerde proxy maximaal 350 MB; proxybestanden blijven los van het montageproject en kunnen na heropenen opnieuw gekoppeld moeten worden.
 
+## Motion Studio beta.7 — cubic Bézier-keyframes
+
+- UI-contracttests controleren de Bézier-modus, de gedeelde curve-engine, de zichtbare handlebediening en dat dezelfde evaluator wordt gebruikt voor preview en offline MP4-export.
+- De pure curve-tests controleren lineaire standaardhandles, exacte eindpunten, monotone tijdhandles, bereikbegrenzing voor dekking/schaal/positie/volume en normalisatie van onbetrouwbare handlewaarden.
+- Bézier-handles en handle-offsets worden meegenomen in projectserialisatie, undo/redo en bij het opnieuw openen van montageprojecten.
+- De daadwerkelijke testuitkomst voor de samengestelde bèta staat in de GitHub Actions-run op de laatste commit.
+
 ## Motion Studio beta.6 — offline MP4-render
 
 - Added pure unit tests for export limits, supported resolutions, safe names, JPEG frame validation, bounded stereo Float32 audio chunks and FFmpeg argument construction.
