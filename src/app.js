@@ -417,6 +417,8 @@
       $('bezier-point-count').textContent = `${count} ${count === 1 ? 'punt' : 'punten'}`;
       $('delete-bezier-point-button').disabled = count <= 2 || !Number.isInteger(state.selectedBezierPointIndex) || state.selectedBezierPointIndex < 0 || state.selectedBezierPointIndex >= count;
       $('add-bezier-point-button').disabled = count >= 100000 || count < 2;
+      $('toggle-bezier-closed-button').textContent = selected.closed ? 'Pad openen' : 'Pad sluiten';
+      $('toggle-bezier-closed-button').disabled = count < 2;
     }
     $('pixel-adjust-section').classList.toggle('hidden', state.activeWorkspace !== 'pixel');
     $('layout-section').classList.toggle('hidden', state.activeWorkspace !== 'layout');
@@ -652,7 +654,7 @@
       } else if (obj.type === 'line') {
         svg.append(svgEl('line', { ...commonSvgAttrs(obj), x1: obj.x, y1: obj.y, x2: obj.x + obj.w, y2: obj.y + obj.h, stroke: obj.stroke || '#25283a', 'stroke-width': obj.strokeWidth || 2, 'stroke-linecap': 'round' }));
       } else if (obj.type === 'path' || obj.type === 'stroke' || obj.type === 'bezier') {
-        const d = obj.type === 'bezier' ? Core.smoothPathData(obj.points || []) : (obj.points || []).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+        const d = obj.type === 'bezier' ? `${Core.smoothPathData(obj.points || [])}${obj.closed ? ' Z' : ''}` : (obj.points || []).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
         svg.append(svgEl('path', { ...commonSvgAttrs(obj), d, fill: 'none', stroke: obj.stroke || '#8b7cff', 'stroke-width': obj.strokeWidth || 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
       } else if (obj.type === 'text') {
         const text = svgEl('text', { ...commonSvgAttrs(obj), x: obj.x, y: obj.y + (obj.fontSize || 32), fill: obj.fill || '#11131d', 'font-size': obj.fontSize || 32, 'font-family': obj.fontFamily || 'Inter, Segoe UI, sans-serif' });
@@ -1802,6 +1804,14 @@
   for (const [id, alignment] of [['align-left-button', 'left'], ['align-center-x-button', 'center-x'], ['align-right-button', 'right'], ['align-top-button', 'top'], ['align-center-y-button', 'center-y'], ['align-bottom-button', 'bottom']]) $(id).addEventListener('click', () => alignSelectedToCanvas(alignment));
   $('add-bezier-point-button').addEventListener('click', addBezierAnchor);
   $('delete-bezier-point-button').addEventListener('click', deleteBezierAnchor);
+  $('toggle-bezier-closed-button').addEventListener('click', () => {
+    const selected = activeObjects().find(o => o.id === state.selectedId);
+    if (!selected || selected.type !== 'bezier' || selected.locked || (selected.points || []).length < 2) return;
+    checkpoint();
+    selected.closed = !selected.closed;
+    markDirty(selected.closed ? 'Bézier-pad gesloten' : 'Bézier-pad geopend');
+    renderAll();
+  });
   for (const key of ['brightness', 'contrast', 'saturation', 'blur']) {
     const id = `${key}-slider`;
     $(id).addEventListener('input', () => {
