@@ -488,7 +488,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     if (['rectangle','ellipse'].includes(c.maskType)) {
-      const maskScale = Math.max(10, Math.min(100, Number(c.maskSize) || 90)) / 100;
+      const maskScale = Math.max(10, Math.min(100, animatedValue(c, 'maskSize', c.maskSize || 90))) / 100;
       ctx.beginPath();
       if (c.maskType === 'ellipse') ctx.ellipse(W / 2, H / 2, W * maskScale / 2, H * maskScale / 2, 0, 0, Math.PI * 2);
       else ctx.rect(W * (1 - maskScale) / 2, H * (1 - maskScale) / 2, W * maskScale, H * maskScale);
