@@ -497,6 +497,17 @@
     applyCanvasScale();
   }
 
+  function pixelPresetFilter(preset) {
+    const filters = {
+      original: '',
+      mono: 'grayscale(100%)',
+      warm: 'sepia(22%) saturate(115%) hue-rotate(-8deg)',
+      cool: 'saturate(92%) hue-rotate(12deg)',
+      vintage: 'sepia(35%) contrast(92%) saturate(82%)'
+    };
+    return filters[preset] ?? filters.original;
+  }
+
   function renderPixel() {
     if (!state.project) return;
     const canvas = $('pixel-canvas');
@@ -515,7 +526,7 @@
         if (!cached.complete || !cached.naturalWidth) cached.onload = () => { if (state.project && state.project.pixel.baseImage === token) renderPixel(); };
       }
       if (cached && cached.complete && cached.naturalWidth) {
-        try { ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%) blur(${Math.max(0, Math.min(20, Number(doc.blur) || 0))}px)`; ctx.drawImage(cached, 0, 0, width, height); ctx.filter = 'none'; } catch (_) {}
+        try { ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%) blur(${Math.max(0, Math.min(20, Number(doc.blur) || 0))}px) ${pixelPresetFilter(doc.filterPreset)}`; ctx.drawImage(cached, 0, 0, width, height); ctx.filter = 'none'; } catch (_) {}
       }
     }
     drawPixelObjects(ctx, state.draftObject && state.activeWorkspace === 'pixel' ? [...doc.objects, state.draftObject] : doc.objects, state.selectedId);
@@ -782,6 +793,7 @@
     }
     $('blur-slider').value = String(Math.max(0, Math.min(20, Number(state.project?.pixel?.blur) || 0)));
     $('blur-value').textContent = `${Math.max(0, Math.min(20, Number(state.project?.pixel?.blur) || 0))} px`;
+    $('pixel-filter-preset').value = ['original', 'mono', 'warm', 'cool', 'vintage'].includes(d.filterPreset) ? d.filterPreset : 'original';
   }
 
   function renderLayers() {
@@ -1821,9 +1833,9 @@
   $('reset-adjustments-button').addEventListener('click', () => {
     if (!state.project) return;
     const doc = state.project.pixel;
-    if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100 && !doc.blur) return;
+    if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100 && !doc.blur && (!doc.filterPreset || doc.filterPreset === 'original')) return;
     checkpoint();
-    Object.assign(doc, { brightness: 100, contrast: 100, saturation: 100, blur: 0 });
+    Object.assign(doc, { brightness: 100, contrast: 100, saturation: 100, blur: 0, filterPreset: 'original' });
     markDirty(); renderAll();
   });
   $('crop-apply-button').addEventListener('click', applyPixelCrop);
@@ -1837,6 +1849,17 @@
     selected.closed = !selected.closed;
     markDirty(selected.closed ? 'Bézier-pad gesloten' : 'Bézier-pad geopend');
     renderAll();
+  });
+  $('pixel-filter-preset').addEventListener('change', () => {
+    if (!state.project) return;
+    const doc = state.project.pixel;
+    const preset = $('pixel-filter-preset').value;
+    if (!['original', 'mono', 'warm', 'cool', 'vintage'].includes(preset) || (doc.filterPreset || 'original') === preset) return;
+    checkpoint();
+    doc.filterPreset = preset;
+    markDirty('Filterpreset gewijzigd');
+    renderPixel();
+    updateHistoryButtons();
   });
   for (const key of ['brightness', 'contrast', 'saturation', 'blur']) {
     const id = `${key}-slider`;
