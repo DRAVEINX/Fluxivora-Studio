@@ -977,7 +977,10 @@ test('Motion Studio animates mask size through the keyframe curve editor', () =>
 
 test('Motion Studio persists and renders two-mask combination operations', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
-  for (const id of ['video-mask-secondary', 'video-mask-secondary-size', 'video-mask-operation']) assert.ok(html.includes('id="' + id + '"'));
+  for (const id of ['video-mask-secondary', 'video-mask-secondary-size', 'video-mask-operation', 'video-mask-x', 'video-mask-y', 'video-mask-secondary-x', 'video-mask-secondary-y']) assert.ok(html.includes('id="' + id + '"'));
+  for (const key of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) assert.match(video, new RegExp(key));
+  assert.match(video, /maskPath\(c\.maskType,[^;]+c\.maskX, c\.maskY\)/);
+  assert.match(video, /maskPath\(secondaryType,[^;]+c\.maskSecondaryX, c\.maskSecondaryY\)/);
   for (const operation of ['add', 'subtract', 'intersect']) assert.ok(html.includes('value="' + operation + '"'));
   assert.match(video, /maskSecondaryType/);
   assert.match(video, /maskSecondarySize/);
