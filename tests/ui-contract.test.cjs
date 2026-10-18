@@ -900,6 +900,17 @@ test('Page Studio persists and renders an adjustable non-printing baseline grid'
 });
 
 
+test('Motion Studio offers compositing color effects and preserves them in projects', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  for (const effect of ['invert', 'hue', 'brighten', 'crush']) {
+    assert.ok(html.includes('value="' + effect + '"'), 'Missing effect control: ' + effect);
+    assert.ok(video.includes(effect + ':'), 'Missing rendered effect: ' + effect);
+    assert.ok(video.includes("'" + effect + "'"), 'Missing persisted effect type: ' + effect);
+    assert.ok(motion.includes(effect + ':'), 'Missing effect label: ' + effect);
+  }
+});
+
 test('Pixel Lab provides persistent non-destructive filter presets', () => {
   const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
   for (const preset of ['original', 'mono', 'warm', 'cool', 'vintage']) {
