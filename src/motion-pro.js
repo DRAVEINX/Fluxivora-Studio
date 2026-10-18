@@ -1276,7 +1276,7 @@ void main() {
             api.notice('Let op: de opnieuw gekoppelde bron heeft een andere duur dan verwacht. Controleer de clipsynchronisatie.');
           }
           asset.duration = probe.duration;
-          matches.forEach(clip => { clip.duration = probe.duration; clip.out = Math.max(clip.in + .04, Math.min(clip.out || probe.duration, probe.duration)); });
+          matches.forEach(clip => clampRelinkedClipRange(clip, probe.duration));
           api.refresh();
         }
         probe.removeAttribute('src'); probe.load();
