@@ -560,9 +560,23 @@ void main() {
       api.notice('Voer eerst een audioanalyse uit.');
       return;
     }
-    const accepted = preview.suggestions.filter(item => item.accepted && Number.isFinite(item.offsetSeconds));
+    const currentAngleIds = new Set(group.angleAssetIds || []);
+    if (!currentAngleIds.has(preview.referenceAssetId) ||
+        !state.assets.some(asset => asset.id === preview.referenceAssetId && asset.type === 'video' && asset.file && !asset.missing)) {
+      multicamSyncSuggestions.delete(group.id);
+      api.notice('De bron van deze analyse is gewijzigd of niet meer beschikbaar. Voer de analyse opnieuw uit.');
+      renderMulticamGroups();
+      return;
+    }
+    const accepted = preview.suggestions.filter(item =>
+      item.accepted &&
+      Number.isFinite(item.offsetSeconds) &&
+      item.assetId !== preview.referenceAssetId &&
+      currentAngleIds.has(item.assetId) &&
+      state.assets.some(asset => asset.id === item.assetId && asset.type === 'video' && asset.file && !asset.missing)
+    );
     if (!accepted.length) {
-      api.notice('Er zijn geen betrouwbare offsets om toe te passen. Stel de synchronisatie handmatig in.');
+      api.notice('Er zijn geen actuele, betrouwbare offsets om toe te passen. Stel de synchronisatie handmatig in of voer de analyse opnieuw uit.');
       return;
     }
     api.pushHistory();
@@ -570,7 +584,7 @@ void main() {
     accepted.forEach(item => { group.offsets[item.assetId] = clamp(item.offsetSeconds, -86400, 86400); });
     api.refresh();
     renderMulticamGroups();
-    api.notice(accepted.length + ' offset(s) toegepast. De overige hoeken zijn ongewijzigd gebleven.');
+    api.notice(accepted.length + ' actuele offset(s) toegepast. Niet meer gekoppelde hoeken zijn overgeslagen.');
   }
 
   function renderMulticamGroups() {
