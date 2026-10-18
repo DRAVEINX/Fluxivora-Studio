@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.8');
+  assert.equal(pkg.version, '0.5.0-beta.9');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -696,6 +696,20 @@ test('Motion Studio kan proxybestanden koppelen zonder de originele media te ver
   assert.match(motion, /video-proxy-preview/);
 });
 
+test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op unieke bestandsnaam', () => {
+  const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(html, /id="video-proxy-relink-all"/);
+  assert.match(html, /id="video-proxy-relink-files" type="file" accept="video\/\*" multiple/);
+  assert.match(motion, /function relinkKnownProxyFiles\(files\)/);
+  assert.match(motion, /assetsByProxyName/);
+  assert.match(motion, /matches\.length === 1/);
+  assert.match(motion, /matches\.length > 1/);
+  assert.match(motion, /const claimedAssetIds = new Set\(\)/);
+  assert.match(motion, /claimedAssetIds\.has\(matches\[0\]\.id\)/);
+  assert.match(motion, /linkProxyFile\(file, matches\[0\]\.id, \{ silent: true \}\)/);
+});
+
 
 test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
   for (const id of ['video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut']) {
@@ -707,6 +721,22 @@ test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcu
   assert.match(video, /activeAngleAssetId/);
   assert.match(video, /function splitSelectedAtPlayhead/);
   assert.match(video, /videoPosition = angleAsset/);
+  assert.match(motion, /async function analyzeMulticamGroup\(/);
+  assert.match(motion, /function applyMulticamSyncSuggestions\(/);
+  assert.match(motion, /currentAngleIds\.has\(preview\.referenceAssetId\)/);
+  assert.match(motion, /currentAngleIds\.has\(item\.assetId\)/);
+  assert.match(motion, /sourceSignatures/);
+  assert.match(motion, /sourceStillMatches\(preview\.referenceAssetId\)/);
+  assert.match(motion, /sourceStillMatches\(item\.assetId\)/);
+  assert.match(motion, /multicamSyncSuggestions\.delete\(group\.id\)/);
+  assert.match(motion, /Analyseer audio-sync/);
+  assert.match(motion, /Betrouwbare offsets toepassen/);
+  assert.match(motion, /minConfidence: 0\.25/);
+  assert.match(motion, /const comparisonRate = 10/);
+  assert.match(motion, /const comparisonSeconds = 180/);
+  assert.match(motion, /const envelopeRate = envelope\.length \/ duration/);
+  assert.match(motion, /const maxLagSamples = 150/);
+
   assert.match(motion, /function createMulticamGroup\(/);
   assert.match(motion, /function renderMulticamGroups\(/);
   assert.match(motion, /function attachMulticamGroup\(/);
@@ -741,7 +771,7 @@ test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt real
   assert.match(helper, /-f', 'f32le'/);
   assert.match(helper, /'libx264'/);
   assert.match(helper, /'aac'/);
-  assert.equal(pkg.version, '0.5.0-beta.8');
+  assert.equal(pkg.version, '0.5.0-beta.9');
   assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
   assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
   assert.ok(pkg.build.files.includes('node_modules/ffmpeg-static/**/*'));
@@ -776,19 +806,27 @@ test('Motion Studio genereert proxies met batchbediening, voortgang en annuleren
   assert.match(motion, /window\.fluxivora\.createVideoProxyForFile/);
   assert.match(motion, /window\.fluxivora\.readVideoProxyChunk/);
   assert.match(motion, /onVideoProxyProgress/);
-  for (const route of ['video:choose-proxy-directory','video:create-proxy','video:cancel-proxy','video:read-proxy-chunk','video:release-proxy-read']) {
+  for (const route of ['video:choose-proxy-directory','video:create-proxy','video:analyze-multicam-audio','video:cancel-proxy','video:read-proxy-chunk','video:release-proxy-read']) {
     assert.ok(main.includes("ipcMain.handle('" + route + "'"), 'Ontbrekende proxy IPC-route: ' + route);
   }
-  for (const api of ['chooseVideoProxyDirectory','createVideoProxyForFile','cancelVideoProxy','readVideoProxyChunk','releaseVideoProxyRead','onVideoProxyProgress']) {
+  for (const api of ['chooseVideoProxyDirectory','createVideoProxyForFile','analyzeMulticamAudioForFile','cancelVideoProxy','readVideoProxyChunk','releaseVideoProxyRead','onVideoProxyProgress']) {
     assert.ok(preload.includes(api + ':'), 'Ontbrekende proxy preload-API: ' + api);
   }
+  assert.match(main, /'-ar', '1000', '-f', 's16le', 'pipe:1'/,
+    'Multicam audio moet lokaal via FFmpeg naar begrensde mono-PCM worden gedecodeerd');
+  assert.match(main, /totalBytes > 400000/,
+    'Multicam audio-IPC moet een harde uitvoerlimiet hebben');
+  assert.match(preload, /webUtils\.getPathForFile\(file\)/,
+    'Multicam audioanalyse moet een lokaal bestandspad ophalen zonder renderer Node-integratie');
+  assert.match(motion, /analyzeMulticamAudioForFile/,
+    'Multicam sync moet de lokale FFmpeg-decoder gebruiken in Electron');
   assert.match(preload, /webUtils\.getPathForFile\(file\)/);
   assert.match(main, /shell: false/);
   assert.match(main, /MAX_PROXY_OUTPUT_BYTES/);
   assert.match(helper, /function validateProxyRequest\(/);
   assert.match(helper, /function buildProxyArgs\(/);
   assert.match(ffmpegTests, /lower-resolution H\.264\/AAC proxy/);
-  assert.match(JSON.stringify(require(path.join(root, 'package.json'))), /0\.5\.0-beta\.8/);
+  assert.match(JSON.stringify(require(path.join(root, 'package.json'))), /0\.5\.0-beta\.9/);
 });
 
 test('Motion Studio proxy-generation UI references existing HTML elements and keeps generated media separate', () => {
@@ -797,7 +835,7 @@ test('Motion Studio proxy-generation UI references existing HTML elements and ke
   const references = [...motion.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
   const missing = [...new Set(references.filter(id => !ids.has(id)))];
   assert.deepEqual(missing, [], 'Motion Studio verwijst naar een proxy-UI-element dat ontbreekt');
-  assert.match(motion, /function linkProxyFile\(file, assetId = selectedProxyAssetId\)/);
+  assert.match(motion, /async function linkProxyFile\(file, assetId = selectedProxyAssetId, options = \{\}\)/);
   assert.match(motion, /proxyName = file\.name/);
   assert.match(motion, /new File\(chunks, result\.name/);
   assert.match(motion, /video-proxy-batch/);
@@ -820,5 +858,12 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   assert.match(motion, /frame\.inHandle\[drag\.property\] = value - frame\[drag\.property\]/);
   assert.match(shared, /function bezierValue\(/);
   assert.match(shared, /function controlPoints\(/);
-  assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.8');
+  assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.9');
+});
+
+
+test('multicam-audio markeert afkappen op basis van de gedecodeerde audiolengte', () => {
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  assert.match(main, /truncated: pcm\.length \/ 2 >= 180000/);
+  assert.doesNotMatch(main, /truncated: sourceStat\.size > 0/);
 });

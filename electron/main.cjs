@@ -629,6 +629,61 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
   }
 });
 
+ipcMain.handle('video:analyze-multicam-audio', async (event, payload = {}) => {
+  const sourcePath = typeof payload.sourcePath === 'string' && payload.sourcePath.length <= 4096 ? payload.sourcePath : '';
+  if (!sourcePath || !path.isAbsolute(sourcePath) || !VIDEO_SOURCE_EXTENSIONS.includes(path.extname(sourcePath).toLowerCase())) {
+    throw new Error('De bron is geen ondersteund videobestand op schijf.');
+  }
+  const sourceStat = await fs.stat(sourcePath);
+  if (!sourceStat.isFile() || sourceStat.size < 1 || sourceStat.size > MAX_PROXY_SOURCE_BYTES) {
+    throw new Error('De videobron is leeg of groter dan de limiet van 20 GB.');
+  }
+  const ffmpegPath = resolvedFfmpegPath();
+  await fs.access(ffmpegPath);
+  // Decode at most 180 seconds to mono 1 kHz PCM. This keeps IPC/memory bounded
+  // while avoiding browser decodeAudioData failures on video containers.
+  const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-i', sourcePath, '-t', '180',
+    '-vn', '-ac', '1', '-ar', '1000', '-f', 's16le', 'pipe:1'];
+  const child = spawn(ffmpegPath, args, { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  const chunks = [];
+  let totalBytes = 0;
+  let stderr = '';
+  let overflow = false;
+  child.stderr.on('data', data => { stderr = (stderr + data.toString('utf8')).slice(-4000); });
+  child.stdout.on('data', data => {
+    totalBytes += data.length;
+    if (totalBytes > 400000) {
+      overflow = true;
+      try { child.kill(); } catch (_) {}
+      return;
+    }
+    chunks.push(Buffer.from(data));
+  });
+  const result = await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (error) reject(error); else resolve(value);
+    };
+    const timeout = setTimeout(() => {
+      try { child.kill(); } catch (_) {}
+      finish(new Error('Audioanalyse duurde te lang; probeer een kortere bron.' ));
+    }, 90000);
+    child.once('error', error => finish(error));
+    child.once('close', (code, signal) => {
+      if (overflow) return finish(new Error('De audioanalyse overschreed de veilige uitvoerlimiet.'));
+      if (code !== 0) return finish(new Error('FFmpeg kon geen audio uit deze video lezen' + (stderr ? ': ' + stderr.slice(-1000) : '.')));
+      const pcm = Buffer.concat(chunks);
+      if (pcm.length < 1600 || pcm.length % 2 !== 0) return finish(new Error('Deze video bevat geen bruikbare audiotrack of is te kort.'));
+      finish(null, { pcmBase64: pcm.toString('base64'), sampleRate: 1000, sampleCount: pcm.length / 2, truncated: pcm.length / 2 >= 180000 });
+    });
+  });
+  if (event.sender.isDestroyed()) throw new Error('Het venster is gesloten.');
+  return result;
+});
+
 ipcMain.handle('video:cancel-proxy', async (event, payload = {}) => {
   const requestId = typeof payload.requestId === 'string' ? payload.requestId : '';
   if (!/^[a-z0-9_-]{1,80}$/i.test(requestId)) return { cancelled: false };

@@ -428,6 +428,7 @@ void main() {
   const PROXY_READ_CHUNK_SIZE = 2 * 1024 * 1024;
 
   const multicamAngleSelection = new Set();
+  const multicamSyncSuggestions = new Map();
 
   function groupForId(id) {
     return state.multicamGroups.find(group => group.id === id) || null;
@@ -476,6 +477,147 @@ void main() {
     $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
   }
 
+  async function analyzeMulticamGroup(group) {
+    if (!window.FluxivoraMulticamSync || typeof window.FluxivoraMulticamSync.createRmsEnvelope !== 'function') {
+      api.notice('De golfvormmodule is niet beschikbaar. Herlaad Fluxivora Studio en probeer opnieuw.');
+      return;
+    }
+    const assets = group.angleAssetIds.map(id => state.assets.find(asset => asset.id === id));
+    if (assets.length < 2 || assets.some(asset => !asset || !asset.file || asset.missing)) {
+      api.notice('Koppel eerst alle videobronnen opnieuw. Synchronisatieanalyse gebruikt momenteel alleen lokaal beschikbare bestanden.');
+      return;
+    }
+    if (assets.some(asset => Number(asset.file.size) > 300 * 1024 * 1024)) {
+      api.notice('Een bestand is groter dan 300 MB. Gebruik voorlopig kortere mediabestanden om geheugenproblemen te voorkomen.');
+      return;
+    }
+    const button = $('video-multicam-sync-' + group.id);
+    const status = $('video-multicam-sync-status-' + group.id);
+    if (button) { button.disabled = true; button.textContent = 'Audio analyseren…'; }
+    if (status) status.textContent = 'Lokale analyse voorbereiden…';
+    let audioContext;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Deze browser ondersteunt geen lokale audioanalyse.');
+      audioContext = new AudioContextClass();
+      const decoded = [];
+      for (let index = 0; index < assets.length; index++) {
+        if (status) status.textContent = 'Bron ' + (index + 1) + ' van ' + assets.length + ' analyseren…';
+        let envelope, duration;
+        if (typeof window.fluxivora?.analyzeMulticamAudioForFile === 'function') {
+          // Electron's bundled FFmpeg handles video containers that Web Audio may not decode.
+          const result = await window.fluxivora.analyzeMulticamAudioForFile(assets[index].file);
+          if (!result || typeof result.pcmBase64 !== 'string' || result.pcmBase64.length > 540000) {
+            throw new Error('De audioanalyse gaf geen geldige, begrensde PCM-data terug.');
+          }
+          const binary = atob(result.pcmBase64);
+          const bytes = new Uint8Array(binary.length);
+          for (let byteIndex = 0; byteIndex < binary.length; byteIndex++) bytes[byteIndex] = binary.charCodeAt(byteIndex);
+          if (bytes.byteLength < 1600 || bytes.byteLength % 2 !== 0) throw new Error('Deze video bevat geen bruikbare audiotrack.');
+          const pcm = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+          const normalized = new Float32Array(pcm.length);
+          for (let sampleIndex = 0; sampleIndex < pcm.length; sampleIndex++) normalized[sampleIndex] = pcm[sampleIndex] / 32768;
+          envelope = window.FluxivoraMulticamSync.createRmsEnvelope([normalized], { frameSize: 100, maxSamples: 12000 });
+          duration = pcm.length / Number(result.sampleRate || 1000);
+        } else {
+          const buffer = await assets[index].file.arrayBuffer();
+          const audio = await audioContext.decodeAudioData(buffer.slice(0));
+          const channels = [];
+          for (let channel = 0; channel < audio.numberOfChannels; channel++) channels.push(audio.getChannelData(channel));
+          const frameSize = Math.max(64, Math.min(65536, Math.round(audio.sampleRate / 10)));
+          envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize, maxSamples: 12000 });
+          duration = audio.duration;
+        }
+        const envelopeRate = envelope.length / duration;
+        decoded.push({ asset: assets[index], envelope, sampleRate: envelopeRate, duration });
+      }
+      const reference = decoded[0];
+      const suggestions = [];
+      const comparisonRate = 10;
+      const comparisonSeconds = 180;
+      const toComparisonEnvelope = source => {
+        const count = Math.min(Math.floor(source.duration * comparisonRate), comparisonSeconds * comparisonRate);
+        if (count < 8) throw new Error('Een bron moet minstens 0,8 seconde audio bevatten.');
+        const output = [];
+        for (let index = 0; index < count; index++) {
+          const position = Math.min(source.envelope.length - 1, index * source.sampleRate / comparisonRate);
+          const left = Math.floor(position);
+          const right = Math.min(source.envelope.length - 1, left + 1);
+          const fraction = position - left;
+          output.push(source.envelope[left] * (1 - fraction) + source.envelope[right] * fraction);
+        }
+        return output;
+      };
+      const refEnvelope = toComparisonEnvelope(reference);
+      for (const candidate of decoded.slice(1)) {
+        const candEnvelope = toComparisonEnvelope(candidate);
+        const maxLagSamples = 150;
+        const result = window.FluxivoraMulticamSync.estimateWaveformOffset(refEnvelope, candEnvelope, {
+          sampleRate: comparisonRate, maxLagSamples, minConfidence: 0.25, minOverlapRatio: 0.5
+        });
+        suggestions.push({ assetId: candidate.asset.id, assetName: candidate.asset.name, ...result });
+      }
+      const sourceSignatures = Object.fromEntries(decoded.map(item => [item.asset.id, {
+        name: String(item.asset.file && item.asset.file.name || ''),
+        size: Number(item.asset.file && item.asset.file.size || 0),
+        lastModified: Number(item.asset.file && item.asset.file.lastModified || 0)
+      }]));
+      multicamSyncSuggestions.set(group.id, { referenceAssetId: reference.asset.id, sourceSignatures, suggestions, createdAt: Date.now() });
+      renderMulticamGroups();
+      const accepted = suggestions.filter(item => item.accepted).length;
+      api.notice('Analyse voltooid: ' + accepted + ' van ' + suggestions.length + ' offsets hebben voldoende vertrouwen. Controleer de voorstellen vóór toepassing.');
+    } catch (error) {
+      if (status) status.textContent = 'Analyse mislukt: ' + (error && error.message ? error.message : 'onbekende fout');
+      api.notice('Audioanalyse kon niet worden uitgevoerd. Controleer of de bestanden een ondersteund audiokanaal bevatten.');
+    } finally {
+      if (audioContext && typeof audioContext.close === 'function') {
+        try { await audioContext.close(); } catch (_) {}
+      }
+      const currentButton = $('video-multicam-sync-' + group.id);
+      if (currentButton) { currentButton.disabled = false; currentButton.textContent = 'Analyseer audio-sync'; }
+    }
+  }
+
+  function applyMulticamSyncSuggestions(group) {
+    const preview = multicamSyncSuggestions.get(group.id);
+    if (!preview || !Array.isArray(preview.suggestions)) {
+      api.notice('Voer eerst een audioanalyse uit.');
+      return;
+    }
+    const currentAngleIds = new Set(group.angleAssetIds || []);
+    const sourceStillMatches = assetId => {
+      const expected = preview.sourceSignatures && preview.sourceSignatures[assetId];
+      const asset = state.assets.find(item => item.id === assetId && item.type === 'video' && item.file && !item.missing);
+      return Boolean(expected && asset &&
+        String(asset.file.name || '') === expected.name &&
+        Number(asset.file.size || 0) === expected.size &&
+        Number(asset.file.lastModified || 0) === expected.lastModified);
+    };
+    if (!currentAngleIds.has(preview.referenceAssetId) || !sourceStillMatches(preview.referenceAssetId)) {
+      multicamSyncSuggestions.delete(group.id);
+      api.notice('De bron van deze analyse is gewijzigd of niet meer beschikbaar. Voer de analyse opnieuw uit.');
+      renderMulticamGroups();
+      return;
+    }
+    const accepted = preview.suggestions.filter(item =>
+      item.accepted &&
+      Number.isFinite(item.offsetSeconds) &&
+      item.assetId !== preview.referenceAssetId &&
+      currentAngleIds.has(item.assetId) &&
+      sourceStillMatches(item.assetId)
+    );
+    if (!accepted.length) {
+      api.notice('Er zijn geen actuele, betrouwbare offsets om toe te passen. Stel de synchronisatie handmatig in of voer de analyse opnieuw uit.');
+      return;
+    }
+    api.pushHistory();
+    if (!group.offsets) group.offsets = {};
+    accepted.forEach(item => { group.offsets[item.assetId] = clamp(item.offsetSeconds, -86400, 86400); });
+    api.refresh();
+    renderMulticamGroups();
+    api.notice(accepted.length + ' actuele offset(s) toegepast. Niet meer gekoppelde hoeken zijn overgeslagen.');
+  }
+
   function renderMulticamGroups() {
     const host = $('video-multicam-groups');
     if (!host) return;
@@ -508,6 +650,39 @@ void main() {
       const hint = document.createElement('small');
       hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
       card.append(hint);
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.id = 'video-multicam-sync-' + group.id;
+      syncButton.className = 'button subtle compact';
+      syncButton.textContent = 'Analyseer audio-sync';
+      syncButton.addEventListener('click', () => analyzeMulticamGroup(group));
+      card.append(syncButton);
+      const syncStatus = document.createElement('small');
+      syncStatus.id = 'video-multicam-sync-status-' + group.id;
+      syncStatus.textContent = 'Analyseert lokaal waar mogelijk; voorgestelde offsets worden niet automatisch toegepast.';
+      card.append(syncStatus);
+      const syncPreview = multicamSyncSuggestions.get(group.id);
+      if (syncPreview) {
+        const summary = document.createElement('div');
+        summary.className = 'video-multicam-sync-results';
+        const referenceAsset = state.assets.find(item => item.id === syncPreview.referenceAssetId);
+        const summaryHeading = document.createElement('strong');
+        summaryHeading.textContent = 'Referentie: ' + (referenceAsset ? referenceAsset.name : 'onbekende bron');
+        summary.append(summaryHeading);
+        syncPreview.suggestions.forEach(item => {
+          const line = document.createElement('p');
+          const seconds = Number(item.offsetSeconds);
+          line.textContent = item.assetName + ': ' + (item.accepted && Number.isFinite(seconds) ? (seconds >= 0 ? '+' : '') + seconds.toFixed(3) + ' s · vertrouwen ' + Math.round(item.confidence * 100) + '%' : 'geen betrouwbaar voorstel (' + item.reason + ')');
+          summary.append(line);
+        });
+        const apply = document.createElement('button');
+        apply.type = 'button';
+        apply.className = 'button primary compact';
+        apply.textContent = 'Betrouwbare offsets toepassen';
+        apply.addEventListener('click', () => applyMulticamSyncSuggestions(group));
+        summary.append(apply);
+        card.append(summary);
+      }
       group.angleAssetIds.forEach(assetId => {
         const asset = state.assets.find(item => item.id === assetId);
         const row = document.createElement('label');
@@ -662,7 +837,46 @@ void main() {
     return linked;
   }
 
-  async function linkProxyFile(file, assetId = selectedProxyAssetId) {
+  function relinkKnownProxyFiles(files) {
+    const candidates = [...(files || [])].filter(file => file && file.type && file.type.startsWith('video/'));
+    if (!candidates.length) {
+      api.notice('Selecteer een of meer videobestanden om als proxy te koppelen.');
+      return;
+    }
+    const normalize = value => String(value || '').trim().toLocaleLowerCase();
+    const assetsByProxyName = new Map();
+    state.assets.filter(asset => asset.type === 'video' && asset.proxyName).forEach(asset => {
+      const key = normalize(asset.proxyName);
+      if (!assetsByProxyName.has(key)) assetsByProxyName.set(key, []);
+      assetsByProxyName.get(key).push(asset);
+    });
+    let linked = 0;
+    let unmatched = 0;
+    let ambiguous = 0;
+    const claimedAssetIds = new Set();
+    for (const file of candidates) {
+      const matches = assetsByProxyName.get(normalize(file.name)) || [];
+      if (matches.length === 1 && !claimedAssetIds.has(matches[0].id)) {
+        linkProxyFile(file, matches[0].id, { silent: true });
+        claimedAssetIds.add(matches[0].id);
+        linked++;
+      } else if (matches.length > 1 || (matches.length === 1 && claimedAssetIds.has(matches[0].id))) {
+        ambiguous++;
+      } else {
+        unmatched++;
+      }
+    }
+    if (linked) {
+      api.notice(linked + (linked === 1 ? ' proxy opnieuw gekoppeld' : ' proxies opnieuw gekoppeld') +
+        (unmatched ? ' · ' + unmatched + ' niet herkend' : '') +
+        (ambiguous ? ' · ' + ambiguous + ' dubbelzinnige bestandsnamen overgeslagen' : '') + '.');
+    } else {
+      api.notice('Geen proxy automatisch gekoppeld. Bestandsnamen moeten exact overeenkomen met de opgeslagen proxynaam.' +
+        (ambiguous ? ' ' + ambiguous + ' naamconflicten gevonden.' : ''));
+    }
+  }
+
+  async function linkProxyFile(file, assetId = selectedProxyAssetId, options = {}) {
     const asset = state.assets.find(item => item.id === assetId);
     if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
       api.notice('Kies een videobestand als proxy.');
@@ -700,7 +914,7 @@ void main() {
     selectedProxyAssetId = null;
     renderMediaBin();
     if (useProxyPreview) applyProxyPreview();
-    api.notice('Proxy gekoppeld: ' + file.name);
+    if (!options.silent) api.notice('Proxy gekoppeld: ' + file.name);
     $('video-proxy-file').value = '';
   }
 
@@ -1435,6 +1649,11 @@ void main() {
   $('video-multicam-cut').addEventListener('click', cutToMulticamAngle);
   $('video-proxy-file').addEventListener('change', event => {
     linkProxyFile(event.target.files?.[0]);
+    event.target.value = '';
+  });
+  $('video-proxy-relink-all').addEventListener('click', () => $('video-proxy-relink-files').click());
+  $('video-proxy-relink-files').addEventListener('change', event => {
+    relinkKnownProxyFiles(event.target.files);
     event.target.value = '';
   });
   $('video-proxy-batch').addEventListener('click', () => runProxyGeneration());
