@@ -967,3 +967,15 @@ test('Motion Studio animates mask size through the keyframe curve editor', () =>
   assert.match(motion, /maskSize: \[10, 100\]/);
   assert.match(motion, /maskSize: 'Maskergrootte'/);
 });
+
+
+test('Motion Studio persists and renders two-mask combination operations', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const id of ['video-mask-secondary', 'video-mask-secondary-size', 'video-mask-operation']) assert.ok(html.includes('id="' + id + '"'));
+  for (const operation of ['add', 'subtract', 'intersect']) assert.ok(html.includes('value="' + operation + '"'));
+  assert.match(video, /maskSecondaryType/);
+  assert.match(video, /maskSecondarySize/);
+  assert.match(video, /maskOperation/);
+  assert.match(video, /ctx\.clip\(combined, 'evenodd'\)/);
+  assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
+});
