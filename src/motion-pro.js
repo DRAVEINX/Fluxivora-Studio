@@ -554,6 +554,7 @@ void main() {
     const a = reference.energies, b = candidate.energies, step = reference.windowSeconds;
     const maxLag = Math.min(Math.floor(30 / step), Math.floor(a.length / 3), Math.floor(b.length / 3));
     let best = { lag: 0, score: -1 };
+    const scores = [];
     for (let lag = -maxLag; lag <= maxLag; lag++) {
       const aStart = Math.max(0, -lag), bStart = Math.max(0, lag);
       const length = Math.min(a.length - aStart, b.length - bStart);
@@ -564,9 +565,21 @@ void main() {
         dot += av * bv; aa += av * av; bb += bv * bv;
       }
       const score = aa > 0 && bb > 0 ? dot / Math.sqrt(aa * bb) : -1;
+      scores.push({ lag, score });
       if (score > best.score) best = { lag, score };
     }
-    return { offset: best.lag * step, confidence: best.score };
+    // Ignore the immediate shoulders of the winning peak. A similarly strong,
+    // distant peak means repetitive music/noise may yield an ambiguous offset.
+    const exclusion = Math.max(1, Math.round(1 / step));
+    const runnerUp = scores.reduce((peak, item) =>
+      Math.abs(item.lag - best.lag) > exclusion && item.score > peak.score ? item : peak,
+      { lag: best.lag, score: -1 });
+    return {
+      offset: best.lag * step,
+      confidence: best.score,
+      peakGap: best.score - runnerUp.score,
+      ambiguous: runnerUp.score >= 0 && best.score - runnerUp.score < 0.015
+    };
   }
 
   async function autoSyncMulticamGroup(group, button, status) {
@@ -589,6 +602,9 @@ void main() {
         const match = correlateMulticamOffset(reference, candidate);
         if (!Number.isFinite(match.confidence) || match.confidence < 0.25) {
           throw new Error('Geen betrouwbare audiomatch gevonden voor ' + assets[i].name + '. Er zijn geen offsets aangepast.');
+        }
+        if (match.ambiguous) {
+          throw new Error('Meerdere audiomomenten lijken even sterk op elkaar in ' + assets[i].name + '. Synchroniseer deze hoek handmatig; er zijn geen offsets aangepast.');
         }
         results.push({ asset: assets[i], ...match });
       }
