@@ -15,7 +15,7 @@ const OUTPUTS = Object.freeze({
 
 function safeFileStem(value) {
   const cleaned = String(value || 'Fluxivora-video')
-    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, ' ')
+    .replace(/[<>:"\/\\|?*\u0000-\u001f]+/g, ' ')
     .replace(/[. ]+$/g, '')
     .trim()
     .replace(/\s+/g, ' ')
