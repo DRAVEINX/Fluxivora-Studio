@@ -32,3 +32,13 @@ test('weak correlation is reported as unaccepted instead of silently syncing', (
   assert.equal(result.accepted, false);
   assert.equal(result.reason, 'low-confidence');
 });
+
+test('waveform correlation estimates a negative offset when the candidate starts earlier', () => {
+  const reference = [0.05, 0.7, 0.2, 0.95, 0.35, 0.1, 0.8, 0.45, 0.6, 0.15, 0.9, 0.3, 0.55, 0.25, 0.75, 0.4];
+  const candidate = [...reference.slice(2), 0.12, 0.88];
+  const result = estimateWaveformOffset(reference, candidate, { sampleRate: 25, maxLagSamples: 4, minConfidence: 0.8 });
+  assert.equal(result.accepted, true);
+  assert.equal(result.lagSamples, -2);
+  assert.equal(result.offsetSeconds, -0.08);
+  assert.ok(result.confidence > 0.99);
+});
