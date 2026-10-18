@@ -14,7 +14,7 @@
     clips: [], assets: [], programLut: null, multicamGroups: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
-    recorder: null, exportChunks: [], exportActive: false, exportSize: '1080p', snap: true
+    recorder: null, exportChunks: [], exportActive: false, offlineExportActive: false, offlineExportCancel: false, offlineSessionId: null, exportSize: '1080p', snap: true
   };
   const SEQUENCE_FPS = 25;
   function normaliseProgramLut(lut) {
@@ -489,7 +489,10 @@
     $('video-seek').max = String(Math.max(0.01, timelineEnd()));
     $('video-seek').value = String(Math.min(timelineEnd(), state.playhead));
     $('video-play').textContent = state.playing ? 'Ⅱ' : '▶';
-    $('video-export').disabled = !state.clips.length || state.clips.some(c => c.missing);
+    const canExport = state.clips.length > 0 && !state.clips.some(c => c.missing);
+    $('video-export').disabled = !canExport || state.exportActive || state.offlineExportActive;
+    $('video-export-webm').disabled = !canExport || state.exportActive || state.offlineExportActive;
+    $('video-export-cancel').disabled = !state.offlineExportActive;
     $('video-zoom').value = String(state.zoom);
     $('video-zoom-label').textContent = state.zoom + ' px/s';
     $('video-snap').classList.toggle('active', state.snap);
@@ -719,7 +722,351 @@
     if (state.playhead >= timelineEnd() && timelineEnd() > 0) { stopPlayback(); return; }
     state.raf = requestAnimationFrame(tick);
   }
-  function exportVideo() {
+  const offlineAudioBufferCache = new WeakMap();
+  const OFFLINE_AUDIO_CHUNK_SAMPLES = 4 * 48000;
+
+  function setOfflineProgress(title, detail, progress) {
+    $('video-render-progress').classList.remove('hidden');
+    $('video-render-progress-title').textContent = title;
+    $('video-render-progress-detail').textContent = detail;
+    if (Number.isFinite(progress)) $('video-render-meter').value = Math.max(0, Math.min(1, progress));
+  }
+
+  function requestRenderPaint() {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  function waitForVideoFrame(media, name) {
+    if (!media) return Promise.resolve();
+    if (media.error) return Promise.reject(new Error('De video-decoder kan "' + name + '" niet lezen.'));
+    if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let timer = null;
+      const cleanup = () => {
+        if (timer !== null) clearTimeout(timer);
+        media.removeEventListener('seeked', check);
+        media.removeEventListener('loadeddata', check);
+        media.removeEventListener('error', failed);
+      };
+      const check = () => {
+        if (media.error) return failed();
+        if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) {
+          cleanup();
+          resolve();
+        }
+      };
+      const failed = () => {
+        cleanup();
+        reject(new Error('De video-decoder kon geen frame laden uit "' + name + '". Controleer of dit bronformaat in deze versie wordt ondersteund.'));
+      };
+      media.addEventListener('seeked', check);
+      media.addEventListener('loadeddata', check);
+      media.addEventListener('error', failed);
+      timer = window.setTimeout(() => {
+        if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) check();
+        else failed();
+      }, 6000);
+      check();
+    });
+  }
+
+  async function renderTimelineFrame(time) {
+    state.playhead = Math.max(0, time);
+    state.playing = false;
+    syncMedia(true);
+    const activeVideos = state.clips.filter(clip => clip.type === 'video' && !clip.missing && activeAt(clip) && clip.mediaEl);
+    await Promise.all(activeVideos.map(clip => waitForVideoFrame(clip.mediaEl, clip.name)));
+    await requestRenderPaint();
+    if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+    renderPreview();
+    await requestRenderPaint();
+  }
+
+  function toBase64(bytes) {
+    let binary = '';
+    const sliceSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += sliceSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, Math.min(bytes.length, offset + sliceSize)));
+    }
+    return btoa(binary);
+  }
+
+  async function decodeOfflineAudioFile(file) {
+    if (!file) throw new Error('Een audiobron ontbreekt in het project.');
+    if (offlineAudioBufferCache.has(file)) return offlineAudioBufferCache.get(file);
+    const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!AudioContextClass || !OfflineContext) throw new Error('Offline audio-rendering wordt niet door deze Electron-versie ondersteund.');
+    const promise = (async () => {
+      const decoder = new AudioContextClass({ sampleRate: 48000 });
+      try {
+        const bytes = await file.arrayBuffer();
+        return await decoder.decodeAudioData(bytes);
+      } finally {
+        try { await decoder.close(); } catch (_) {}
+      }
+    })();
+    offlineAudioBufferCache.set(file, promise);
+    try { return await promise; }
+    catch (error) {
+      offlineAudioBufferCache.delete(file);
+      throw error;
+    }
+  }
+
+  function exportAnimatedValue(clip, key, relativeTime, baseValue) {
+    const frames = Array.isArray(clip.keyframes)
+      ? clip.keyframes.filter(frame => Number.isFinite(frame.time) && Number.isFinite(frame[key])).slice().sort((a, b) => a.time - b.time)
+      : [];
+    if (!frames.length) return Number(baseValue) || 0;
+    if (relativeTime <= frames[0].time) return frames[0][key];
+    if (relativeTime >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
+    const curves = {
+      linear: value => value,
+      easeIn: value => value * value,
+      easeOut: value => 1 - Math.pow(1 - value, 2),
+      easeInOut: value => value < 0.5 ? 2 * value * value : 1 - Math.pow(-2 * value + 2, 2) / 2,
+      hold: () => 0
+    };
+    for (let i = 1; i < frames.length; i++) {
+      const left = frames[i - 1], right = frames[i];
+      if (relativeTime <= right.time) {
+        const amount = Math.max(0, Math.min(1, (relativeTime - left.time) / Math.max(0.0001, right.time - left.time)));
+        const t = (curves[right.ease] || curves.linear)(amount);
+        return left[key] + (right[key] - left[key]) * t;
+      }
+    }
+    return Number(baseValue) || 0;
+  }
+
+  function exportAudioGain(clip, relativeTime) {
+    const length = clipLength(clip);
+    let fade = 1;
+    const fadeIn = Math.max(0, Number(clip.fadeIn) || 0);
+    const fadeOut = Math.max(0, Number(clip.fadeOut) || 0);
+    if (fadeIn > 0) fade = Math.min(fade, Math.max(0, Math.min(1, relativeTime / fadeIn)));
+    if (fadeOut > 0) fade = Math.min(fade, Math.max(0, Math.min(1, (length - relativeTime) / fadeOut)));
+    return Math.max(0, exportAnimatedValue(clip, 'volume', relativeTime, clip.volume) * fade);
+  }
+
+  async function prepareOfflineAudio(durationSeconds) {
+    const entries = [];
+    let skippedVideoAudio = 0;
+    for (const clip of state.clips) {
+      if (!['video', 'audio'].includes(clip.type) || clip.missing || clip.start >= durationSeconds || clipLength(clip) <= 0) continue;
+      const clipTrack = track(clip.trackId);
+      if (clipTrack && clipTrack.muted) continue;
+      const possibleVolume = [Number(clip.volume) || 0, ...(clip.keyframes || []).map(frame => Number(frame.volume) || 0)];
+      if (possibleVolume.every(value => value <= 0)) continue;
+      const asset = state.assets.find(item => item.id === clip.assetId) ||
+        state.assets.find(item => item.file && clip.file && item.file === clip.file) ||
+        state.assets.find(item => item.type === clip.type && item.name.toLowerCase() === String(clip.name || '').toLowerCase());
+      const file = clip.file || asset?.file;
+      if (!file) {
+        if (clip.type === 'audio') throw new Error('Koppel eerst het audiobestand "' + clip.name + '" opnieuw.');
+        skippedVideoAudio++;
+        continue;
+      }
+      try {
+        const buffer = await decodeOfflineAudioFile(file);
+        entries.push({ clip, buffer });
+      } catch (error) {
+        if (clip.type === 'audio') {
+          throw new Error('De audioclip "' + clip.name + '" kon niet worden gedecodeerd: ' + error.message);
+        }
+        skippedVideoAudio++;
+      }
+    }
+    return { entries, skippedVideoAudio };
+  }
+
+  function softLimitSample(sample) {
+    const value = sample * 0.85;
+    const magnitude = Math.abs(value);
+    if (magnitude <= 0.84) return value;
+    return Math.sign(value) * (0.84 + 0.16 * Math.tanh((magnitude - 0.84) / 0.16));
+  }
+
+  async function renderOfflineAudioChunk(entries, chunkStartSample, chunkSamples) {
+    const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const context = new OfflineContext(2, chunkSamples, 48000);
+    const chunkStart = chunkStartSample / 48000;
+    const chunkDuration = chunkSamples / 48000;
+    for (const entry of entries) {
+      const clip = entry.clip, buffer = entry.buffer;
+      const speed = Math.max(0.1, Math.min(4, Number(clip.speed) || 1));
+      const clipStart = Math.max(0, Number(clip.start) || 0);
+      const clipEnd = clipStart + clipLength(clip);
+      const overlapStart = Math.max(chunkStart, clipStart);
+      const overlapEnd = Math.min(chunkStart + chunkDuration, clipEnd);
+      if (overlapEnd - overlapStart < 0.002) continue;
+      const relativeStart = overlapStart - clipStart;
+      const sourceOffset = Math.max(0, Number(clip.in) || 0) + relativeStart * speed;
+      if (sourceOffset >= buffer.duration) continue;
+      const availableTimeline = (buffer.duration - sourceOffset) / speed;
+      const overlapDuration = Math.min(overlapEnd - overlapStart, availableTimeline);
+      if (overlapDuration < 0.002) continue;
+      const when = Math.max(0, overlapStart - chunkStart);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = speed;
+      const gain = context.createGain();
+      source.connect(gain);
+      gain.connect(context.destination);
+      const curveLength = Math.max(2, Math.min(128, Math.ceil(overlapDuration * 24) + 1));
+      const curve = new Float32Array(curveLength);
+      for (let i = 0; i < curveLength; i++) {
+        const time = relativeStart + overlapDuration * i / (curveLength - 1);
+        curve[i] = exportAudioGain(clip, time);
+      }
+      try {
+        if (overlapDuration > 0.01) gain.gain.setValueCurveAtTime(curve, when, overlapDuration);
+        else gain.gain.setValueAtTime(curve[0], when);
+        source.start(when, sourceOffset);
+        source.stop(Math.min(chunkDuration, when + overlapDuration));
+      } catch (error) {
+        throw new Error('Audio-rendering mislukt voor "' + clip.name + '": ' + error.message);
+      }
+    }
+    const mixed = await context.startRendering();
+    const left = mixed.getChannelData(0), right = mixed.getChannelData(1);
+    const interleaved = new Float32Array(chunkSamples * 2);
+    for (let i = 0; i < chunkSamples; i++) {
+      interleaved[i * 2] = softLimitSample(left[i]);
+      interleaved[i * 2 + 1] = softLimitSample(right[i]);
+    }
+    return new Uint8Array(interleaved.buffer);
+  }
+
+  async function streamOfflineAudio(sessionId, entries, totalSamples, onProgress) {
+    let startSample = 0;
+    let chunkIndex = 0;
+    while (startSample < totalSamples) {
+      if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+      const chunkSamples = Math.min(OFFLINE_AUDIO_CHUNK_SAMPLES, totalSamples - startSample);
+      const bytes = await renderOfflineAudioChunk(entries, startSample, chunkSamples);
+      if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+      await window.fluxivora.writeVideoAudio({ sessionId, base64Data: toBase64(bytes) });
+      startSample += chunkSamples;
+      chunkIndex++;
+      onProgress(startSample / totalSamples, chunkIndex);
+    }
+  }
+
+  async function cancelOfflineMp4() {
+    if (!state.offlineExportActive) return;
+    state.offlineExportCancel = true;
+    $('video-export-cancel').disabled = true;
+    setOfflineProgress('Render annuleren…', 'De encoder en tijdelijke uitvoer worden gestopt.', $('video-render-meter').value);
+    if (state.offlineSessionId && window.fluxivora?.cancelVideoRender) {
+      try { await window.fluxivora.cancelVideoRender({ sessionId: state.offlineSessionId }); } catch (_) {}
+    }
+  }
+
+  async function exportOfflineMp4() {
+    if (state.offlineExportActive || state.exportActive) return;
+    if (!window.fluxivora?.beginVideoRender || !window.fluxivora?.writeVideoFrame ||
+        !window.fluxivora?.writeVideoAudio || !window.fluxivora?.finishVideoRender) {
+      notice('Offline MP4-export is beschikbaar in de desktopinstallatie van Fluxivora Studio.');
+      return;
+    }
+    if (!state.clips.length || state.clips.some(clip => clip.missing && clip.type !== 'title')) {
+      notice('Koppel alle ontbrekende bronbestanden voordat je exporteert.');
+      return;
+    }
+    const endTime = timelineEnd();
+    const frameCount = Math.ceil(endTime * SEQUENCE_FPS);
+    if (frameCount < 2) { notice('De montage is te kort om te exporteren.'); return; }
+    if (frameCount > 15 * 60 * SEQUENCE_FPS) {
+      notice('Deze bèta ondersteunt offline MP4-projecten tot maximaal 15 minuten.');
+      return;
+    }
+    const canvas = $('video-canvas');
+    const originalWidth = canvas.width, originalHeight = canvas.height;
+    const originalPlayhead = state.playhead;
+    const exportSize = $('video-export-size').value;
+    const dimensions = exportSize === '720p' ? [1280, 720] : exportSize === '4k' ? [3840, 2160] : [1920, 1080];
+    let sessionId = null;
+    state.offlineExportActive = true;
+    state.offlineExportCancel = false;
+    state.offlineSessionId = null;
+    stopPlayback();
+    $('video-render-meter').value = 0;
+    $('video-export-cancel').disabled = false;
+    setOfflineProgress('MP4 render voorbereiden', 'Frames: ' + frameCount.toLocaleString('nl-NL') + ' · ' + exportSize + ' · 25 fps', 0);
+    updateTransport();
+    try {
+      const started = await window.fluxivora.beginVideoRender({
+        name: state.name, size: exportSize, fps: SEQUENCE_FPS, frameCount
+      });
+      if (!started || !started.sessionId) {
+        notice('MP4-export geannuleerd voordat de render begon.');
+        return;
+      }
+      sessionId = started.sessionId;
+      state.offlineSessionId = sessionId;
+      const totalSamples = Math.round((frameCount / SEQUENCE_FPS) * 48000);
+      setOfflineProgress('Audiotracks voorbereiden', 'Bronaudio wordt gedecodeerd en in tijdlijnvolgorde gemixt.', 0);
+      const audio = await prepareOfflineAudio(totalSamples / 48000);
+      if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+      const audioTask = streamOfflineAudio(sessionId, audio.entries, totalSamples, (progress, chunkIndex) => {
+        if (chunkIndex % 4 === 0 || progress >= 1) {
+          const percent = Math.round(progress * 100);
+          setOfflineProgress('Audio offline renderen', percent + '% van de audiotijdlijn verwerkt.', progress * 0.2);
+        }
+      });
+      let audioError = null;
+      audioTask.catch(error => { audioError = error; state.offlineExportCancel = true; });
+      canvas.width = dimensions[0];
+      canvas.height = dimensions[1];
+      for (let index = 0; index < frameCount; index++) {
+        if (state.offlineExportCancel) throw audioError || new Error('MP4-export geannuleerd.');
+        const time = index / SEQUENCE_FPS;
+        await renderTimelineFrame(time);
+        const url = canvas.toDataURL('image/jpeg', 0.92);
+        const base64Data = url.slice(url.indexOf(',') + 1);
+        await window.fluxivora.writeVideoFrame({ sessionId, index, base64Data });
+        if (index % SEQUENCE_FPS === 0 || index === frameCount - 1) {
+          const progress = (index + 1) / frameCount;
+          setOfflineProgress('Video beeld voor beeld renderen',
+            'Frame ' + (index + 1).toLocaleString('nl-NL') + ' van ' + frameCount.toLocaleString('nl-NL') +
+            (audio.skippedVideoAudio ? ' · ' + audio.skippedVideoAudio + ' videobron(nen) zonder decodeerbare audio' : ''),
+            progress * 0.75);
+        }
+      }
+      await audioTask;
+      if (state.offlineExportCancel) throw audioError || new Error('MP4-export geannuleerd.');
+      setOfflineProgress('MP4 encoderen', 'H.264-video en AAC-audio worden samengevoegd.', 0.9);
+      const result = await window.fluxivora.finishVideoRender({ sessionId });
+      sessionId = null;
+      state.offlineSessionId = null;
+      setOfflineProgress('MP4 opgeslagen', (result.filePath ? result.filePath.split(/[\\\\/]/).pop() : 'MP4') +
+        ' · ' + (result.size / (1024 * 1024)).toFixed(1) + ' MB', 1);
+      notice('Offline MP4-export afgerond (H.264 + AAC).');
+      if (audio.skippedVideoAudio) {
+        notice('Let op: audio uit ' + audio.skippedVideoAudio + ' videobron(nen) kon niet offline worden gedecodeerd; controleer de audiomix.');
+      }
+    } catch (error) {
+      if (sessionId && window.fluxivora?.cancelVideoRender) {
+        try { await window.fluxivora.cancelVideoRender({ sessionId }); } catch (_) {}
+      }
+      if (state.offlineExportCancel || /geannuleerd/i.test(error.message)) notice('Offline MP4-export geannuleerd.');
+      else notice('Offline MP4-export mislukt: ' + (error?.message || 'onbekende fout'));
+    } finally {
+      state.offlineSessionId = null;
+      state.offlineExportActive = false;
+      state.offlineExportCancel = false;
+      canvas.width = originalWidth || 1920;
+      canvas.height = originalHeight || 1080;
+      state.playhead = originalPlayhead;
+      renderPreview();
+      updateTransport();
+      $('video-render-progress').classList.add('hidden');
+    }
+  }
+
+  async function exportRealtimeWebm() {
+    if (state.offlineExportActive || state.exportActive) return;
+
     if (window.FluxivoraMotionStudio?.hasProxyPreview?.()) {
       notice('Zet Proxy preview uit voordat je exporteert. Dan wordt de originele bronkwaliteit gebruikt.');
       return;
