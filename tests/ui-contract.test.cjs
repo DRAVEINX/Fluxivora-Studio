@@ -1101,3 +1101,10 @@ test('Motion Graphics kan herbruikbare grafische composities lokaal opslaan en i
   const styles = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
   assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-compositions/);
 });
+
+test('Motion FX curve editor exposes rotation with matching degree limits', () => {
+  const motionPro = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(html, /<option value="rotation">Rotatie \(°\)<\/option>/);
+  assert.match(motionPro, /rotation: \[-3600, 3600\]/);
+  assert.match(motionPro, /rotation: 'Rotatie \(°\)'/);
+});
