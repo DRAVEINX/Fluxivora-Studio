@@ -1048,3 +1048,14 @@ test('Motion Studio media-import accepteert bekende extensies bij generieke MIME
   assert.match(video, /if \(!genericMime\) return false/);
 });
 
+
+
+test('Motion Graphics heeft een eigen navigatie-ingang en gebruikt de gedeelde animatie-editor', () => {
+  assert.match(html, /data-workspace="motionfx"[^>]*title="Motion Graphics"/);
+  assert.match(html, /id="video-workspace-title"/);
+  assert.match(app, /workspace === 'video' \|\| workspace === 'motionfx'/);
+  const motion = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(motion, /function show\(mode = 'video'\)/);
+  assert.match(motion, /b\.dataset\.workspace === 'motionfx'/);
+  assert.match(motion, /Animatie, compositing en bewegende vormgeving/);
+});
