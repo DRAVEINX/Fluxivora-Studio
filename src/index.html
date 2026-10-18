@@ -266,6 +266,7 @@
                 <label class="video-field">TEKST <textarea id="video-title-text" rows="3" maxlength="1000"></textarea></label>
                 <div class="video-property-grid"><label class="video-field">LETTERGROOTTE / VORMMAAT<input id="video-title-size" type="number" min="18" max="180" step="2" /></label><label class="video-field">KLEUR / VULLING<input id="video-title-color" type="color" /></label></div>
                 <div id="video-shape-controls" class="hidden"><h4>VORMSTIJL</h4><div class="video-property-grid"><label class="video-field">LIJNKLEUR<input id="video-shape-stroke-color" type="color" value="#ffffff" /></label><label class="video-field">LIJNDIKTE<input id="video-shape-stroke-width" type="number" min="0" max="30" step="1" value="0" /></label></div><small>Gebruik lijndikte 0 voor geen omlijning.</small></div>
+                <div id="video-mask-controls"><h4>LAAGMASKER</h4><div class="video-property-grid"><label class="video-field">MASKERVORM<select id="video-mask-type"><option value="none">Geen masker</option><option value="rectangle">Rechthoek</option><option value="ellipse">Ellips</option></select></label><label class="video-field">MASKERMAAT (%)<input id="video-mask-size" type="number" min="10" max="100" step="5" value="90" /></label></div><small>Masker knipt de zichtbare inhoud van deze titel- of vormlaag.</small></div>
               </div>
             </div>
             <div id="video-media-engine" class="video-media-engine" aria-hidden="true"><video id="video-preview" playsinline preload="metadata"></video></div>
