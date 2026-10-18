@@ -78,6 +78,6 @@ test('evaluateert de volledige laagtransformatie op een gekozen frame', () => {
     ]
   };
   assert.deepEqual(Eval.evaluateLayerTransform(layer, 10), {
-    x: 100, y: 50, anchorX: 0, anchorY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.75
+    x: 100, y: 50, anchorX: 0.5, anchorY: 0.5, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.75
   });
 });
