@@ -95,3 +95,32 @@ test('Motion FX composition evaluation rejects circular parent relationships', (
     { id: 'b', parentId: 'a', transform: {}, timing: { inFrame: 0, outFrame: 2 } }
   ] }, 1), /Circulaire ouder-kindrelatie/);
 });
+
+
+test('Motion FX composition evaluation respects disabled layers and exact timing boundaries', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'disabled-parent', type: 'group', enabled: false,
+      transform: { x: 20, y: 30, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child', parentId: 'disabled-parent', type: 'shape', enabled: true,
+      transform: { x: 5, y: 7, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'boundary-layer', type: 'shape', enabled: true,
+      transform: {}, timing: { inFrame: 5, outFrame: 8 } }
+  ] }, 8);
+  const parent = evaluated.find(layer => layer.id === 'disabled-parent');
+  const child = evaluated.find(layer => layer.id === 'child');
+  const boundary = evaluated.find(layer => layer.id === 'boundary-layer');
+  assert.equal(parent.visible, false);
+  assert.equal(child.visible, false);
+  assert.equal(boundary.visible, false, 'outFrame is exclusive');
+});
+
+test('Motion FX composition evaluation keeps a layer inactive before its inFrame', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'later', type: 'shape', enabled: true,
+      transform: { x: 12 }, timing: { inFrame: 4, outFrame: 12 } }
+  ] }, 3);
+  assert.equal(layer.visible, false);
+  assert.equal(layer.localTransform.x, 12);
+});
