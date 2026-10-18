@@ -904,10 +904,10 @@ test('Page Studio persists and renders an adjustable non-printing baseline grid'
 test('Motion Studio creates persisted and animated rectangle or ellipse shape layers', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   assert.match(html, /id="video-add-shape"/);
-  assert.match(html, /id="video-add-ellipse"\/);
-  assert.match(video, /function addShape\(\)/);
+  assert.match(html, /id="video-add-ellipse"/);
+  assert.match(video, /function addShape\(shapeType = 'rectangle'\)/);
   assert.match(video, /shapeType = isEllipse \? 'ellipse' : 'rectangle'/);
-  assert.match(video, /addShape\\('ellipse'\\)/);
+  assert.match(video, /addShape\('ellipse'\)/);
   assert.match(video, /shapeType: \['rectangle','ellipse'\]\.includes\(c\.shapeType\) \? c\.shapeType : null/);
   assert.match(video, /animatedValue\(c, 'scale'/);
   assert.match(video, /animatedValue\(c, 'opacity'/);
