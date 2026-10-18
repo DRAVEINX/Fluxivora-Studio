@@ -1,3 +1,11 @@
+## 0.5.0-beta.7 — cubic Bézier keyframe curves
+
+- Added cubic Bézier interpolation to Motion Studio keyframes alongside linear, ease-in/out and hold.
+- Added draggable outgoing and incoming tangent handles to the selected-property curve graph.
+- Shared curve math is used for timeline preview and offline audio volume keyframes.
+- Keyframe handles are validated, persisted in project JSON, deep-cloned for undo/redo and retained when clips are split.
+- Added unit tests for linear defaults, curved tangents, property limits and invalid handle normalization, plus UI contract tests for the editable handles.
+
 ## 0.5.0-beta.6 — offline MP4 rendering
 
 - Added frame-by-frame Motion Studio rendering that no longer depends on real-time playback or MediaRecorder.
