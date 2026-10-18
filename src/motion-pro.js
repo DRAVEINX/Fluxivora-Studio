@@ -11,7 +11,8 @@
   const gradeHistory = new Set();
   const effectLabels = {
     grayscale: 'Zwart-wit', sepia: 'Sepia', blur: 'Blur',
-    soften: 'Zachte focus', boost: 'Contrast + kleur', desaturate: 'Gedempt kleur'
+    soften: 'Zachte focus', boost: 'Contrast + kleur', desaturate: 'Gedempt kleur',
+    invert: 'Negatief', hue: 'Kleurverschuiving', brighten: 'Helderheid', crush: 'Hard contrast'
   };
 
   let lutRenderer = null;
