@@ -714,6 +714,7 @@ test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op
   assert.match(motion, /asset\.proxySize\) === Number\(file\.size\)/, 'Proxy-herstel moet opgeslagen bestandsgrootte controleren wanneer beschikbaar');
   assert.match(motion, /asset\.proxySize = Number\.isSafeInteger\(Number\(file\.size\)\)/);
   assert.match(video, /proxySize: Number\.isSafeInteger\(Number\(a\.proxySize\)\)/, 'Proxy-bestandsgrootte moet in projectbestanden worden bewaard');
+  assert.match(video, /format: 'fluxivora-video-project', version: '0\.5\.0-beta\.10'/, 'Opgeslagen projecten moeten de huidige Beta 10-versie aangeven');
   assert.match(motion, /linkProxyFile\(file, matches\[0\]\.id, \{ silent: true \}\)/);
 });
 
