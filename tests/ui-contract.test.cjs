@@ -856,3 +856,12 @@ test('Page Studio has persistent margin and column guides plus a PDF preflight c
   assert.match(app, /Toch PDF maken/);
   assert.match(app, /exportLayoutPdf\(true\)/);
 });
+
+
+test('Pixel Lab has a non-destructive blur adjustment included in canvas and image export', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  assert.match(html, /id="blur-slider"/);
+  assert.match(app, /'brightness', 'contrast', 'saturation', 'blur'/);
+  assert.match(app, /blur\(\$\{Math\.max\(0, Math\.min\(20, Number\(doc\.blur\) \|\| 0\)\)\}px\)/);
+  assert.match(app, /blur: 0/);
+});
