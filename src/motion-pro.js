@@ -1618,22 +1618,35 @@ void main() {
   $('video-proxy-files-relink').addEventListener('change', event => {
     const files = [...(event.target.files || [])];
     const pending = state.assets.filter(asset => asset.type === 'video' && asset.proxyName && (!asset.proxyUrl || asset.proxyMissing));
+    const normalize = value => String(value || '').toLocaleLowerCase();
+    const fileCounts = new Map();
+    const assetCounts = new Map();
+    for (const file of files) fileCounts.set(normalize(file.name), (fileCounts.get(normalize(file.name)) || 0) + 1);
+    for (const asset of pending) assetCounts.set(normalize(asset.proxyName), (assetCounts.get(normalize(asset.proxyName)) || 0) + 1);
     let linked = 0;
     let ambiguous = 0;
+    let unmatched = 0;
+    const usedNames = new Set();
     for (const file of files) {
-      const matches = pending.filter(asset => asset.proxyName.toLocaleLowerCase() === file.name.toLocaleLowerCase());
-      if (matches.length === 1) {
-        linkProxyFile(file, matches[0].id);
-        linked++;
-      } else if (matches.length > 1) {
+      const name = normalize(file.name);
+      if (!name || usedNames.has(name)) continue;
+      usedNames.add(name);
+      if ((fileCounts.get(name) || 0) > 1 || (assetCounts.get(name) || 0) > 1) {
         ambiguous++;
+        continue;
+      }
+      const match = pending.find(asset => normalize(asset.proxyName) === name);
+      if (match) {
+        linkProxyFile(file, match.id);
+        linked++;
+      } else {
+        unmatched++;
       }
     }
-    const unmatched = files.length - linked - ambiguous;
     if (linked === 0) {
-      api.notice(ambiguous ? 'Geen proxy gekoppeld: sommige bestandsnamen komen meerdere keren voor. Koppel die proxy’s afzonderlijk.' : 'Geen overeenkomst gevonden. Controleer de proxybestandsnamen.');
+      api.notice(ambiguous ? 'Geen proxy gekoppeld: dubbele bestandsnamen gevonden bij proxybestanden of projectmedia. Koppel deze proxy’s afzonderlijk.' : 'Geen overeenkomst gevonden. Controleer de proxybestandsnamen.');
     } else {
-      api.notice(linked + ' proxybestand(en) gekoppeld op basis van exacte bestandsnaam.' + (ambiguous ? ' ' + ambiguous + ' naam(en) zijn dubbel; die moeten afzonderlijk worden gekoppeld.' : '') + (unmatched ? ' ' + unmatched + ' bestand(en) hadden geen overeenkomst.' : ''));
+      api.notice(linked + ' proxybestand(en) veilig gekoppeld op basis van exacte bestandsnaam.' + (ambiguous ? ' ' + ambiguous + ' dubbele naam(en) overgeslagen; koppel die proxy’s afzonderlijk.' : '') + (unmatched ? ' ' + unmatched + ' bestand(en) hadden geen overeenkomst.' : ''));
     }
     event.target.value = '';
   });
