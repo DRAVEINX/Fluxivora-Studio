@@ -1,0 +1,83 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const MotionFX = require('../src/motion-fx-composition.cjs');
+
+test('nieuwe compositie heeft begrensde instellingen en een lege lagenlijst', () => {
+  const composition = MotionFX.createComposition({ width: 99999, height: 0, fps: 240, durationFrames: -4 });
+  assert.equal(composition.format, MotionFX.FORMAT);
+  assert.equal(composition.version, 1);
+  assert.equal(composition.settings.width, 7680);
+  assert.equal(composition.settings.height, 16);
+  assert.equal(composition.settings.fps, 120);
+  assert.equal(composition.settings.durationFrames, 1);
+  assert.deepEqual(composition.layers, []);
+  assert.deepEqual(MotionFX.validateComposition(composition), []);
+});
+
+test('laagtypes en transformaties krijgen veilige standaardwaarden', () => {
+  const layer = MotionFX.createLayer('shape', { transform: { x: 'NaN', opacity: 4, scaleX: -2 } });
+  assert.equal(layer.type, 'shape');
+  assert.equal(layer.transform.x, 0);
+  assert.equal(layer.transform.opacity, 1);
+  assert.equal(layer.transform.scaleX, -2);
+  assert.equal(layer.timing.outFrame > layer.timing.inFrame, true);
+  assert.throws(() => MotionFX.createLayer('unknown'), /Onbekend/);
+});
+
+test('compositie serializeert en opent opnieuw zonder gegevensverlies', () => {
+  const composition = MotionFX.createComposition({ name: 'Intro animatie', fps: 30, durationFrames: 450 });
+  const title = MotionFX.createLayer('text', {
+    id: 'title-1', name: 'Hoofdtitel',
+    transform: { x: 960, y: 540, opacity: 0.8 },
+    timing: { inFrame: 0, outFrame: 450 },
+    keyframes: [
+      { frame: 0, property: 'opacity', value: 0, interpolation: 'ease' },
+      { frame: 24, property: 'opacity', value: 1, interpolation: 'bezier' }
+    ],
+    data: { text: 'Fluxivora', fontSize: 120, fill: '#ffffff' }
+  });
+  composition.layers.push(title);
+  const reopened = MotionFX.parseComposition(MotionFX.serializeComposition(composition));
+  assert.equal(reopened.name, 'Intro animatie');
+  assert.equal(reopened.settings.fps, 30);
+  assert.equal(reopened.layers[0].data.text, 'Fluxivora');
+  assert.deepEqual(reopened.layers[0].keyframes, title.keyframes);
+  assert.deepEqual(MotionFX.validateComposition(reopened), []);
+});
+
+test('validator weigert dubbele IDs, onbekende formaten en ontbrekende ouderlagen', () => {
+  const composition = MotionFX.createComposition();
+  const a = MotionFX.createLayer('null', { id: 'controller' });
+  const b = MotionFX.createLayer('shape', { id: 'shape', parentId: 'missing' });
+  composition.layers.push(a, b);
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ouderlaag bestaat niet')));
+  b.id = 'controller';
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('dubbel')));
+  composition.format = 'other';
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('formaat')));
+});
+
+test('projectparser weigert ongeldige JSON, te grote invoer en ongeldige laagstructuren', () => {
+  assert.throws(() => MotionFX.parseComposition('{broken'), /geldige JSON/);
+  assert.throws(() => MotionFX.parseComposition('x'.repeat(25 * 1024 * 1024 + 1)), /te groot/);
+  const invalid = MotionFX.createComposition();
+  invalid.layers.push({ id: 'bad', type: 'nope' });
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(invalid)), /Onbekend|Ongeldig/);
+});
+
+test('dupliceren maakt nieuwe laag-ID’s en behoudt ouder-kindrelaties en animaties', () => {
+  const composition = MotionFX.createComposition({ name: 'Logo animatie' });
+  composition.layers.push(
+    MotionFX.createLayer('null', { id: 'parent' }),
+    MotionFX.createLayer('shape', { id: 'child', parentId: 'parent', keyframes: [{ frame: 8, property: 'rotation', value: 180 }] })
+  );
+  const copy = MotionFX.cloneComposition(composition);
+  assert.notEqual(copy.id, composition.id);
+  assert.equal(copy.name, 'Logo animatie kopie');
+  assert.notEqual(copy.layers[0].id, composition.layers[0].id);
+  assert.equal(copy.layers[1].parentId, copy.layers[0].id);
+  assert.deepEqual(copy.layers[1].keyframes, composition.layers[1].keyframes);
+  assert.deepEqual(MotionFX.validateComposition(copy), []);
+});
