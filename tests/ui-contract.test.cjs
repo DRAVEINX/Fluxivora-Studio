@@ -723,6 +723,9 @@ test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcu
   assert.match(video, /videoPosition = angleAsset/);
   assert.match(motion, /async function analyzeMulticamGroup\(/);
   assert.match(motion, /function applyMulticamSyncSuggestions\(/);
+  assert.match(motion, /currentAngleIds\.has\(preview\.referenceAssetId\)/);
+  assert.match(motion, /currentAngleIds\.has\(item\.assetId\)/);
+  assert.match(motion, /multicamSyncSuggestions\.delete\(group\.id\)/);
   assert.match(motion, /Analyseer audio-sync/);
   assert.match(motion, /Betrouwbare offsets toepassen/);
   assert.match(motion, /minConfidence: 0\.25/);
