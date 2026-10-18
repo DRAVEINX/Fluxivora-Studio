@@ -1204,7 +1204,17 @@ void main() {
       api.notice('Kies een passend bronbestand.');
       return;
     }
-    const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
+    const normalizedAssetName = String(asset.name || '').trim().toLocaleLowerCase();
+    const sameNameAssets = state.assets.filter(item => item.type === asset.type &&
+      String(item.name || '').trim().toLocaleLowerCase() === normalizedAssetName);
+    const ambiguousNameFallback = sameNameAssets.length > 1;
+    const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type &&
+      (clip.assetId ? clip.assetId === asset.id :
+        (!ambiguousNameFallback && String(clip.name || '').trim().toLocaleLowerCase() === normalizedAssetName)));
+    if (ambiguousNameFallback && state.clips.some(clip => clip.missing && clip.type === asset.type &&
+      !clip.assetId && String(clip.name || '').trim().toLocaleLowerCase() === normalizedAssetName)) {
+      api.notice('Meerdere bronbestanden hebben dezelfde naam. Clips zonder opgeslagen bron-ID zijn niet automatisch gekoppeld; controleer ze handmatig.');
+    }
     const expectedDuration = Number(asset.duration) || 0;
     asset.file = file;
     asset.url = URL.createObjectURL(file);
