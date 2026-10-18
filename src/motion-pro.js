@@ -845,6 +845,11 @@ void main() {
     }
     const normalize = value => String(value || '').trim().toLocaleLowerCase();
     const assetsByProxyName = new Map();
+    const candidateCounts = new Map();
+    for (const file of candidates) {
+      const key = normalize(file.name);
+      candidateCounts.set(key, (candidateCounts.get(key) || 0) + 1);
+    }
     state.assets.filter(asset => asset.type === 'video' && asset.proxyName).forEach(asset => {
       const key = normalize(asset.proxyName);
       if (!assetsByProxyName.has(key)) assetsByProxyName.set(key, []);
@@ -855,7 +860,13 @@ void main() {
     let ambiguous = 0;
     const claimedAssetIds = new Set();
     for (const file of candidates) {
-      const matches = assetsByProxyName.get(normalize(file.name)) || [];
+      const key = normalize(file.name);
+      const matches = assetsByProxyName.get(key) || [];
+      // Never guess which file is correct when the user selected duplicate names.
+      if (candidateCounts.get(key) > 1) {
+        ambiguous++;
+        continue;
+      }
       if (matches.length === 1 && !claimedAssetIds.has(matches[0].id)) {
         linkProxyFile(file, matches[0].id, { silent: true });
         claimedAssetIds.add(matches[0].id);
