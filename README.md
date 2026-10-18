@@ -1,6 +1,13 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.6 — frame-voor-frame offline MP4-export met H.264-video en AAC-audio.**
+**Huidige ontwikkelversie: 0.5.0-beta.7 — cubic Bézier-keyframecurves met versleepbare in- en out-handles.**
+
+### Nieuw in bèta.7 — Bézier-keyframes
+
+- De Motion Studio-curve-editor biedt nu ook echte kubische Bézier-interpolatie naast lineair, ease-in/out en hold.
+- Turquoise uit-handles en roze in-handles zijn rechtstreeks in de grafiek te verslepen om de kromming en het verloop tussen keyframes aan te passen.
+- Dezelfde curveberekening wordt gebruikt voor de tijdlijnpreview en offline volume-keyframes, zodat animatie en audiovolume dezelfde interpolatie volgen.
+- Handlewaarden worden begrensd op de eigenschap en de tijdhandles blijven binnen het segment. In- en out-handles worden opgeslagen in het projectbestand en meegenomen in undo/redo.
 
 ### Nieuw in bèta.6 — offline MP4-render
 
@@ -23,7 +30,7 @@
 - Multicamgroepen met meerdere videobronnen, handmatige sync-offsets per hoek en cuts naar een gekozen camerahoek op de playhead; de bestaande audiotrack blijft behouden.
 - De bestaande Pixel Lab-, Vector Forge- en Page Studio-werkruimtes zijn behouden.
 
-**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De offline MP4-render is frame-voor-frame en encodeert H.264/AAC, maar de visuele compositing gebeurt nog in de browser-renderer en er gelden limieten van 15 minuten en 256 MB per audiobron. De scopes zijn indicatief en de output-LUT geldt op sequentieniveau, niet per clip. Automatische proxy-generatie, automatische multicam-sync op waveform/tijdcode, een live-multiviewer en volledige Bézier-handles moeten nog worden gebouwd. De WebM-export blijft als realtime alternatief beschikbaar. Bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moeten bronnen opnieuw worden gekoppeld.
+**Belangrijk:** Motion Studio is nog geen volledige vervanging van Adobe Premiere Pro. De offline MP4-render is frame-voor-frame en encodeert H.264/AAC, maar de visuele compositing gebeurt nog in de browser-renderer en er gelden limieten van 15 minuten en 256 MB per audiobron. De scopes zijn indicatief en de output-LUT geldt op sequentieniveau, niet per clip. Automatische proxy-generatie, automatische multicam-sync op waveform/tijdcode en een live-multiviewer moeten nog worden gebouwd. De curve-editor heeft basis-Bézier-handles; koppelen/spiegelen van tangenten en uitgebreide snelheids-/waarde-curves blijven vervolgwerk. De WebM-export blijft als realtime alternatief beschikbaar. Bronmedia worden niet in het project-JSON ingebed; na het opnieuw openen moeten bronnen opnieuw worden gekoppeld.
 
 **Eén creatieve werkplaats voor beeld, vectoren, pagina-opmaak en videomontage.**
 
