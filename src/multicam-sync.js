@@ -34,6 +34,12 @@
     }
 
     const maxLag = Math.min(maxLagSamples, reference.length - 4, candidate.length - 4);
+    // Bound synchronous work so unusually large inputs cannot freeze the editor UI.
+    const estimatedOperations = (2 * maxLag + 1) * Math.min(reference.length, candidate.length);
+    const MAX_CORRELATION_OPERATIONS = 25000000;
+    if (estimatedOperations > MAX_CORRELATION_OPERATIONS) {
+      throw new RangeError('Waveform comparison is too large for a safe synchronous calculation. Use shorter envelopes or a smaller maxLagSamples value.');
+    }
     let best = { lagSamples: 0, confidence: -2 };
     let hasValidCorrelation = false;
     for (let lag = -maxLag; lag <= maxLag; lag++) {
