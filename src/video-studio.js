@@ -324,6 +324,16 @@
     notice('Titel toegevoegd; pas de tekst aan in Eigenschappen.');
     return c;
   }
+  function addShape() {
+    pushHistory();
+    const t = state.tracks.find(x => x.id === state.activeTrack && x.kind === 'title') || state.tracks.find(x => x.kind === 'title');
+    const c = createClip({type: 'title', name: 'Vormlaag · rechthoek', duration: 5, trackId: t.id, start: state.playhead, text: ''});
+    c.shapeType = 'rectangle'; c.fontSize = 120; c.color = '#8b7cff'; c.bold = false;
+    state.activeTrack = t.id;
+    refresh(); renderPreview();
+    notice('Vormlaag toegevoegd. De laag is te animeren met positie, schaal en dekking.');
+    return c;
+  }
   function seekTo(time) {
     state.playhead = Math.max(0, Math.min(Math.max(timelineEnd(), 0.01), Number(time) || 0));
     syncMedia(true);
@@ -477,9 +487,19 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     ctx.fillStyle = c.color || '#ffffff';
-    const lines = String(c.text || '').split('\n').slice(0, 5);
-    const x = W / 2 + animatedValue(c, 'x', c.x || 0) * W / 100, y = H * 0.815 + animatedValue(c, 'y', c.y || 0) * H / 100;
-    lines.forEach((line, i) => ctx.fillText(line.slice(0, 250), x, y + (i - (lines.length - 1) / 2) * size * 1.16, W * .88));
+    const x = W / 2 + animatedValue(c, 'x', c.x || 0) * W / 100;
+    if (c.shapeType === 'rectangle' || c.shapeType === 'ellipse') {
+      const y = H / 2 + animatedValue(c, 'y', c.y || 0) * H / 100;
+      const shapeW = Math.max(20, (c.fontSize || 120) * 2.4 * animatedScale * (W / 1920));
+      const shapeH = Math.max(20, (c.fontSize || 120) * animatedScale * (H / 1080));
+      ctx.shadowBlur = 0;
+      if (c.shapeType === 'ellipse') { ctx.beginPath(); ctx.ellipse(x, y, shapeW / 2, shapeH / 2, 0, 0, Math.PI * 2); ctx.fill(); }
+      else ctx.fillRect(x - shapeW / 2, y - shapeH / 2, shapeW, shapeH);
+    } else {
+      const lines = String(c.text || '').split('\\n').slice(0, 5);
+      const y = H * 0.815 + animatedValue(c, 'y', c.y || 0) * H / 100;
+      lines.forEach((line, i) => ctx.fillText(line.slice(0, 250), x, y + (i - (lines.length - 1) / 2) * size * 1.16, W * .88));
+    }
     ctx.restore();
   }
   function renderPreview() {
@@ -1258,6 +1278,7 @@
       state.clips = data.clips.map(c => ({
         id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null,
         type: ['video','audio','title'].includes(c.type) ? c.type : 'video',
+        shapeType: ['rectangle','ellipse'].includes(c.shapeType) ? c.shapeType : null,
         multicamGroupId: typeof c.multicamGroupId === 'string' ? c.multicamGroupId.slice(0,256) : null,
         activeAngleAssetId: typeof c.activeAngleAssetId === 'string' ? c.activeAngleAssetId.slice(0,256) : null,
         activeAngleIn: Number.isFinite(Number(c.activeAngleIn)) ? Math.max(0,Math.min(86400,Number(c.activeAngleIn))) : null,
@@ -1461,6 +1482,7 @@
     $('video-export-webm').addEventListener('click', exportRealtimeWebm);
     $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
     $('video-add-title').addEventListener('click', addTitle);
+    $('video-add-shape').addEventListener('click', addShape);
     $('video-add-marker').addEventListener('click', addMarker);
     $('video-split-clip').addEventListener('click', splitSelectedAtPlayhead);
     $('video-ripple-delete').addEventListener('click', () => removeSelected(true));
