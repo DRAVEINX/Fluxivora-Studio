@@ -966,7 +966,9 @@ test('Motion Studio houdt proxy-preview gescheiden van de uiteindelijke MP4-expo
   const previewFunction = motion.slice(startPreview, endPreview);
   assert.match(previewFunction, /const proxy = useProxyPreview && sourceAsset && sourceAsset\.proxyUrl && !sourceAsset\.proxyMissing \? sourceAsset\.proxyUrl : null/,
     'Alleen expliciet ingeschakelde, aanwezige proxy-preview mag een proxy kiezen');
-  assert.match(previewFunction, /const target = proxy \|\| \(angleAsset \? angleAsset\.url : clip\.url\)/,
+  assert.match(previewFunction, /const originalSource = angleAsset \? angleAsset\.url : clip\.url/,
+    'De oorspronkelijke bron moet de actieve camerahoek volgen');
+  assert.match(previewFunction, /const target = proxy \|\| originalSource/,
     'Zonder proxy-preview moet de preview terugvallen op de originele bron');
 });
 
