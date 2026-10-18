@@ -332,6 +332,8 @@ ipcMain.handle('video:begin-render', async (event, payload = {}) => {
     exitSignal: null, processError: null, stderr: '', cancelled: false
   };
   child.once('error', error => { session.processError = error; });
+  child.stdin.on('error', error => { session.processError = error; });
+  child.stdio[3].on('error', error => { session.processError = error; });
   child.stderr.on('data', data => {
     session.stderr = (session.stderr + data.toString('utf8')).slice(-12000);
   });
