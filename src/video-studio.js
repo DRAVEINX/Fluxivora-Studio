@@ -504,10 +504,14 @@
         const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), c.maskSecondaryX, c.maskSecondaryY);
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'subtract') {
-          const combined = new Path2D();
-          combined.addPath(primary);
-          combined.addPath(secondary);
-          ctx.clip(combined, 'evenodd');
+          // First constrain output to the primary mask, then remove the secondary
+          // shape from the full frame. This implements A minus B even when B
+          // extends beyond A; XOR of the two paths would be incorrect here.
+          ctx.clip(primary);
+          const outsideSecondary = new Path2D();
+          outsideSecondary.rect(0, 0, W, H);
+          outsideSecondary.addPath(secondary);
+          ctx.clip(outsideSecondary, 'evenodd');
         } else {
           const combined = new Path2D();
           combined.addPath(primary); combined.addPath(secondary);
