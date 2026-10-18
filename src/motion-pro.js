@@ -1054,6 +1054,10 @@ void main() {
 
   function applyRelink(file) {
     const asset = state.assets.find(item => item.id === $('video-relink-files').dataset.assetId);
+    return applyRelinkToAsset(asset, file, false);
+  }
+
+  function applyRelinkToAsset(asset, file, quiet) {
     if (!asset || !file || (asset.type === 'audio' ? !file.type.startsWith('audio/') : !file.type.startsWith('video/'))) {
       api.notice('Kies een passend bronbestand.');
       return;
@@ -1104,9 +1108,33 @@ void main() {
     renderMediaBin();
     api.refresh();
     api.renderPreview();
-    api.notice('Bronbestand gekoppeld aan bibliotheek en bijpassende clips.');
+    if (!quiet) api.notice('Bronbestand gekoppeld aan bibliotheek en bijpassende clips.');
   }
 
+
+  function relinkMissingAssets(files) {
+    const candidates = Array.from(files || []);
+    if (!candidates.length) return;
+    const key = value => String(value || '').trim().toLocaleLowerCase();
+    const missing = state.assets.filter(asset => asset.missing || !asset.url || !asset.file);
+    let linked = 0;
+    const unmatched = [];
+    missing.forEach(asset => {
+      const index = candidates.findIndex(file => key(file.name) === key(asset.name) &&
+        (asset.type === 'audio' ? file.type.startsWith('audio/') : file.type.startsWith('video/')));
+      if (index < 0) { unmatched.push(asset.name); return; }
+      if (applyRelinkToAsset(asset, candidates[index], true)) {
+        linked++;
+        candidates.splice(index, 1);
+      }
+    });
+    renderMediaBin();
+    api.refresh();
+    api.renderPreview();
+    api.notice(linked
+      ? linked + ' ontbrekende bron' + (linked === 1 ? '' : 'nen') + ' automatisch gekoppeld op bestandsnaam.' + (unmatched.length ? ' Niet gevonden: ' + unmatched.length + '.' : '')
+      : 'Geen overeenkomende ontbrekende bronnen gevonden. Bestandsnamen en media-types moeten overeenkomen.');
+  }
   function renderEffectStack() {
     const container = $('video-effect-stack');
     const clip = api.selected();
@@ -1597,6 +1625,11 @@ void main() {
   });
   $('video-relink-files').addEventListener('change', event => {
     applyRelink(event.target.files?.[0]);
+    event.target.value = '';
+  });
+  $('video-relink-all').addEventListener('click', () => $('video-relink-batch-files').click());
+  $('video-relink-batch-files').addEventListener('change', event => {
+    relinkMissingAssets(event.target.files);
     event.target.value = '';
   });
   $('video-effect-add').addEventListener('click', () => {
