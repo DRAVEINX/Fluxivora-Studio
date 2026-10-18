@@ -45,7 +45,7 @@ test('untrusted handle values are normalized and invalid handle objects are igno
   assert.equal(handle.time, 0.48);
   assert.equal(handle.opacity, 0.5);
   assert.equal(handle.scale, -0.9);
-  assert.equal(handle.rotation, 90);
+  assert.equal(handle.rotation, 3510); // Handle stores a delta relative to the 90° keyframe value.
   assert.equal(handle.x, 100);
   assert.equal(handle.y, -100);
   assert.equal(handle.volume, 1);
