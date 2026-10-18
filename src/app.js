@@ -512,7 +512,7 @@
         if (!cached.complete || !cached.naturalWidth) cached.onload = () => { if (state.project && state.project.pixel.baseImage === token) renderPixel(); };
       }
       if (cached && cached.complete && cached.naturalWidth) {
-        try { ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%)`; ctx.drawImage(cached, 0, 0, width, height); ctx.filter = 'none'; } catch (_) {}
+        try { ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%) blur(${Math.max(0, Math.min(20, Number(doc.blur) || 0))}px)`; ctx.drawImage(cached, 0, 0, width, height); ctx.filter = 'none'; } catch (_) {}
       }
     }
     drawPixelObjects(ctx, state.draftObject && state.activeWorkspace === 'pixel' ? [...doc.objects, state.draftObject] : doc.objects, state.selectedId);
@@ -766,6 +766,8 @@
       $(`${name}-slider`).value = d[name] ?? 100;
       $(`${name}-value`).textContent = `${d[name] ?? 100}%`;
     }
+    $('blur-slider').value = String(Math.max(0, Math.min(20, Number(state.project?.pixel?.blur) || 0)));
+    $('blur-value').textContent = `${Math.max(0, Math.min(20, Number(state.project?.pixel?.blur) || 0))} px`;
   }
 
   function renderLayers() {
@@ -1353,7 +1355,7 @@
         });
       }
       ctx.save();
-      ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%)`;
+      ctx.filter = `brightness(${doc.brightness ?? 100}%) contrast(${doc.contrast ?? 100}%) saturate(${doc.saturation ?? 100}%) blur(${Math.max(0, Math.min(20, Number(doc.blur) || 0))}px)`;
       ctx.drawImage(image, 0, 0, width, height);
       ctx.restore();
     }
@@ -1770,7 +1772,7 @@
   $('document-reset-button').addEventListener('click', resetDocument);
   $('document-width').addEventListener('change', changeDocumentSize); $('document-height').addEventListener('change', changeDocumentSize);
   $('delete-object-button').addEventListener('click', deleteSelected); $('delete-layer-button').addEventListener('click', deleteSelected); $('duplicate-object-button').addEventListener('click', duplicateSelected); $('layer-up-button').addEventListener('click', () => moveSelectedLayer(1)); $('layer-down-button').addEventListener('click', () => moveSelectedLayer(-1));
-  const editingFields = ['object-text', 'object-x', 'object-y', 'object-width', 'object-height', 'object-rotation', 'fill-color', 'stroke-color', 'stroke-width', 'font-size', 'opacity-slider', 'brightness-slider', 'contrast-slider', 'saturation-slider'];
+  const editingFields = ['object-text', 'object-x', 'object-y', 'object-width', 'object-height', 'object-rotation', 'fill-color', 'stroke-color', 'stroke-width', 'font-size', 'opacity-slider', 'brightness-slider', 'contrast-slider', 'saturation-slider', 'blur-slider'];
   const editingStarted = new Map();
   editingFields.forEach(id => {
     const field = $(id);
@@ -1791,16 +1793,16 @@
   $('reset-adjustments-button').addEventListener('click', () => {
     if (!state.project) return;
     const doc = state.project.pixel;
-    if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100) return;
+    if (doc.brightness === 100 && doc.contrast === 100 && doc.saturation === 100 && !doc.blur) return;
     checkpoint();
-    Object.assign(doc, { brightness: 100, contrast: 100, saturation: 100 });
+    Object.assign(doc, { brightness: 100, contrast: 100, saturation: 100, blur: 0 });
     markDirty(); renderAll();
   });
   $('crop-apply-button').addEventListener('click', applyPixelCrop);
   for (const [id, alignment] of [['align-left-button', 'left'], ['align-center-x-button', 'center-x'], ['align-right-button', 'right'], ['align-top-button', 'top'], ['align-center-y-button', 'center-y'], ['align-bottom-button', 'bottom']]) $(id).addEventListener('click', () => alignSelectedToCanvas(alignment));
   $('add-bezier-point-button').addEventListener('click', addBezierAnchor);
   $('delete-bezier-point-button').addEventListener('click', deleteBezierAnchor);
-  for (const key of ['brightness', 'contrast', 'saturation']) {
+  for (const key of ['brightness', 'contrast', 'saturation', 'blur']) {
     const id = `${key}-slider`;
     $(id).addEventListener('input', () => {
       if (!state.project) return;
@@ -1809,7 +1811,7 @@
       const beforeProject = JSON.parse(JSON.stringify(state.project));
       state.project.pixel[key] = nextValue;
       commitEditorEdit(id, beforeProject);
-      $(`${key}-value`).textContent = `${nextValue}%`;
+      $(`${key}-value`).textContent = key === 'blur' ? `${nextValue} px` : `${nextValue}%`;
       renderPixel();
       markDirty();
     });
