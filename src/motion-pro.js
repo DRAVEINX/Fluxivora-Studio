@@ -220,12 +220,23 @@ void main() {
     return state.clips.find(clip => clip.type === asset.type && clip.name.toLowerCase() === asset.name.toLowerCase());
   }
 
-  function registerImportedClip(clipId) {
+  function findUnambiguousMissingAsset(type, name) {
+    const normalizedName = String(name || '').trim().toLocaleLowerCase();
+    const matches = state.assets.filter(asset => asset.missing && asset.type === type &&
+      String(asset.name || '').trim().toLocaleLowerCase() === normalizedName);
+    if (matches.length > 1) {
+      api.notice('Meerdere ontbrekende bronbestanden hebben dezelfde naam. Het bestand is als nieuwe bron toegevoegd; koppel bestaande clips handmatig om verwisseling te voorkomen.');
+      return null;
+    }
+    return matches[0] || null;
+  }
+
+    function registerImportedClip(clipId) {
     const clip = state.clips.find(item => item.id === clipId);
     if (!clip || clip.type === 'title' || !clip.file) return;
     const existingFile = state.assets.find(asset => asset.file === clip.file);
     if (existingFile) { clip.assetId = existingFile.id; applyProxyPreview(); return; }
-    const waiting = state.assets.find(asset => asset.missing && asset.type === clip.type && asset.name.toLowerCase() === clip.name.toLowerCase());
+    const waiting = findUnambiguousMissingAsset(clip.type, clip.name);
     let asset = waiting;
     if (waiting) {
       waiting.file = clip.file;
@@ -248,7 +259,7 @@ void main() {
     const file = detail && detail.file;
     if (!file || !['video', 'audio'].includes(detail.type)) return;
     if (state.assets.some(asset => asset.file === file)) return;
-    const waiting = state.assets.find(asset => asset.missing && asset.type === detail.type && asset.name.toLowerCase() === String(detail.name || file.name).toLowerCase());
+    const waiting = findUnambiguousMissingAsset(detail.type, String(detail.name || file.name));
     let asset = waiting;
     if (waiting) {
       waiting.file = file;
