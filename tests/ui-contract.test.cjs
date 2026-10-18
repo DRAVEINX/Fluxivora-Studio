@@ -953,8 +953,8 @@ test('Motion Studio heropent bron- en proxybestanden expliciet als ontbrekend zo
     'Proxy-media mogen na heropenen geen verlopen tijdelijke URL of File bewaren');
   assert.match(open, /proxySize: Number\.isSafeInteger\(Number\(a\.proxySize\)\)/,
     'Proxy-herstelmetadata moet worden gevalideerd en behouden');
-  assert.match(open, /clip\.missing = clip\.type !== 'title' \|\| !clip\.url/,
-    'Clips zonder herstelde bron moeten zichtbaar ontbrekend blijven');
+  assert.match(open, /missing: c\.type !== 'title'/,
+    'Clips zonder herstelde bron moeten bij het heropenen zichtbaar ontbrekend blijven');
   assert.match(open, /Koppel alle ontbrekende bronbestanden voordat je exporteert|missing/,
     'Heropenen mag ontbrekende bronmedia niet stilzwijgend als beschikbaar behandelen');
 });
