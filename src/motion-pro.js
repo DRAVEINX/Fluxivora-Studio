@@ -743,6 +743,7 @@ void main() {
     let calls = 0;
     try {
       while (offset < result.size) {
+        if (proxyCancelRequested) throw new Error('Proxy-generatie is geannuleerd.');
         if (++calls > Math.ceil(result.size / PROXY_READ_CHUNK_SIZE) + 2) {
           throw new Error('De proxy is niet volledig gelezen; het chunkbudget is overschreden.');
         }
@@ -786,7 +787,10 @@ void main() {
         directoryToken
       });
       if (!result) return false;
-      if (proxyCancelRequested) return false;
+      if (proxyCancelRequested) {
+        try { await window.fluxivora.releaseVideoProxyRead({ readToken: result.readToken }); } catch (_) {}
+        return false;
+      }
       setProxyJobStatus((index + 1) + '/' + total + ' · Proxy lezen: ' + result.name, 100);
       const proxyFile = await readGeneratedProxy(result);
       if (proxyCancelRequested) return false;
