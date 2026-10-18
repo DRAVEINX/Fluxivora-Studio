@@ -900,6 +900,16 @@ test('Page Studio persists and renders an adjustable non-printing baseline grid'
 });
 
 
+test('Motion Studio effect stack exposes adjustable intensity and renders it', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /video-effect-amount/);
+  assert.match(motion, /effect\.amount = Number\(amount\.value\)/);
+  assert.match(motion, /effectAmountHistory/);
+  assert.match(video, /amount: Math\.max\(0, Math\.min\(100, e\.amount == null \? 100 : Number\(e\.amount\)\)\)/);
+  assert.match(video, /render\(Math\.max\(0, Math\.min\(100, e\.amount == null \? 100 : Number\(e\.amount\)\)\)\)/);
+});
+
 test('Motion Studio offers compositing color effects and preserves them in projects', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
