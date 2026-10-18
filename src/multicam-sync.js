@@ -33,6 +33,11 @@
       throw new RangeError('minConfidence must be between 0 and 1.');
     }
 
+    const minOverlapRatio = options.minOverlapRatio == null ? 0.5 : Number(options.minOverlapRatio);
+    if (!Number.isFinite(minOverlapRatio) || minOverlapRatio < 0.25 || minOverlapRatio > 1) {
+      throw new RangeError('minOverlapRatio must be between 0.25 and 1.');
+    }
+    const minimumOverlap = Math.max(8, Math.ceil(Math.min(reference.length, candidate.length) * minOverlapRatio));
     const maxLag = Math.min(maxLagSamples, reference.length - 4, candidate.length - 4);
     // Bound synchronous work so unusually large inputs cannot freeze the editor UI.
     const estimatedOperations = (2 * maxLag + 1) * Math.min(reference.length, candidate.length);
@@ -46,7 +51,7 @@
       const refStart = Math.max(0, -lag);
       const candStart = Math.max(0, lag);
       const count = Math.min(reference.length - refStart, candidate.length - candStart);
-      if (count < 8) continue;
+      if (count < minimumOverlap) continue;
       let sumA = 0, sumB = 0;
       for (let i = 0; i < count; i++) {
         sumA += reference[refStart + i];
