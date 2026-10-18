@@ -1409,11 +1409,17 @@
     } catch (error) { notice('Montage openen mislukt: ' + error.message); }
     finally { $('video-session-file').value = ''; }
   }
-  function show() {
+  function show(mode = 'video') {
+    const motionGraphics = mode === 'motionfx';
     $('welcome-screen').classList.add('hidden'); $('editor-screen').classList.add('hidden'); $('video-screen').classList.remove('hidden');
     document.body.classList.add('video-mode');
-    document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.classList.toggle('active', b.dataset.workspace === 'video'));
-    $('footer-workspace').textContent = 'Motion Studio';
+    document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.classList.toggle('active', b.dataset.workspace === mode));
+    $('video-workspace-title').textContent = motionGraphics ? 'Motion Graphics' : 'Motion Studio';
+    $('video-workspace-subtitle').textContent = motionGraphics
+      ? 'Animatie, compositing en bewegende vormgeving · lokaal'
+      : 'Professionele videomontage · offline-first';
+    $('video-workspace-glyph').textContent = motionGraphics ? '✧' : '▶';
+    $('footer-workspace').textContent = motionGraphics ? 'Motion Graphics' : 'Motion Studio';
     refresh(); renderPreview();
   }
   function splitSelectedAtPlayhead() {
@@ -1623,7 +1629,7 @@
       else if (e.key === 'Delete' && !typing && !$('video-screen').classList.contains('hidden')) { removeSelected(e.altKey); }
     });
     document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.workspace === 'video') show();
+      if (b.dataset.workspace === 'video' || b.dataset.workspace === 'motionfx') show(b.dataset.workspace);
       else { $('video-screen').classList.add('hidden'); document.body.classList.remove('video-mode'); stopPlayback(); }
     }));
     window.addEventListener('beforeunload', () => { state.clips.forEach(c => disposeMedia(c, true)); state.assets.forEach(a => { if (a.url) URL.revokeObjectURL(a.url); }); });
