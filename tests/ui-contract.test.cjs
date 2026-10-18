@@ -1075,3 +1075,21 @@ test('Motion Graphics bevat een interactieve compositielaagstapel', () => {
   assert.match(styles, /\.motionfx-layer-row\.active/);
   assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-layer-panel/);
 });
+
+test('Motion Graphics kan herbruikbare grafische composities lokaal opslaan en invoegen', () => {
+  assert.match(html, /id="motionfx-compositions"/);
+  assert.match(html, /id="motionfx-composition-name"/);
+  assert.match(html, /id="motionfx-save-composition"/);
+  assert.match(html, /id="motionfx-composition-list"/);
+  const motion = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(motion, /const MOTION_COMPOSITIONS_KEY = 'fluxivora\.motionfx\.compositions\.v1'/);
+  assert.match(motion, /function readMotionCompositions\(\)/);
+  assert.match(motion, /function saveMotionComposition\(\)/);
+  assert.match(motion, /function handleMotionCompositionAction\(event\)/);
+  assert.match(motion, /localStorage\.setItem\(MOTION_COMPOSITIONS_KEY/);
+  assert.match(motion, /compositionName: item\.name/);
+  assert.match(motion, /state\.playhead \+ Number\(layer\.start \|\| 0\)/);
+  assert.match(motion, /layers\.length > 30/);
+  const styles = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
+  assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-compositions/);
+});
