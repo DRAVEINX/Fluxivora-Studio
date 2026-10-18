@@ -778,8 +778,70 @@
     document.querySelectorAll('.video-audio-controls').forEach(element => element.classList.toggle('hidden', c.type === 'title'));
     ['video-in','video-out','video-speed','video-volume'].forEach(id => { $(id).disabled = c.missing; });
   }
+  function renderMotionLayers() {
+    const list = $('motionfx-layer-list');
+    const count = $('motionfx-layer-count');
+    if (!list || !count) return;
+    list.replaceChildren();
+    count.textContent = String(state.tracks.length);
+    state.tracks.forEach((t, index) => {
+      const row = document.createElement('div');
+      row.className = 'motionfx-layer-row' + (t.id === state.activeTrack ? ' active' : '');
+      const select = document.createElement('button');
+      select.type = 'button'; select.className = 'motionfx-layer-select';
+      select.dataset.layerAction = 'select'; select.dataset.trackId = t.id;
+      select.title = 'Selecteer ' + t.name + ' in de tijdlijn';
+      const kind = document.createElement('span'); kind.className = 'motionfx-layer-kind';
+      kind.textContent = t.kind === 'video' ? '▣' : t.kind === 'audio' ? '♫' : 'T';
+      const label = document.createElement('strong'); label.textContent = t.name;
+      const details = document.createElement('small');
+      details.textContent = state.clips.filter(c => c.trackId === t.id).length + ' clips';
+      select.append(kind, label, details);
+      const actions = document.createElement('div'); actions.className = 'motionfx-layer-actions';
+      const actionButton = (text, action, title, active = false, disabled = false) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = text;
+        b.dataset.layerAction = action; b.dataset.trackId = t.id; b.title = title;
+        if (active) b.classList.add('active');
+        b.disabled = disabled; actions.append(b);
+      };
+      const sameKindIndices = state.tracks.map((x, i) => x.kind === t.kind ? i : -1).filter(i => i >= 0);
+      const kindIndex = sameKindIndices.indexOf(index);
+      actionButton('↑', 'up', 'Laag naar voren / hoger', false, kindIndex <= 0);
+      actionButton('↓', 'down', 'Laag naar achteren / lager', false, kindIndex < 0 || kindIndex >= sameKindIndices.length - 1);
+      if (t.kind === 'audio') actionButton(t.muted ? 'M̸' : 'M', 'visibility', t.muted ? 'Track weer hoorbaar maken' : 'Track dempen', t.muted);
+      else actionButton(t.hidden ? '◌' : '◉', 'visibility', t.hidden ? 'Track zichtbaar maken' : 'Track verbergen', t.hidden);
+      actionButton(t.locked ? '🔒' : '⌑', 'lock', t.locked ? 'Track ontgrendelen' : 'Track vergrendelen', t.locked);
+      row.append(select, actions); list.append(row);
+    });
+  }
+  function handleMotionLayerAction(event) {
+    const button = event.target.closest('[data-layer-action]');
+    if (!button || !$('motionfx-layer-list')?.contains(button)) return;
+    const t = track(button.dataset.trackId);
+    if (!t) return;
+    const action = button.dataset.layerAction;
+    if (action === 'select') { state.activeTrack = t.id; refresh(); return; }
+    if (action === 'visibility') {
+      pushHistory();
+      if (t.kind === 'audio') t.muted = !t.muted;
+      else t.hidden = !t.hidden;
+      refresh(); renderPreview(); return;
+    }
+    if (action === 'lock') { pushHistory(); t.locked = !t.locked; refresh(); return; }
+    if (action === 'up' || action === 'down') {
+      const index = state.tracks.findIndex(x => x.id === t.id);
+      const indices = state.tracks.map((x, i) => x.kind === t.kind ? i : -1).filter(i => i >= 0);
+      const position = indices.indexOf(index);
+      const next = indices[position + (action === 'up' ? -1 : 1)];
+      if (next === undefined) return;
+      pushHistory();
+      [state.tracks[index], state.tracks[next]] = [state.tracks[next], state.tracks[index]];
+      state.activeTrack = t.id;
+      refresh(); renderPreview();
+    }
+  }
   function refresh() {
-    renderTracks(); populateInspector(); updateTransport(); updateHistoryButtons();
+    renderTracks(); renderMotionLayers(); populateInspector(); updateTransport(); updateHistoryButtons();
     const n = state.clips.length;
     $('video-count').textContent = n + (n === 1 ? ' clip' : ' clips');
     $('video-project-name').value = state.name;
@@ -1413,6 +1475,7 @@
     const motionGraphics = mode === 'motionfx';
     $('welcome-screen').classList.add('hidden'); $('editor-screen').classList.add('hidden'); $('video-screen').classList.remove('hidden');
     document.body.classList.add('video-mode');
+    document.body.classList.toggle('motionfx-mode', motionGraphics);
     document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.classList.toggle('active', b.dataset.workspace === mode));
     $('video-workspace-title').textContent = motionGraphics ? 'Motion Graphics' : 'Motion Studio';
     $('video-workspace-subtitle').textContent = motionGraphics
@@ -1420,7 +1483,7 @@
       : 'Professionele videomontage · offline-first';
     $('video-workspace-glyph').textContent = motionGraphics ? '✧' : '▶';
     $('footer-workspace').textContent = motionGraphics ? 'Motion Graphics' : 'Motion Studio';
-    refresh(); renderPreview();
+    refresh(); renderPreview(); renderMotionLayers();
   }
   function splitSelectedAtPlayhead() {
     const c = selected();
@@ -1630,8 +1693,9 @@
     });
     document.querySelectorAll('.rail-button[data-workspace]').forEach(b => b.addEventListener('click', () => {
       if (b.dataset.workspace === 'video' || b.dataset.workspace === 'motionfx') show(b.dataset.workspace);
-      else { $('video-screen').classList.add('hidden'); document.body.classList.remove('video-mode'); stopPlayback(); }
+      else { $('video-screen').classList.add('hidden'); document.body.classList.remove('video-mode'); document.body.classList.remove('motionfx-mode'); stopPlayback(); }
     }));
+    $('motionfx-layer-list')?.addEventListener('click', handleMotionLayerAction);
     window.addEventListener('beforeunload', () => { state.clips.forEach(c => disposeMedia(c, true)); state.assets.forEach(a => { if (a.url) URL.revokeObjectURL(a.url); }); });
   }
   window.FluxivoraMotionStudio = { state, selected, track, createClip, createMedia, pushHistory, refresh, renderPreview, seekTo, stopPlayback, splitSelectedAtPlayhead, notice, uid };
