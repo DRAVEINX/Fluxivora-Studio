@@ -905,3 +905,15 @@ test('Motion Studio maakt bronherkoppeling ongedaanbaar en meldt metadatafouten'
   assert.match(relink, /probe\.onerror = \(\) => api\.notice\('Bronbestand is gekoppeld, maar de videometadata konden niet worden gelezen/);
   assert.match(relink, /probe\.onerror = \(\) => api\.notice\('Bronbestand is gekoppeld, maar de audiometadata konden niet worden gelezen/);
 });
+
+
+test('Motion Studio bewaart herstelbare proxy-identiteit maar exporteert geen tijdelijke bestands-URLs', () => {
+  const videoStudio = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const start = videoStudio.indexOf('function saveSession()');
+  const end = videoStudio.indexOf('\n  }', start);
+  assert.ok(start >= 0 && end > start, 'saveSession-functie ontbreekt');
+  const save = videoStudio.slice(start, end);
+  assert.match(save, /assets:\s*state\.assets\.map\(a => \(\{ id: a\.id, name: a\.name, type: a\.type, duration: a\.duration, missing: true, proxyName: a\.proxyName \|\| null, proxySize:/);
+  assert.match(save, /clips:\s*state\.clips\.map\(c => \(\{\.\.\.metaClip\(c\), missing: c\.type !== 'title'\}\)\)/);
+  assert.doesNotMatch(save, /proxyUrl:\s*a\.proxyUrl|proxyFile:\s*a\.proxyFile|url:\s*a\.url|file:\s*a\.file/);
+});
