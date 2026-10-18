@@ -985,7 +985,7 @@ test('Motion Studio persists and renders two-mask combination operations', () =>
   assert.match(video, /maskSecondaryType/);
   assert.match(video, /maskSecondarySize/);
   assert.match(video, /maskOperation/);
-  assert.match(video, /ctx\.clip\(combined, 'evenodd'\)/);
+  assert.match(video, /ctx\.clip\(outsideSecondary, 'evenodd'\)/);
   assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
 });
 
