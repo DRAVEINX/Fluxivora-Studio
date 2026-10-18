@@ -739,4 +739,7 @@ test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt real
   assert.equal(pkg.version, '0.5.0-beta.6');
   assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
   assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
+  assert.ok(pkg.build.files.includes('node_modules/ffmpeg-static/**/*'));
+  assert.ok(pkg.build.files.includes('THIRD-PARTY-NOTICES.md'));
+  assert.match(fs.readFileSync(path.join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8'), /GPL-3\.0-or-later/);
 });
