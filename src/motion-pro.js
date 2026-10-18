@@ -478,6 +478,106 @@ void main() {
     $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
   }
 
+  const multicamSyncCache = new Map();
+
+  async function decodeMulticamEnergy(asset) {
+    if (!asset || !asset.file || asset.missing) throw new Error('Koppel eerst alle camerabronnen opnieuw.');
+    if (asset.file.size > 256 * 1024 * 1024) throw new Error('Bronbestand is groter dan de veilige synchronisatiegrens van 256 MB.');
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Deze computer ondersteunt geen Web Audio voor automatische synchronisatie.');
+    const key = asset.id + ':' + asset.file.size + ':' + asset.file.lastModified;
+    if (multicamSyncCache.has(key)) return multicamSyncCache.get(key);
+    const context = new AudioContextClass();
+    try {
+      const decoded = await context.decodeAudioData(await asset.file.arrayBuffer());
+      const windowSeconds = 0.1;
+      const count = Math.floor(Math.min(180, decoded.duration) / windowSeconds);
+      if (count < 20) throw new Error('Er is minder dan twee seconden bruikbare audio in ' + asset.name + '.');
+      const energies = new Float32Array(count);
+      const frameSize = Math.max(1, Math.floor(decoded.sampleRate * windowSeconds));
+      for (let i = 0; i < count; i++) {
+        const start = i * frameSize, end = Math.min(decoded.length, start + frameSize);
+        let sum = 0, samples = 0;
+        for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+          const data = decoded.getChannelData(ch);
+          for (let j = start; j < end; j += 8) { const v = data[j]; sum += v * v; samples++; }
+        }
+        energies[i] = samples ? Math.sqrt(sum / samples) : 0;
+      }
+      let mean = 0;
+      for (const value of energies) mean += value;
+      mean /= energies.length;
+      let variance = 0;
+      for (let i = 0; i < energies.length; i++) { energies[i] -= mean; variance += energies[i] * energies[i]; }
+      if (variance < 1e-7) throw new Error('De audio in ' + asset.name + ' bevat te weinig variatie om veilig te synchroniseren.');
+      const result = { energies, windowSeconds, duration: decoded.duration };
+      multicamSyncCache.set(key, result);
+      return result;
+    } finally {
+      await context.close().catch(() => {});
+    }
+  }
+
+  function correlateMulticamOffset(reference, candidate) {
+    const a = reference.energies, b = candidate.energies, step = reference.windowSeconds;
+    const maxLag = Math.min(Math.floor(30 / step), Math.floor(a.length / 3), Math.floor(b.length / 3));
+    let best = { lag: 0, score: -1 };
+    for (let lag = -maxLag; lag <= maxLag; lag++) {
+      const aStart = Math.max(0, -lag), bStart = Math.max(0, lag);
+      const length = Math.min(a.length - aStart, b.length - bStart);
+      if (length < 20) continue;
+      let dot = 0, aa = 0, bb = 0;
+      for (let i = 0; i < length; i++) {
+        const av = a[aStart + i], bv = b[bStart + i];
+        dot += av * bv; aa += av * av; bb += bv * bv;
+      }
+      const score = aa > 0 && bb > 0 ? dot / Math.sqrt(aa * bb) : -1;
+      if (score > best.score) best = { lag, score };
+    }
+    return { offset: best.lag * step, confidence: best.score };
+  }
+
+  async function autoSyncMulticamGroup(group, button, status) {
+    if (!group || !Array.isArray(group.angleAssetIds) || group.angleAssetIds.length < 2) {
+      api.notice('Kies eerst een multicamgroep met minstens twee camerahoeken.'); return;
+    }
+    const assets = group.angleAssetIds.map(id => state.assets.find(item => item.id === id));
+    if (assets.some(asset => !asset || asset.type !== 'video' || !asset.file || asset.missing)) {
+      api.notice('Koppel alle camerabronnen opnieuw voordat je automatisch synchroniseert.'); return;
+    }
+    button.disabled = true;
+    button.textContent = 'Audio analyseren…';
+    status.textContent = 'Audio analyseren (lokaal)…';
+    try {
+      const reference = await decodeMulticamEnergy(assets[0]);
+      const results = [{ asset: assets[0], offset: 0, confidence: 1 }];
+      for (let i = 1; i < assets.length; i++) {
+        status.textContent = 'Synchroniseren: ' + (i + 1) + '/' + assets.length + ' · ' + assets[i].name;
+        const candidate = await decodeMulticamEnergy(assets[i]);
+        const match = correlateMulticamOffset(reference, candidate);
+        if (!Number.isFinite(match.confidence) || match.confidence < 0.25) {
+          throw new Error('Geen betrouwbare audiomatch gevonden voor ' + assets[i].name + '. Er zijn geen offsets aangepast.');
+        }
+        results.push({ asset: assets[i], ...match });
+      }
+      api.pushHistory();
+      if (!group.offsets) group.offsets = {};
+      results.forEach(result => { group.offsets[result.asset.id] = clamp(result.offset, -86400, 86400); });
+      group.syncMode = 'audio-correlation';
+      group.syncConfidence = Object.fromEntries(results.map(result => [result.asset.id, Number(result.confidence.toFixed(3))]));
+      renderMulticamGroups();
+      api.refresh();
+      const summary = results.slice(1).map(result => result.asset.name + ': ' + (result.offset >= 0 ? '+' : '') + result.offset.toFixed(2) + ' s').join(' · ');
+      api.notice('Audiocorrelatie voltooid. Controleer de uitlijning handmatig: ' + summary);
+    } catch (error) {
+      status.textContent = error.message || 'Automatische synchronisatie mislukt.';
+      api.notice('Automatisch synchroniseren niet toegepast: ' + status.textContent);
+    } finally {
+      button.disabled = false;
+      button.textContent = '⟷ Synchroniseer op audio';
+    }
+  }
+
   function renderMulticamGroups() {
     const host = $('video-multicam-groups');
     if (!host) return;
@@ -507,6 +607,19 @@ void main() {
       });
       heading.append(title, remove);
       card.append(heading);
+      const syncControls = document.createElement('div');
+      syncControls.className = 'video-multicam-sync-controls';
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.className = 'button subtle compact';
+      syncButton.textContent = '⟷ Synchroniseer op audio';
+      const syncStatus = document.createElement('small');
+      syncStatus.className = 'video-multicam-sync-status';
+      syncStatus.setAttribute('aria-live', 'polite');
+      syncStatus.textContent = group.syncMode === 'audio-correlation' ? 'Audiomatch berekend · controleer de uitlijning' : 'Vergelijkt maximaal 180 s audio en zoekt tot ±30 s verschil';
+      syncButton.addEventListener('click', () => autoSyncMulticamGroup(group, syncButton, syncStatus));
+      syncControls.append(syncButton, syncStatus);
+      card.append(syncControls);
       const hint = document.createElement('small');
       hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
       card.append(hint);
