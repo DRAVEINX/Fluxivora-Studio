@@ -30,7 +30,9 @@
       "assets/**/*",
       "package.json",
       "README.md",
-      "LICENSE"
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.md",
+      "node_modules/ffmpeg-static/**/*"
     ],
     "asar": true,
     "win": {
