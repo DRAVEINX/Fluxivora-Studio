@@ -860,3 +860,10 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   assert.match(shared, /function controlPoints\(/);
   assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.8');
 });
+
+
+test('multicam-audio markeert afkappen op basis van de gedecodeerde audiolengte', () => {
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  assert.match(main, /truncated: pcm\.length \/ 2 >= 180000/);
+  assert.doesNotMatch(main, /truncated: sourceStat\.size > 0/);
+});
