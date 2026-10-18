@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.8');
+  assert.equal(pkg.version, '0.5.0-beta.9');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -771,7 +771,7 @@ test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt real
   assert.match(helper, /-f', 'f32le'/);
   assert.match(helper, /'libx264'/);
   assert.match(helper, /'aac'/);
-  assert.equal(pkg.version, '0.5.0-beta.8');
+  assert.equal(pkg.version, '0.5.0-beta.9');
   assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
   assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
   assert.ok(pkg.build.files.includes('node_modules/ffmpeg-static/**/*'));
@@ -858,7 +858,7 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   assert.match(motion, /frame\.inHandle\[drag\.property\] = value - frame\[drag\.property\]/);
   assert.match(shared, /function bezierValue\(/);
   assert.match(shared, /function controlPoints\(/);
-  assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.8');
+  assert.equal(require(path.join(root, 'package.json')).version, '0.5.0-beta.9');
 });
 
 
