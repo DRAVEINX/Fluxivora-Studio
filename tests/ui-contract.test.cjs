@@ -719,6 +719,14 @@ test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op
 });
 
 
+test('Motion Studio koppelt bronclips met dubbele namen niet automatisch aan de verkeerde asset', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /const sameNameAssets = state\.assets\.filter/);
+  assert.match(motion, /const ambiguousNameFallback = sameNameAssets\.length > 1/);
+  assert.match(motion, /!ambiguousNameFallback && String\(clip\.name \|\| ''\)/);
+  assert.match(motion, /Clips zonder opgeslagen bron-ID zijn niet automatisch gekoppeld/);
+});
+
 test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wordt gekoppeld', () => {
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   assert.match(motion, /const expectedDuration = Number\(asset\.duration\) \|\| 0/);
