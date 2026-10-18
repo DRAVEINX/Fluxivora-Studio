@@ -503,7 +503,11 @@
       else {
         const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), c.maskSecondaryX, c.maskSecondaryY);
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
-        else if (c.maskOperation === 'subtract') {
+        else if (c.maskOperation === 'xor') {
+          const exclusive = new Path2D();
+          exclusive.addPath(primary); exclusive.addPath(secondary);
+          ctx.clip(exclusive, 'evenodd');
+        } else if (c.maskOperation === 'subtract') {
           // First constrain output to the primary mask, then remove the secondary
           // shape from the full frame. This implements A minus B even when B
           // extends beyond A; XOR of the two paths would be incorrect here.
@@ -749,7 +753,7 @@
     $('video-mask-secondary-size').value = String(Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)));
     $('video-mask-secondary-x').value = String(Math.max(-50, Math.min(50, Number(c.maskSecondaryX) || 0)));
     $('video-mask-secondary-y').value = String(Math.max(-50, Math.min(50, Number(c.maskSecondaryY) || 0)));
-    $('video-mask-operation').value = ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add';
+    $('video-mask-operation').value = ['add','subtract','intersect','xor'].includes(c.maskOperation) ? c.maskOperation : 'add';
     $('video-shape-controls').classList.toggle('hidden', c.type !== 'title' || !['rectangle','ellipse'].includes(c.shapeType));
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
