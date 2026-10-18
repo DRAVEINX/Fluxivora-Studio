@@ -140,11 +140,13 @@
             <input id="video-session-file" type="file" accept=".json,.fluxivora-video.json,application/json" hidden />
             <input id="video-relink-files" type="file" accept="video/*,audio/*" hidden />
             <input id="video-proxy-file" type="file" accept="video/*" hidden />
+            <input id="video-proxy-relink-files" type="file" accept="video/*" multiple hidden />
             <div class="video-proxy-controls">
               <label><input id="video-proxy-preview" type="checkbox" disabled /> Proxy preview</label>
               <div class="video-proxy-tools">
                 <label for="video-proxy-preset">KWALITEIT <select id="video-proxy-preset"><option value="540p">540p · compact</option><option value="720p">720p · scherper</option></select></label>
                 <button id="video-proxy-batch" type="button" class="button subtle compact">Genereer ontbrekende proxies</button>
+                <button id="video-proxy-relink-all" type="button" class="button subtle compact">Bestaande proxies opnieuw koppelen</button>
                 <button id="video-proxy-cancel" type="button" class="button subtle compact hidden">Annuleren</button>
               </div>
               <progress id="video-proxy-progress" max="100" value="0" hidden aria-label="Voortgang proxy-generatie"></progress>
