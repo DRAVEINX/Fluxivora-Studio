@@ -1064,3 +1064,12 @@ test('Electron verwijdert gedeeltelijke proxybestanden bij fouten of annuleren',
     'Een geannuleerde taak mag niet als geslaagde proxy worden gepubliceerd');
 });
 
+test('Windows-installer gebruikt NSIS en maakt herkenbare snelkoppelingen', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.match(pkg.scripts['dist:win'], /electron-builder --win nsis --x64/);
+  assert.equal(pkg.build.productName, 'Fluxivora Studio');
+  assert.equal(pkg.build.win.artifactName, 'Fluxivora-Studio-Setup-${version}.${ext}');
+  assert.ok(pkg.build.nsis.createDesktopShortcut, 'Bureaubladsnelkoppeling moet worden aangemaakt');
+  assert.ok(pkg.build.nsis.createStartMenuShortcut, 'Startmenu-snelkoppeling moet worden aangemaakt');
+  assert.equal(pkg.build.nsis.shortcutName, 'Fluxivora Studio');
+});
