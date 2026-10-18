@@ -17,6 +17,46 @@
     return output;
   }
 
+  function createRmsEnvelope(channelData, options = {}) {
+    if (!Array.isArray(channelData) || channelData.length < 1 || channelData.length > 32) {
+      throw new TypeError('channelData must contain between 1 and 32 audio channels.');
+    }
+    const frameSize = options.frameSize == null ? 2048 : Number(options.frameSize);
+    const maxSamples = options.maxSamples == null ? 200000 : Number(options.maxSamples);
+    if (!Number.isInteger(frameSize) || frameSize < 64 || frameSize > 65536) {
+      throw new RangeError('frameSize must be an integer between 64 and 65536.');
+    }
+    if (!Number.isInteger(maxSamples) || maxSamples < 8 || maxSamples > 200000) {
+      throw new RangeError('maxSamples must be an integer between 8 and 200000.');
+    }
+    const channels = channelData.map((channel, index) => {
+      if (!channel || typeof channel.length !== 'number' || channel.length < 1) {
+        throw new TypeError('Audio channel ' + index + ' must contain samples.');
+      }
+      if (channel.length > 100000000) throw new RangeError('Audio channel is too large to process safely.');
+      return channel;
+    });
+    const frameCount = Math.ceil(Math.min(...channels.map(channel => channel.length)) / frameSize);
+    const stride = Math.max(1, Math.ceil(frameCount / maxSamples));
+    const envelope = [];
+    for (let frame = 0; frame < frameCount; frame += stride) {
+      const start = frame * frameSize;
+      const end = Math.min(start + frameSize, ...channels.map(channel => channel.length));
+      let sumSquares = 0, count = 0;
+      for (let i = start; i < end; i++) {
+        for (const channel of channels) {
+          const sample = Number(channel[i]);
+          if (!Number.isFinite(sample)) throw new TypeError('Audio channels must contain finite samples.');
+          sumSquares += sample * sample;
+          count++;
+        }
+      }
+      if (count) envelope.push(Math.sqrt(sumSquares / count));
+    }
+    if (envelope.length < 8) throw new RangeError('Audio is too short to build a useful waveform envelope.');
+    return envelope;
+  }
+
   function estimateWaveformOffset(referenceInput, candidateInput, options = {}) {
     const reference = validateEnvelope(referenceInput, 'reference');
     const candidate = validateEnvelope(candidateInput, 'candidate');
@@ -84,5 +124,5 @@
     };
   }
 
-  return { estimateWaveformOffset };
+  return { createRmsEnvelope, estimateWaveformOffset };
 });
