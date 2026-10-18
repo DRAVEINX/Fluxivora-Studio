@@ -2,6 +2,12 @@
 
 **Huidige ontwikkelversie: 0.5.0-beta.7 — automatische proxy-generatie met FFmpeg voor Motion Studio.**
 
+### Nieuwe werkruimte — Motion Graphics
+
+- Er is nu een aparte **Motion FX**-ingang in de zijbalk. Deze opent de bestaande animatie- en compositing-editor onder de naam **Motion Graphics**, los van de gewone videomontage-ingang.
+- Dit is de eerste stap richting een eigen After Effects-achtige workflow: gebruik de bestaande keyframes en Bézier-curves, tekst- en vormlagen, maskers, effecten en offline MP4-render.
+- De werkruimte deelt op dit moment nog dezelfde tijdlijn en render-engine als Motion Studio. Dit is dus **geen ingebouwde Adobe After Effects** en nog geen volledig zelfstandige compositing-engine; een eigen lagencompositor, pre-comps, motion-graphics-presets en transparante export moeten nog verder worden ontwikkeld.
+
 ### Nieuw in bèta.7 — proxygeneratie en batchworkflow
 
 - Genereer voor elke videobron een lichtere H.264-proxy in 540p of 720p met de meegeleverde lokale FFmpeg-encoder.
