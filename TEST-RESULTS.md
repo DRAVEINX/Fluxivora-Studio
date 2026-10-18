@@ -1,4 +1,4 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.6
+# Testresultaten — Fluxivora Studio 0.5.0-beta.7
 
 Controles bijgewerkt op 17 oktober 2026.
 
@@ -8,6 +8,12 @@ Controles bijgewerkt op 17 oktober 2026.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
 - Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
+
+## Motion Studio beta.7 — kubische Bézier-keyframes
+
+- Pure unit tests cover default linear Bezier controls, shaped tangents, bounded control points and validation of untrusted project handle data.
+- UI contract tests cover Bezier interpolation selection, visible/draggable in/out handles, shared curve evaluation in preview and offline audio automation, plus project metadata preservation.
+- The same shared curve module is used in the browser preview and audio offline mixer. The new CI must run these tests and package the Windows installer before beta.7 can be merged.
 
 ## Motion Studio beta.6 — offline MP4-render
 
