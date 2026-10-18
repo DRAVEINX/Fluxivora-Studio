@@ -1237,7 +1237,7 @@
       format: 'fluxivora-video-project', version: '0.5.0-beta.8', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})) },
       tracks: state.tracks.map(t => ({...t})),
-      assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
+      assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null, proxySize: Number.isSafeInteger(Number(a.proxySize)) && Number(a.proxySize) > 0 ? Number(a.proxySize) : 0 })),
       clips: state.clips.map(c => ({...metaClip(c), missing: c.type !== 'title'}))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -1285,7 +1285,7 @@
       if (data.sequence?.lut && !state.programLut) notice('De opgeslagen 3D-LUT is ongeldig en is niet geladen.');
       state.multicamGroups = Array.isArray(data.sequence?.multicamGroups) ? data.sequence.multicamGroups.slice(0, 200).filter(g => g && Array.isArray(g.angleAssetIds)).map(g => ({ id: String(g.id || uid('multicam')), name: String(g.name || 'Multicamgroep').slice(0,128), angleAssetIds: [...new Set(g.angleAssetIds.filter(id => typeof id === 'string').map(id=>id.slice(0,256)))].slice(0,32), offsets: Object.fromEntries(Object.entries(g.offsets || {}).filter(([id, value]) => typeof id === 'string' && Number.isFinite(Number(value))).slice(0,32).map(([id,value]) => [id,Math.max(-86400,Math.min(86400,Number(value)))])) })) : [];
       state.assets.forEach(asset => { if (asset.url) URL.revokeObjectURL(asset.url); if (asset.proxyUrl) URL.revokeObjectURL(asset.proxyUrl); });
-      state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true, proxyName: a.proxyName ? String(a.proxyName).slice(0, 512) : null, proxyFile: null, proxyUrl: null, proxyDuration: 0, proxyMissing: !!a.proxyName })) : [];
+      state.assets = Array.isArray(data.assets) ? data.assets.slice(0, 2000).filter(a => a && ['video','audio'].includes(a.type)).map(a => ({ id: String(a.id || uid('asset')), name: String(a.name || 'Media').slice(0, 512), type: a.type, duration: Math.max(0, Math.min(86400, Number(a.duration) || 0)), url: null, file: null, missing: true, proxyName: a.proxyName ? String(a.proxyName).slice(0, 512) : null, proxySize: Number.isSafeInteger(Number(a.proxySize)) && Number(a.proxySize) > 0 ? Math.min(Number(a.proxySize), 2147483647) : 0, proxyFile: null, proxyUrl: null, proxyDuration: 0, proxyMissing: !!a.proxyName })) : [];
       if (!Array.isArray(data.assets)) {
         const seenAssets = new Set();
         data.clips.filter(clip => clip && ['video','audio'].includes(clip.type)).forEach(clip => {
