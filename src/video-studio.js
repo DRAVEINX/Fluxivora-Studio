@@ -793,6 +793,10 @@
 
   async function decodeOfflineAudioFile(file) {
     if (!file) throw new Error('Een audiobron ontbreekt in het project.');
+    if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
+    if (file.size > 256 * 1024 * 1024) {
+      throw new Error('Deze bron is groter dan 256 MB en past niet veilig in de offline audiodecoder van beta.6. Gebruik een kleinere audio-extractie.');
+    }
     if (offlineAudioBufferCache.has(file)) return offlineAudioBufferCache.get(file);
     const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     if (!AudioContextClass || !OfflineContext) throw new Error('Offline audio-rendering wordt niet door deze Electron-versie ondersteund.');
@@ -852,6 +856,7 @@
     const entries = [];
     let skippedVideoAudio = 0;
     for (const clip of state.clips) {
+      if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
       if (!['video', 'audio'].includes(clip.type) || clip.missing || clip.start >= durationSeconds || clipLength(clip) <= 0) continue;
       const clipTrack = track(clip.trackId);
       if (clipTrack && clipTrack.muted) continue;
@@ -1403,6 +1408,10 @@
     $('video-undo').addEventListener('click', undo); $('video-redo').addEventListener('click', redo);
     wireProperties();
     window.addEventListener('keydown', e => {
+      if (state.offlineExportActive) {
+        if (e.key === 'Escape') { e.preventDefault(); cancelOfflineMp4(); }
+        return;
+      }
       const target = e.target;
       const typing = target && ['INPUT','TEXTAREA','SELECT'].includes(target.tagName);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
