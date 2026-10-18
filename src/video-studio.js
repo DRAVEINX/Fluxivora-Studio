@@ -876,8 +876,9 @@
       copy.append(title, detail);
       const actions = document.createElement('div'); actions.className = 'motionfx-composition-actions';
       const insert = document.createElement('button'); insert.type = 'button'; insert.textContent = '＋'; insert.title = 'Compositie invoegen op de afspeelkop'; insert.dataset.compositionAction = 'insert'; insert.dataset.compositionId = item.id;
+      const update = document.createElement('button'); update.type = 'button'; update.textContent = '↻'; update.title = 'Compositie bijwerken met huidige grafische lagen'; update.dataset.compositionAction = 'update'; update.dataset.compositionId = item.id;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.title = 'Compositie verwijderen'; remove.dataset.compositionAction = 'delete'; remove.dataset.compositionId = item.id;
-      actions.append(insert, remove); row.append(copy, actions); list.append(row);
+      actions.append(insert, update, remove); row.append(copy, actions); list.append(row);
     });
   }
   function saveMotionComposition() {
@@ -911,6 +912,18 @@
       if (writeMotionCompositions(items.filter(entry => entry.id !== item.id))) {
         renderMotionCompositions();
         notice('Compositie verwijderd uit de lokale bibliotheek.');
+      }
+      return;
+    }
+    if (button.dataset.compositionAction === 'update') {
+      const layers = state.clips.filter(c => c.type === 'title').sort((a, b) => a.start - b.start);
+      if (!layers.length) { notice('Voeg eerst grafische lagen toe om deze compositie bij te werken.'); return; }
+      if (layers.length > 30) { notice('Een compositie kan maximaal 30 grafische lagen bevatten.'); return; }
+      const origin = Math.min(...layers.map(c => c.start));
+      const updated = { ...item, layers: layers.map(layer => ({ ...metaClip(layer), start: Math.max(0, layer.start - origin), type: 'title' })) };
+      if (writeMotionCompositions(items.map(entry => entry.id === item.id ? updated : entry))) {
+        renderMotionCompositions();
+        notice('Compositie bijgewerkt: ' + item.name);
       }
       return;
     }
