@@ -1872,7 +1872,7 @@
     $('vector-grid-button').textContent = state.vectorGridEnabled ? 'Raster aan' : 'Raster uit';
     $('vector-grid-button').setAttribute('aria-pressed', String(state.vectorGridEnabled));
     renderSvgWorkspace('vector'); renderSvgWorkspace('layout');
-    notify(state.vectorGridEnabled ? 'Raster en magnetisch uitlijnen ingeschakeld (${state.vectorGridSize} px).' : 'Raster en magnetisch uitlijnen uitgeschakeld.');
+    notify(state.vectorGridEnabled ? `Raster en magnetisch uitlijnen ingeschakeld (${state.vectorGridSize} px).` : 'Raster en magnetisch uitlijnen uitgeschakeld.');
   });
     $('project-name').addEventListener('change', () => {
     if (!state.project) return;
