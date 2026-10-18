@@ -1057,10 +1057,23 @@ void main() {
     return applyRelinkToAsset(asset, file, false);
   }
 
+  function isCompatibleMediaFile(file, type) {
+    if (!file || !['audio', 'video'].includes(type)) return false;
+    const mime = String(file.type || '').toLowerCase();
+    if (mime.startsWith(type + '/')) return true;
+    // Some browsers and file pickers provide an empty or generic MIME type.
+    const name = String(file.name || '').toLowerCase();
+    const extension = name.includes('.') ? name.split('.').pop() : '';
+    const extensions = type === 'audio'
+      ? ['aac', 'aif', 'aiff', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav', 'wma']
+      : ['avi', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv'];
+    return extensions.includes(extension);
+  }
+
   function applyRelinkToAsset(asset, file, quiet) {
-    if (!asset || !file || (asset.type === 'audio' ? !file.type.startsWith('audio/') : !file.type.startsWith('video/'))) {
-      api.notice('Kies een passend bronbestand.');
-      return;
+    if (!asset || !isCompatibleMediaFile(file, asset.type)) {
+      if (!quiet) api.notice('Kies een passend audio- of videobestand.');
+      return false;
     }
     const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
     api.pushHistory();
@@ -1122,7 +1135,7 @@ void main() {
     const unmatched = [];
     missing.forEach(asset => {
       const index = candidates.findIndex(file => key(file.name) === key(asset.name) &&
-        (asset.type === 'audio' ? file.type.startsWith('audio/') : file.type.startsWith('video/')));
+        isCompatibleMediaFile(file, asset.type));
       if (index < 0) { unmatched.push(asset.name); return; }
       if (applyRelinkToAsset(asset, candidates[index], true)) {
         linked++;
