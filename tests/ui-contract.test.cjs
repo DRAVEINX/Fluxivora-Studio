@@ -979,3 +979,10 @@ test('Motion Studio persists and renders two-mask combination operations', () =>
   assert.match(video, /ctx\.clip\(combined, 'evenodd'\)/);
   assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
 });
+
+
+test('Motion Studio subtract mode cuts the second mask from the first mask', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /else if \(c\.maskOperation === 'subtract'\) \{\s*const combined = new Path2D\(\);\s*combined\.addPath\(primary\);\s*combined\.addPath\(secondary\);\s*ctx\.clip\(combined, 'evenodd'\);/);
+  assert.doesNotMatch(video, /ctx\.clip\(combined, 'evenodd'\);[\s\S]{0,80}ctx\.clip\(combined, 'nonzero'\)/);
+});
