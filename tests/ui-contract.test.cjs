@@ -1008,7 +1008,9 @@ test('Motion Studio valt bij een onleesbare proxy-preview terug op de originele 
   const end = motion.indexOf('\n  function relinkKnownProxyFiles', start);
   assert.ok(start >= 0 && end > start, 'Proxy-previewfunctie ontbreekt');
   const preview = motion.slice(start, end);
-  assert.match(preview, /if \(proxy && clip\.url && clip\.url !== proxy\)/,
+  assert.match(preview, /const originalSource = angleAsset \? angleAsset\.url : clip\.url/,
+    'Fallback moet de originele bron van de actieve camerahoek gebruiken wanneer die actief is');
+  assert.match(preview, /if \(proxy && originalSource && originalSource !== proxy\)/,
     'Fallback mag alleen worden ingesteld wanneer de originele bron beschikbaar is');
   assert.match(preview, /media\.addEventListener\('error', \(\) =>/,
     'Een proxy-fout moet worden afgehandeld');
@@ -1016,8 +1018,8 @@ test('Motion Studio valt bij een onleesbare proxy-preview terug op de originele 
     'Een late proxy-fout mag een nieuwere bron niet overschrijven');
   assert.match(preview, /sourceAsset\.proxyMissing = true/,
     'Een onleesbare proxy moet als ontbrekend worden gemarkeerd');
-  assert.match(preview, /media\.src = clip\.url/,
-    'De preview moet terugschakelen naar de originele bron');
+  assert.match(preview, /media\.src = originalSource/,
+    'De preview moet terugschakelen naar de juiste originele bron, ook bij een actieve camerahoek');
   assert.match(preview, /Proxy kon niet worden gelezen; voorbeeld schakelt terug naar het origineel/,
     'De gebruiker moet een duidelijke melding krijgen');
 });
