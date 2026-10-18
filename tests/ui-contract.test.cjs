@@ -995,3 +995,14 @@ test('Motion Studio subtract mode cuts the second mask from the first mask', () 
   assert.match(video, /else if \(c\.maskOperation === 'subtract'\) \{\s*const combined = new Path2D\(\);\s*combined\.addPath\(primary\);\s*combined\.addPath\(secondary\);\s*ctx\.clip\(combined, 'evenodd'\);/);
   assert.doesNotMatch(video, /ctx\.clip\(combined, 'evenodd'\);[\s\S]{0,80}ctx\.clip\(combined, 'nonzero'\)/);
 });
+
+
+test('maskerposities zijn beschikbaar voor keyframes en blijven in projectsnapshots bewaard', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.match(motion, new RegExp(`${property}: \\[-50, 50\\]`), `Ontbrekende curvegrenzen voor ${property}`);
+    assert.match(motion, new RegExp(`${property}: '[^']+'`), `Ontbrekend curve-label voor ${property}`);
+    assert.ok(video.includes(`'${property}'`), `Projectopslag mist ${property}`);
+  }
+});
