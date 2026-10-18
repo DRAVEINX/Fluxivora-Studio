@@ -58,5 +58,101 @@
     return { id: String(layer.id || ''), active, values };
   }
 
-  return Object.freeze({ interpolateProperty, evaluateLayerAtTime });
+
+  const MAX_FRAME = 216000;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function interpolateKeyframes(keyframes, frame, fallback = 0) {
+    if (!Array.isArray(keyframes)) return finite(fallback);
+    const valid = keyframes
+      .filter(item => item && Number.isFinite(item.frame) && Number.isFinite(item.value))
+      .map(item => ({ ...item, frame: clamp(item.frame, 0, MAX_FRAME) }))
+      .sort((a, b) => a.frame - b.frame);
+    if (!valid.length) return finite(fallback);
+    if (frame <= valid[0].frame) return valid[0].value;
+    if (frame >= valid[valid.length - 1].frame) return valid[valid.length - 1].value;
+    for (let index = 1; index < valid.length; index += 1) {
+      const right = valid[index];
+      if (frame > right.frame) continue;
+      const left = valid[index - 1];
+      const span = right.frame - left.frame;
+      if (span <= 0 || left.interpolation === 'hold') return left.value;
+      let progress = clamp((frame - left.frame) / span, 0, 1);
+      if (left.interpolation === 'ease' || left.interpolation === 'bezier') {
+        progress = progress * progress * (3 - 2 * progress);
+      }
+      return left.value + (right.value - left.value) * progress;
+    }
+    return finite(fallback);
+  }
+
+  function evaluateCompositionAtFrame(composition, frame) {
+    if (!composition || !Array.isArray(composition.layers) || !Number.isFinite(frame)) {
+      throw new TypeError('Compositie en een geldig frame zijn vereist.');
+    }
+    const byId = new Map(composition.layers.filter(layer => layer && typeof layer.id === 'string').map(layer => [layer.id, layer]));
+    const ordered = [];
+    const visited = new Set();
+    const visiting = new Set();
+    function visit(layer) {
+      if (visited.has(layer.id)) return;
+      if (visiting.has(layer.id)) throw new TypeError('Circulaire ouder-kindrelatie gedetecteerd.');
+      visiting.add(layer.id);
+      if (layer.parentId && byId.has(layer.parentId)) visit(byId.get(layer.parentId));
+      visiting.delete(layer.id);
+      visited.add(layer.id);
+      ordered.push(layer);
+    }
+    for (const layer of composition.layers) if (layer && typeof layer.id === 'string') visit(layer);
+
+    function matrix(transform) {
+      const radians = finite(transform.rotation) * Math.PI / 180;
+      const cos = Math.cos(radians), sin = Math.sin(radians);
+      const sx = finite(transform.scaleX, 1), sy = finite(transform.scaleY, 1);
+      const clean = value => Object.is(value, -0) ? 0 : value;
+      return { a: clean(cos * sx), b: clean(sin * sx), c: clean(-sin * sy), d: clean(cos * sy),
+        e: finite(transform.x), f: finite(transform.y) };
+    }
+    function multiply(parent, local) {
+      return {
+        a: parent.a * local.a + parent.c * local.b,
+        b: parent.b * local.a + parent.d * local.b,
+        c: parent.a * local.c + parent.c * local.d,
+        d: parent.b * local.c + parent.d * local.d,
+        e: parent.a * local.e + parent.c * local.f + parent.e,
+        f: parent.b * local.e + parent.d * local.f + parent.f
+      };
+    }
+
+    const evaluatedById = new Map();
+    return ordered.map(layer => {
+      const base = layer.transform && typeof layer.transform === 'object' ? layer.transform : {};
+      const transform = {};
+      for (const property of ['x', 'y', 'anchorX', 'anchorY', 'rotation', 'scaleX', 'scaleY', 'opacity']) {
+        const defaultValue = property === 'anchorX' || property === 'anchorY' ? 0.5
+          : property === 'scaleX' || property === 'scaleY' || property === 'opacity' ? 1 : 0;
+        transform[property] = interpolateKeyframes(
+          (Array.isArray(layer.keyframes) ? layer.keyframes : []).filter(key => key && key.property === property),
+          frame, finite(base[property], defaultValue));
+      }
+      transform.opacity = clamp(transform.opacity, 0, 1);
+      const localMatrix = matrix(transform);
+      const parent = layer.parentId ? evaluatedById.get(layer.parentId) : null;
+      const worldTransform = parent ? multiply(parent.worldTransform, localMatrix) : localMatrix;
+      const timing = layer.timing || {};
+      const active = layer.enabled !== false && Number.isFinite(timing.inFrame) &&
+        Number.isFinite(timing.outFrame) && frame >= timing.inFrame && frame < timing.outFrame;
+      const visible = active && (!parent || parent.visible);
+      const opacity = clamp(transform.opacity * (parent ? parent.opacity : 1), 0, 1);
+      const result = { id: layer.id, type: layer.type, name: layer.name, visible,
+        localTransform: transform, worldTransform, opacity };
+      evaluatedById.set(layer.id, result);
+      return result;
+    });
+  }
+
+  return Object.freeze({ interpolateProperty, evaluateLayerAtTime, interpolateKeyframes, evaluateCompositionAtFrame });
 });

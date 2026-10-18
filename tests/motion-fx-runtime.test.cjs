@@ -51,3 +51,32 @@ test('runtime valideert de laag en accepteert lege keyframes veilig', () => {
   assert.throws(() => Runtime.evaluateLayerAtTime(null, 0), /geldige Motion FX-laag/);
   assert.equal(Runtime.interpolateProperty([], 'x', 5, 12), 12);
 });
+
+
+test('browser runtime evalueert ouder-kindtransformaties en geërfde opacity', () => {
+  const composition = { layers: [
+    { id: 'child', type: 'shape', name: 'Kind', parentId: 'parent', enabled: true,
+      transform: { x: 10, y: 0, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 }, keyframes: [] },
+    { id: 'parent', type: 'null', name: 'Ouder', parentId: null, enabled: true,
+      transform: { x: 100, y: 20, scaleX: 2, scaleY: 2, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 20 }, keyframes: [] }
+  ] };
+  const result = Runtime.evaluateCompositionAtFrame(composition, 5);
+  assert.deepEqual(result.map(layer => layer.id), ['parent', 'child']);
+  assert.deepEqual(result[1].worldTransform, { a: 2, b: 0, c: 0, d: 2, e: 120, f: 20 });
+  assert.equal(result[1].opacity, 0.4);
+  assert.equal(result[1].visible, true);
+});
+
+test('browser runtime verbergt kinderen van inactieve ouders en weigert cycli', () => {
+  const composition = { layers: [
+    { id: 'parent', parentId: null, enabled: false, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] },
+    { id: 'child', parentId: 'parent', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] }
+  ] };
+  assert.equal(Runtime.evaluateCompositionAtFrame(composition, 2)[1].visible, false);
+  assert.throws(() => Runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'a', parentId: 'b', transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] },
+    { id: 'b', parentId: 'a', transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] }
+  ] }, 2), /Circulaire/);
+});
