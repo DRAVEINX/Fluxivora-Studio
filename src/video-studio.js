@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','compositionId','compositionName','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -840,8 +840,109 @@
       refresh(); renderPreview();
     }
   }
+  const MOTION_COMPOSITIONS_KEY = 'fluxivora.motionfx.compositions.v1';
+  function readMotionCompositions() {
+    try {
+      const raw = localStorage.getItem(MOTION_COMPOSITIONS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(item => item && typeof item.id === 'string' && typeof item.name === 'string' && Array.isArray(item.layers))
+        .slice(0, 30).map(item => ({ id: item.id, name: item.name.slice(0, 60), layers: item.layers.slice(0, 30).filter(layer => layer && layer.type === 'title' && typeof layer.name === 'string') }));
+    } catch (_) { return []; }
+  }
+  function writeMotionCompositions(items) {
+    try { localStorage.setItem(MOTION_COMPOSITIONS_KEY, JSON.stringify(items.slice(0, 30))); return true; }
+    catch (_) { notice('De lokale compositiebibliotheek kan niet worden opgeslagen.'); return false; }
+  }
+  function renderMotionCompositions() {
+    const list = $('motionfx-composition-list');
+    const count = $('motionfx-composition-count');
+    if (!list || !count) return;
+    const items = readMotionCompositions();
+    count.textContent = String(items.length);
+    list.replaceChildren();
+    if (!items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'motionfx-composition-empty';
+      empty.textContent = 'Nog geen opgeslagen composities. Voeg eerst titel- of vormlagen toe.';
+      list.append(empty);
+      return;
+    }
+    items.forEach(item => {
+      const row = document.createElement('div'); row.className = 'motionfx-composition-row';
+      const copy = document.createElement('div'); copy.className = 'motionfx-composition-copy';
+      const title = document.createElement('strong'); title.textContent = item.name;
+      const detail = document.createElement('small'); detail.textContent = item.layers.length + (item.layers.length === 1 ? ' grafische laag' : ' grafische lagen');
+      copy.append(title, detail);
+      const actions = document.createElement('div'); actions.className = 'motionfx-composition-actions';
+      const insert = document.createElement('button'); insert.type = 'button'; insert.textContent = '＋'; insert.title = 'Compositie invoegen op de afspeelkop'; insert.dataset.compositionAction = 'insert'; insert.dataset.compositionId = item.id;
+      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.title = 'Compositie verwijderen'; remove.dataset.compositionAction = 'delete'; remove.dataset.compositionId = item.id;
+      actions.append(insert, remove); row.append(copy, actions); list.append(row);
+    });
+  }
+  function saveMotionComposition() {
+    const layers = state.clips.filter(c => c.type === 'title').sort((a, b) => a.start - b.start);
+    if (!layers.length) { notice('Voeg eerst een titel- of vormlaag toe om een compositie te bewaren.'); return; }
+    if (layers.length > 30) { notice('Een compositie kan maximaal 30 grafische lagen bevatten.'); return; }
+    const input = $('motionfx-composition-name');
+    const name = String(input.value || '').trim().slice(0, 60);
+    if (!name) { input.focus(); notice('Geef de compositie eerst een naam.'); return; }
+    const items = readMotionCompositions();
+    if (items.length >= 30) { notice('De bibliotheek bevat al 30 composities. Verwijder er eerst één.'); return; }
+    const origin = Math.min(...layers.map(c => c.start));
+    const item = {
+      id: uid('composition'), name,
+      layers: layers.map(c => ({ ...metaClip(c), start: Math.max(0, c.start - origin), type: 'title' }))
+    };
+    items.unshift(item);
+    if (writeMotionCompositions(items)) {
+      input.value = '';
+      renderMotionCompositions();
+      notice('Compositie bewaard: ' + name);
+    }
+  }
+  function handleMotionCompositionAction(event) {
+    const button = event.target.closest('[data-composition-action]');
+    if (!button || !$('motionfx-composition-list')?.contains(button)) return;
+    const items = readMotionCompositions();
+    const item = items.find(entry => entry.id === button.dataset.compositionId);
+    if (!item) return;
+    if (button.dataset.compositionAction === 'delete') {
+      if (writeMotionCompositions(items.filter(entry => entry.id !== item.id))) {
+        renderMotionCompositions();
+        notice('Compositie verwijderd uit de lokale bibliotheek.');
+      }
+      return;
+    }
+    if (button.dataset.compositionAction !== 'insert') return;
+    const targetTrack = state.tracks.find(t => t.kind === 'title');
+    if (!targetTrack) { notice('Voeg eerst een titeltrack toe.'); return; }
+    pushHistory();
+    const compositionId = uid('placed-composition');
+    item.layers.forEach(layer => {
+      const clone = {
+        ...layer,
+        id: uid('layer'),
+        name: layer.name.slice(0, 128),
+        type: 'title',
+        trackId: targetTrack.id,
+        start: Math.max(0, state.playhead + Number(layer.start || 0)),
+        keyframes: Array.isArray(layer.keyframes) ? layer.keyframes.map(frame => ({ ...frame })) : [],
+        effects: Array.isArray(layer.effects) ? layer.effects.map(effect => ({ ...effect })) : [],
+        colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(layer.colorAdjustments || {}) },
+        compositionId,
+        compositionName: item.name,
+        file: null, url: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: false
+      };
+      state.clips.push(clone);
+      state.selected = clone.id;
+    });
+    state.activeTrack = targetTrack.id;
+    refresh(); renderPreview();
+    notice('Compositie ingevoegd: ' + item.name);
+  }
   function refresh() {
-    renderTracks(); renderMotionLayers(); populateInspector(); updateTransport(); updateHistoryButtons();
+    renderTracks(); renderMotionLayers(); renderMotionCompositions(); populateInspector(); updateTransport(); updateHistoryButtons();
     const n = state.clips.length;
     $('video-count').textContent = n + (n === 1 ? ' clip' : ' clips');
     $('video-project-name').value = state.name;
@@ -1639,6 +1740,8 @@
     $('video-export').addEventListener('click', exportOfflineMp4);
     $('video-export-webm').addEventListener('click', exportRealtimeWebm);
     $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
+    $('motionfx-save-composition').addEventListener('click', saveMotionComposition);
+    $('motionfx-composition-list').addEventListener('click', handleMotionCompositionAction);
     $('video-add-title').addEventListener('click', addTitle);
     $('video-add-shape').addEventListener('click', () => addShape('rectangle'));
     $('video-add-ellipse').addEventListener('click', () => addShape('ellipse'));
