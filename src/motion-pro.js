@@ -507,20 +507,34 @@ void main() {
         const audio = await audioContext.decodeAudioData(buffer.slice(0));
         const channels = [];
         for (let channel = 0; channel < audio.numberOfChannels; channel++) channels.push(audio.getChannelData(channel));
-        const envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize: 2048, maxSamples: 12000 });
-        decoded.push({ asset: assets[index], envelope, sampleRate: audio.sampleRate / 2048 });
+        const frameSize = Math.max(64, Math.min(65536, Math.round(audio.sampleRate / 10)));
+        const envelope = window.FluxivoraMulticamSync.createRmsEnvelope(channels, { frameSize, maxSamples: 12000 });
+        const envelopeRate = envelope.length / audio.duration;
+        decoded.push({ asset: assets[index], envelope, sampleRate: envelopeRate, duration: audio.duration });
       }
       const reference = decoded[0];
       const suggestions = [];
+      const comparisonRate = 10;
+      const comparisonSeconds = 180;
+      const toComparisonEnvelope = source => {
+        const count = Math.min(Math.floor(source.duration * comparisonRate), comparisonSeconds * comparisonRate);
+        if (count < 8) throw new Error('Een bron moet minstens 0,8 seconde audio bevatten.');
+        const output = [];
+        for (let index = 0; index < count; index++) {
+          const position = Math.min(source.envelope.length - 1, index * source.sampleRate / comparisonRate);
+          const left = Math.floor(position);
+          const right = Math.min(source.envelope.length - 1, left + 1);
+          const fraction = position - left;
+          output.push(source.envelope[left] * (1 - fraction) + source.envelope[right] * fraction);
+        }
+        return output;
+      };
+      const refEnvelope = toComparisonEnvelope(reference);
       for (const candidate of decoded.slice(1)) {
-        const sampleRate = Math.min(reference.sampleRate, candidate.sampleRate);
-        const refStride = Math.max(1, Math.round(reference.sampleRate / sampleRate));
-        const candStride = Math.max(1, Math.round(candidate.sampleRate / sampleRate));
-        const refEnvelope = reference.envelope.filter((_, index) => index % refStride === 0);
-        const candEnvelope = candidate.envelope.filter((_, index) => index % candStride === 0);
-        const maxLagSamples = Math.min(10000, Math.floor(sampleRate * 15));
+        const candEnvelope = toComparisonEnvelope(candidate);
+        const maxLagSamples = 150;
         const result = window.FluxivoraMulticamSync.estimateWaveformOffset(refEnvelope, candEnvelope, {
-          sampleRate, maxLagSamples, minConfidence: 0.25, minOverlapRatio: 0.5
+          sampleRate: comparisonRate, maxLagSamples, minConfidence: 0.25, minOverlapRatio: 0.5
         });
         suggestions.push({ assetId: candidate.asset.id, assetName: candidate.asset.name, ...result });
       }
