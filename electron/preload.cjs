@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('fluxivora', Object.freeze({
   finishVideoRender: (payload) => ipcRenderer.invoke('video:finish-render', payload),
   cancelVideoRender: (payload) => ipcRenderer.invoke('video:cancel-render', payload),
   chooseVideoProxyDirectory: () => ipcRenderer.invoke('video:choose-proxy-directory'),
+  decodeAudioForSync: (file) => {
+    let sourcePath = '';
+    try { sourcePath = webUtils.getPathForFile(file); } catch (_) {}
+    if (!sourcePath) return Promise.reject(new Error('Selecteer een videobestand dat op schijf staat; dit item heeft geen lokaal bronpad.'));
+    return ipcRenderer.invoke('video:decode-audio-for-sync', { sourcePath });
+  },
   createVideoProxyForFile: (file, options = {}) => {
     let sourcePath = '';
     try { sourcePath = webUtils.getPathForFile(file); } catch (_) {}
