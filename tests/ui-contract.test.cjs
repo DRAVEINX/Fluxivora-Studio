@@ -1080,7 +1080,7 @@ test('alle drie grafische werkruimtes publiceren een niet-lege, testbare gereeds
   assert.ok(match, 'Toolsets ontbreken in de app');
   const block = match[1];
   for (const workspace of ['pixel', 'vector', 'layout']) {
-    const workspaceMatch = block.match(new RegExp(workspace + ': \\[([\\s\\S]*?)\\n    \\](?:,|$)'));
+    const workspaceMatch = block.match(new RegExp(workspace + ': \\[([\\s\\S]*?)\\n    \\](?:,|\\n  \\})'));
     assert.ok(workspaceMatch, 'Gereedschapsset ontbreekt: ' + workspace);
     const entries = [...workspaceMatch[1].matchAll(/\['([^']+)',\s*'[^']*',\s*'([^']+)',\s*'([^']+)'\]/g)];
     assert.ok(entries.length >= 15, workspace + ' heeft onverwacht weinig gereedschappen: ' + entries.length);
