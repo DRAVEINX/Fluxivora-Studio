@@ -16,6 +16,9 @@ Motion FX is the planned original motion-graphics and compositing workspace insi
 - [x] Existing Motion Studio composition list supports JSON export/import, merge-on-import, size/count/layer checks and visible editor controls.
 - [x] Windows CI verifies JavaScript syntax, automated/unit and UI contract tests, installer packaging, FFmpeg runtime, checksum manifest and artifact upload.
 
+- [x] Added a browser-safe keyframe runtime for the existing seconds-based clip schema; Motion Studio now routes animated preview/export properties through the shared runtime, preserving the Bézier adapter and legacy fallback.
+- [x] Automated tests cover linear and hold interpolation, Bézier adapter fallback, local clip time, active range and invalid input.
+
 These increments establish and test the data foundation. The versioned composition model and evaluator are not yet the same thing as a fully integrated dedicated compositing workspace; remaining items below still require UI wiring, preview/export integration and acceptance testing.
 
 ## Motion FX delivery phases
