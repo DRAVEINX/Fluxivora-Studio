@@ -499,7 +499,7 @@
       const secondaryType = c.maskSecondaryType;
       if (!['rectangle','ellipse'].includes(secondaryType)) ctx.clip(primary);
       else {
-        const secondary = maskPath(secondaryType, c.maskSecondarySize || 60);
+        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60));
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'subtract') {
           const combined = new Path2D();
