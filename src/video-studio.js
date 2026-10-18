@@ -736,46 +736,80 @@
     return new Promise(resolve => requestAnimationFrame(() => resolve()));
   }
 
-  function waitForVideoFrame(media, name) {
+  function waitForVideoFrame(media, name, targetTime) {
     if (!media) return Promise.resolve();
     if (media.error) return Promise.reject(new Error('De video-decoder kan "' + name + '" niet lezen.'));
-    if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) return Promise.resolve();
+    const target = Number.isFinite(targetTime) ? Math.max(0, targetTime) : null;
+    if (target === null && media.readyState >= 2 && !media.seeking && media.videoWidth > 0) return Promise.resolve();
+    if (target !== null && media.readyState >= 2 && !media.seeking &&
+        media.videoWidth > 0 && Math.abs(media.currentTime - target) <= 0.025) return Promise.resolve();
     return new Promise((resolve, reject) => {
       let timer = null;
+      let pendingSeek = false;
+      let settled = false;
       const cleanup = () => {
         if (timer !== null) clearTimeout(timer);
-        media.removeEventListener('seeked', check);
+        media.removeEventListener('seeked', onSeeked);
+        media.removeEventListener('loadedmetadata', check);
         media.removeEventListener('loadeddata', check);
         media.removeEventListener('error', failed);
       };
+      const finish = error => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) reject(error); else resolve();
+      };
       const check = () => {
+        if (settled) return;
         if (media.error) return failed();
-        if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) {
-          cleanup();
-          resolve();
+        if (media.readyState < 1 || media.seeking) return;
+        const duration = Number.isFinite(media.duration) ? media.duration : Infinity;
+        const desired = target === null ? media.currentTime : Math.max(0, Math.min(target, Math.max(0, duration - 0.0005)));
+        if (target !== null && Math.abs(media.currentTime - desired) > 0.025) {
+          try {
+            pendingSeek = true;
+            media.currentTime = desired;
+          } catch (_) {
+            pendingSeek = false;
+          }
+          if (pendingSeek) return;
+        }
+        if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0 &&
+            !pendingSeek && (target === null || Math.abs(media.currentTime - desired) <= 0.025)) {
+          finish();
         }
       };
-      const failed = () => {
-        cleanup();
-        reject(new Error('De video-decoder kon geen frame laden uit "' + name + '". Controleer of dit bronformaat in deze versie wordt ondersteund.'));
+      const onSeeked = () => {
+        pendingSeek = false;
+        check();
       };
-      media.addEventListener('seeked', check);
+      const failed = () => finish(new Error('De video-decoder kon geen frame laden uit "' + name + '". Controleer of dit bronformaat in deze versie wordt ondersteund.'));
+      media.addEventListener('seeked', onSeeked);
+      media.addEventListener('loadedmetadata', check);
       media.addEventListener('loadeddata', check);
       media.addEventListener('error', failed);
       timer = window.setTimeout(() => {
-        if (media.readyState >= 2 && !media.seeking && media.videoWidth > 0) check();
-        else failed();
+        check();
+        if (!settled) failed();
       }, 6000);
       check();
     });
   }
-
   async function renderTimelineFrame(time) {
     state.playhead = Math.max(0, time);
     state.playing = false;
     syncMedia(true);
     const activeVideos = state.clips.filter(clip => clip.type === 'video' && !clip.missing && activeAt(clip) && clip.mediaEl);
-    await Promise.all(activeVideos.map(clip => waitForVideoFrame(clip.mediaEl, clip.name)));
+    await Promise.all(activeVideos.map(clip => {
+      const speed = Math.max(0.1, Math.min(4, Number(clip.speed) || 1));
+      const elapsed = Math.max(0, state.playhead - clip.start) * speed;
+      const angle = clip.activeAngleAssetId && state.assets.find(asset => asset.id === clip.activeAngleAssetId && asset.url && !asset.missing);
+      const target = angle && Number.isFinite(Number(clip.activeAngleIn))
+        ? Number(clip.activeAngleIn) + elapsed
+        : Math.min(clip.out, clip.in + elapsed);
+      return waitForVideoFrame(clip.mediaEl, clip.name, target);
+    }));
     await requestRenderPaint();
     if (state.offlineExportCancel) throw new Error('MP4-export geannuleerd.');
     renderPreview();
