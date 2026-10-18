@@ -726,6 +726,11 @@ test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcu
   assert.match(motion, /Analyseer audio-sync/);
   assert.match(motion, /Betrouwbare offsets toepassen/);
   assert.match(motion, /minConfidence: 0\.25/);
+  assert.match(motion, /const comparisonRate = 10/);
+  assert.match(motion, /const comparisonSeconds = 180/);
+  assert.match(motion, /const envelopeRate = envelope\.length \/ audio\.duration/);
+  assert.match(motion, /const maxLagSamples = 150/);
+
   assert.match(motion, /function createMulticamGroup\(/);
   assert.match(motion, /function renderMulticamGroups\(/);
   assert.match(motion, /function attachMulticamGroup\(/);
