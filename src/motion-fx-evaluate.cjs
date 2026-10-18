@@ -81,4 +81,60 @@ function sortLayersForEvaluation(layers) {
   return result;
 }
 
-module.exports = { interpolateKeyframes, evaluateLayerProperty, evaluateLayerTransform, isLayerActive, sortLayersForEvaluation };
+
+function transformMatrix(transform) {
+  const radians = (transform.rotation || 0) * Math.PI / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const scaleX = Number.isFinite(transform.scaleX) ? transform.scaleX : 1;
+  const scaleY = Number.isFinite(transform.scaleY) ? transform.scaleY : 1;
+  return {
+    a: cos * scaleX, b: sin * scaleX,
+    c: -sin * scaleY, d: cos * scaleY,
+    e: Number.isFinite(transform.x) ? transform.x : 0,
+    f: Number.isFinite(transform.y) ? transform.y : 0
+  };
+}
+
+function multiplyMatrices(parent, local) {
+  return {
+    a: parent.a * local.a + parent.c * local.b,
+    b: parent.b * local.a + parent.d * local.b,
+    c: parent.a * local.c + parent.c * local.d,
+    d: parent.b * local.c + parent.d * local.d,
+    e: parent.a * local.e + parent.c * local.f + parent.e,
+    f: parent.b * local.e + parent.d * local.f + parent.f
+  };
+}
+
+function evaluateCompositionAtFrame(composition, frame) {
+  if (!composition || !Array.isArray(composition.layers) || !Number.isFinite(frame)) {
+    throw new TypeError('Compositie en een geldig frame zijn vereist.');
+  }
+  const ordered = sortLayersForEvaluation(composition.layers);
+  const byId = new Map();
+  const evaluated = [];
+  for (const layer of ordered) {
+    const transform = evaluateLayerTransform(layer, frame);
+    const localMatrix = transformMatrix(transform);
+    const parent = layer.parentId ? byId.get(layer.parentId) : null;
+    const worldMatrix = parent ? multiplyMatrices(parent.worldMatrix, localMatrix) : localMatrix;
+    const parentVisible = !parent || parent.visible;
+    const visible = isLayerActive(layer, frame) && parentVisible;
+    const worldOpacity = clamp(transform.opacity * (parent ? parent.worldOpacity : 1), 0, 1);
+    const result = {
+      id: layer.id,
+      type: layer.type,
+      name: layer.name,
+      visible,
+      localTransform: transform,
+      worldTransform: worldMatrix,
+      opacity: worldOpacity
+    };
+    byId.set(layer.id, { worldMatrix, worldOpacity, visible });
+    evaluated.push(result);
+  }
+  return evaluated;
+}
+
+module.exports = { interpolateKeyframes, evaluateLayerProperty, evaluateLayerTransform, isLayerActive, sortLayersForEvaluation, evaluateCompositionAtFrame };
