@@ -900,6 +900,18 @@ test('Page Studio persists and renders an adjustable non-printing baseline grid'
 });
 
 
+
+test('Motion Studio creates persisted and animated rectangle or ellipse shape layers', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(html, /id="video-add-shape"/);
+  assert.match(video, /function addShape\(\)/);
+  assert.match(video, /shapeType = 'rectangle'/);
+  assert.match(video, /shapeType === 'ellipse'/);
+  assert.match(video, /shapeType: \['rectangle','ellipse'\]\.includes\(c\.shapeType\) \? c\.shapeType : null/);
+  assert.match(video, /animatedValue\(c, 'scale'/);
+  assert.match(video, /animatedValue\(c, 'opacity'/);
+});
+
 test('Motion Studio effect stack exposes adjustable intensity and renders it', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
