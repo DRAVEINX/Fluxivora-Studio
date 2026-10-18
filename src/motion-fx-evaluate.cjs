@@ -86,11 +86,13 @@ function transformMatrix(transform) {
   const radians = (transform.rotation || 0) * Math.PI / 180;
   const cos = Math.cos(radians);
   const sin = Math.sin(radians);
+  // Avoid negative zero in serialized/debuggable matrices (e.g. rotation 0°). 
+  const cleanZero = value => Object.is(value, -0) ? 0 : value;
   const scaleX = Number.isFinite(transform.scaleX) ? transform.scaleX : 1;
   const scaleY = Number.isFinite(transform.scaleY) ? transform.scaleY : 1;
   return {
-    a: cos * scaleX, b: sin * scaleX,
-    c: -sin * scaleY, d: cos * scaleY,
+    a: cleanZero(cos * scaleX), b: cleanZero(sin * scaleX),
+    c: cleanZero(-sin * scaleY), d: cleanZero(cos * scaleY),
     e: Number.isFinite(transform.x) ? transform.x : 0,
     f: Number.isFinite(transform.y) ? transform.y : 0
   };
