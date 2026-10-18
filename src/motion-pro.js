@@ -842,6 +842,18 @@ void main() {
         if (wasPlaying && state.playing) media.play().catch(() => {});
         api.renderPreview();
       }, { once: true });
+      if (proxy && clip.url && clip.url !== proxy) {
+        media.addEventListener('error', () => {
+          if (media.dataset.fluxivoraActiveSource !== proxy) return;
+          sourceAsset.proxyMissing = true;
+          media.src = clip.url;
+          media.dataset.fluxivoraActiveSource = clip.url;
+          media.load();
+          updateProxyControls();
+          api.notice('Proxy kon niet worden gelezen; voorbeeld schakelt terug naar het origineel.');
+          api.renderPreview();
+        }, { once: true });
+      }
     }
     updateProxyControls();
     if (switched) api.renderPreview();
