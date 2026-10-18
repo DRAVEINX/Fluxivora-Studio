@@ -523,6 +523,10 @@ test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag'
   assert.match(video, /function renderPreview\(/);
   assert.match(video, /async function exportOfflineMp4\(/);
   assert.match(video, /async function exportRealtimeWebm\(/);
+  assert.equal([...video.matchAll(/FluxivoraMotionStudio\?\.hasProxyPreview\?\.\(\)/g)].length, 2,
+    'MP4- en WebM-export moeten proxy-preview blokkeren');
+  assert.match(video, /function waitForVideoFrame\(media, name, targetTime\)/);
+  assert.match(video, /return waitForVideoFrame\(clip\.mediaEl, clip\.name, target\)/);
   assert.match(video, /createMediaStreamDestination\(/);
   assert.match(video, /function undo\(/);
   assert.match(video, /fluxivora-video-project/);
