@@ -50,7 +50,7 @@ function evaluateLayerTransform(layer, frame) {
   const properties = ['x', 'y', 'anchorX', 'anchorY', 'rotation', 'scaleX', 'scaleY', 'opacity'];
   const transform = {};
   for (const property of properties) {
-    const fallback = Number.isFinite(base[property]) ? base[property] : (property === 'scaleX' || property === 'scaleY' || property === 'opacity' ? 1 : 0);
+    const fallback = Number.isFinite(base[property]) ? base[property] : (property === 'anchorX' || property === 'anchorY' ? 0.5 : property === 'scaleX' || property === 'scaleY' || property === 'opacity' ? 1 : 0);
     transform[property] = evaluateLayerProperty(layer, property, frame, fallback);
   }
   transform.opacity = clamp(transform.opacity, 0, 1);
