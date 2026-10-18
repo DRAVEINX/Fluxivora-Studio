@@ -413,8 +413,22 @@
     if (exposure) parts.push('brightness(' + Math.pow(2, exposure).toFixed(3) + ')');
     if (contrast !== 1) parts.push('contrast(' + contrast.toFixed(3) + ')');
     if (saturation !== 1) parts.push('saturate(' + saturation.toFixed(3) + ')');
-    const effectMap = { grayscale: 'grayscale(1)', sepia: 'sepia(1)', blur: 'blur(2px)', soften: 'blur(1px)', boost: 'contrast(1.15) saturate(1.2)', desaturate: 'saturate(.35)', invert: 'invert(1)', hue: 'hue-rotate(90deg)', brighten: 'brightness(1.2)', crush: 'contrast(1.4)' };
-    (clip && Array.isArray(clip.effects) ? clip.effects : []).filter(e => e && e.enabled !== false).forEach(e => { if (effectMap[e.type]) parts.push(effectMap[e.type]); });
+    const effectMap = {
+      grayscale: amount => 'grayscale(' + (amount / 100).toFixed(2) + ')',
+      sepia: amount => 'sepia(' + (amount / 100).toFixed(2) + ')',
+      blur: amount => 'blur(' + (amount / 10).toFixed(2) + 'px)',
+      soften: amount => 'blur(' + (amount / 20).toFixed(2) + 'px)',
+      boost: amount => 'contrast(' + (1 + amount / 200).toFixed(2) + ') saturate(' + (1 + amount / 200).toFixed(2) + ')',
+      desaturate: amount => 'saturate(' + (1 - amount / 125).toFixed(2) + ')',
+      invert: amount => 'invert(' + (amount / 100).toFixed(2) + ')',
+      hue: amount => 'hue-rotate(' + (amount * 3.6).toFixed(1) + 'deg)',
+      brighten: amount => 'brightness(' + (0.5 + amount / 100).toFixed(2) + ')',
+      crush: amount => 'contrast(' + (1 + amount / 125).toFixed(2) + ')'
+    };
+    (clip && Array.isArray(clip.effects) ? clip.effects : []).filter(e => e && e.enabled !== false).forEach(e => {
+      const render = effectMap[e.type];
+      if (render) parts.push(render(Math.max(0, Math.min(100, e.amount == null ? 100 : Number(e.amount))));
+    });
     return parts.join(' ') || 'none';
   }
   function alphaFor(c) {
@@ -1256,7 +1270,7 @@
         scale: Math.max(.1, Math.min(3, Number(c.scale) || 1)),
         x: Math.max(-100, Math.min(100, Number(c.x) || 0)), y: Math.max(-100, Math.min(100, Number(c.y) || 0)),
         filter: String(c.filter || 'normal'), fit: String(c.fit || 'contain'),
-        effects: Array.isArray(c.effects) ? c.effects.slice(0, 30).filter(e => e && ['grayscale','sepia','blur','soften','boost','desaturate','invert','hue','brighten','crush'].includes(e.type)).map(e => ({ id: String(e.id || uid('effect')), type: e.type, enabled: e.enabled !== false })) : [],
+        effects: Array.isArray(c.effects) ? c.effects.slice(0, 30).filter(e => e && ['grayscale','sepia','blur','soften','boost','desaturate','invert','hue','brighten','crush'].includes(e.type)).map(e => ({ id: String(e.id || uid('effect')), type: e.type, enabled: e.enabled !== false, amount: Math.max(0, Math.min(100, e.amount == null ? 100 : Number(e.amount))) })) : [],
         colorAdjustments: {
           exposure: Math.max(-2, Math.min(2, Number(c.colorAdjustments?.exposure) || 0)),
           contrast: Math.max(.5, Math.min(2, c.colorAdjustments?.contrast == null ? 1 : Number(c.colorAdjustments.contrast))),
