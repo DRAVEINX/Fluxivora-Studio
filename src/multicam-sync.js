@@ -34,7 +34,7 @@
     }
 
     const maxLag = Math.min(maxLagSamples, reference.length - 4, candidate.length - 4);
-    let best = { lagSamples: 0, confidence: -1 };
+    let best = { lagSamples: 0, confidence: -2 };
     for (let lag = -maxLag; lag <= maxLag; lag++) {
       const refStart = Math.max(0, -lag);
       const candStart = Math.max(0, lag);
