@@ -920,6 +920,7 @@ void main() {
       asset.proxyUrl = null;
       asset.proxyFile = null;
       asset.proxyName = null;
+      asset.proxySize = 0;
       asset.proxyMissing = false;
       if (useProxyPreview && !state.assets.some(item => item.type === 'video' && item.proxyUrl && !item.proxyMissing)) {
         useProxyPreview = false;
