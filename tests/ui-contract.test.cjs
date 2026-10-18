@@ -808,7 +808,7 @@ test('Motion Studio proxy-generation UI references existing HTML elements and ke
   const references = [...motion.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
   const missing = [...new Set(references.filter(id => !ids.has(id)))];
   assert.deepEqual(missing, [], 'Motion Studio verwijst naar een proxy-UI-element dat ontbreekt');
-  assert.match(motion, /function linkProxyFile\\(file, assetId = selectedProxyAssetId, options = \\{\\}\\)/);
+  assert.match(motion, /async function linkProxyFile\(file, assetId = selectedProxyAssetId, options = \{\}\)/);
   assert.match(motion, /proxyName = file\.name/);
   assert.match(motion, /new File\(chunks, result\.name/);
   assert.match(motion, /video-proxy-batch/);
