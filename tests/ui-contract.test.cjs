@@ -710,3 +710,33 @@ test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcu
   assert.match(motion, /const angleAsset = clip\.activeAngleAssetId/);
   assert.match(motion, /api\.splitSelectedAtPlayhead\(\{ silent: true \}\)/);
 });
+
+
+test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt realtime WebM als fallback', () => {
+  for (const id of ['video-export','video-export-webm','video-render-progress','video-render-meter','video-render-progress-title','video-render-progress-detail','video-export-cancel']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend exportelement: ' + id);
+  }
+  assert.match(html, /Render MP4 · Offline/);
+  assert.match(html, /WebM realtime/);
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
+  const helper = fs.readFileSync(path.join(root, 'electron', 'video-render.cjs'), 'utf8');
+  const pkg = require(path.join(root, 'package.json'));
+  for (const fn of ['exportOfflineMp4(', 'renderTimelineFrame(', 'renderOfflineAudioChunk(', 'streamOfflineAudio(', 'exportRealtimeWebm(']) {
+    assert.ok(video.includes(fn), 'Ontbrekende renderfunctie: ' + fn);
+  }
+  for (const route of ['video:begin-render','video:write-frame','video:write-audio','video:finish-render','video:cancel-render']) {
+    assert.ok(main.includes("ipcMain.handle('" + route + "'"), 'Ontbrekende main-process route: ' + route);
+  }
+  for (const api of ['beginVideoRender','writeVideoFrame','writeVideoAudio','finishVideoRender','cancelVideoRender']) {
+    assert.ok(preload.includes(api + ':'), 'Ontbrekende preload-API: ' + api);
+  }
+  assert.match(helper, /-f', 'image2pipe'/);
+  assert.match(helper, /-f', 'f32le'/);
+  assert.match(helper, /'libx264'/);
+  assert.match(helper, /'aac'/);
+  assert.equal(pkg.version, '0.5.0-beta.6');
+  assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
+  assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
+});
