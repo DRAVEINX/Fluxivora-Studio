@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -329,7 +329,7 @@
     const t = state.tracks.find(x => x.id === state.activeTrack && x.kind === 'title') || state.tracks.find(x => x.kind === 'title');
     const isEllipse = shapeType === 'ellipse';
     const c = createClip({type: 'title', name: isEllipse ? 'Vormlaag · ellips' : 'Vormlaag · rechthoek', duration: 5, trackId: t.id, start: state.playhead, text: ''});
-    c.shapeType = isEllipse ? 'ellipse' : 'rectangle'; c.fontSize = 120; c.color = '#8b7cff'; c.bold = false;
+    c.shapeType = isEllipse ? 'ellipse' : 'rectangle'; c.fontSize = 120; c.color = '#8b7cff'; c.strokeColor = '#ffffff'; c.strokeWidth = 0; c.bold = false;
     state.activeTrack = t.id;
     refresh(); renderPreview();
     notice((isEllipse ? 'Ellips' : 'Rechthoek') + ' toegevoegd als vormlaag. De laag gebruikt de bestaande keyframe-animatie.');
@@ -494,8 +494,8 @@
       const shapeW = Math.max(20, (c.fontSize || 120) * 2.4 * animatedScale * (W / 1920));
       const shapeH = Math.max(20, (c.fontSize || 120) * animatedScale * (H / 1080));
       ctx.shadowBlur = 0;
-      if (c.shapeType === 'ellipse') { ctx.beginPath(); ctx.ellipse(x, y, shapeW / 2, shapeH / 2, 0, 0, Math.PI * 2); ctx.fill(); }
-      else ctx.fillRect(x - shapeW / 2, y - shapeH / 2, shapeW, shapeH);
+      if (c.shapeType === 'ellipse') { ctx.beginPath(); ctx.ellipse(x, y, shapeW / 2, shapeH / 2, 0, 0, Math.PI * 2); ctx.fill(); if (Number(c.strokeWidth) > 0) { ctx.strokeStyle = c.strokeColor || '#ffffff'; ctx.lineWidth = Math.min(30, Math.max(0, Number(c.strokeWidth))) * (W / 1920); ctx.stroke(); } }
+      else { ctx.fillRect(x - shapeW / 2, y - shapeH / 2, shapeW, shapeH); if (Number(c.strokeWidth) > 0) { ctx.strokeStyle = c.strokeColor || '#ffffff'; ctx.lineWidth = Math.min(30, Math.max(0, Number(c.strokeWidth))) * (W / 1920); ctx.strokeRect(x - shapeW / 2, y - shapeH / 2, shapeW, shapeH); } }
     } else {
       const lines = String(c.text || '').split('\\n').slice(0, 5);
       const y = H * 0.815 + animatedValue(c, 'y', c.y || 0) * H / 100;
@@ -707,6 +707,9 @@
     $('video-title-text').value = c.text || '';
     $('video-title-size').value = String(c.fontSize || 72);
     $('video-title-color').value = c.color || '#ffffff';
+    $('video-shape-stroke-color').value = /^#[0-9a-f]{6}$/i.test(c.strokeColor || '') ? c.strokeColor : '#ffffff';
+    $('video-shape-stroke-width').value = String(Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)));
+    $('video-shape-controls').classList.toggle('hidden', c.type !== 'title' || !['rectangle','ellipse'].includes(c.shapeType));
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
     $('video-motion-controls').classList.toggle('hidden', c.type === 'audio');
@@ -1316,6 +1319,9 @@
         })) : [],
         text: String(c.text || '').slice(0, 1000), fontSize: Math.max(18, Math.min(180, Number(c.fontSize) || 72)),
         color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffffff', bold: c.bold !== false,
+        shapeType: ['rectangle','ellipse'].includes(c.shapeType) ? c.shapeType : null,
+        strokeColor: /^#[0-9a-f]{6}$/i.test(c.strokeColor || '') ? c.strokeColor : '#ffffff',
+        strokeWidth: Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)),
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
       })).map(c => {
         if (!track(c.trackId)) c.trackId = state.tracks.find(t => t.kind === c.type || (c.type === 'title' && t.kind === 'title'))?.id || state.tracks[0].id;
@@ -1470,6 +1476,8 @@
     binding('video-title-text', 'text', v => String(v).slice(0, 1000));
     binding('video-title-size', 'fontSize', v => Math.max(18, Math.min(180, Number(v) || 72)));
     binding('video-title-color', 'color', String);
+    binding('video-shape-stroke-color', 'strokeColor', v => /^#[0-9a-f]{6}$/i.test(v) ? v : '#ffffff');
+    binding('video-shape-stroke-width', 'strokeWidth', v => Math.max(0, Math.min(30, Number(v) || 0)));
   }
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
