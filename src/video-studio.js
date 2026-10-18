@@ -502,11 +502,7 @@
         const secondary = maskPath(secondaryType, c.maskSecondarySize || 60);
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'subtract') {
-          ctx.beginPath(); ctx.rect(0, 0, W, H);
-          ctx.clip();
-          ctx.beginPath();
           const combined = new Path2D();
-          combined.rect(0, 0, W, H);
           combined.addPath(primary);
           combined.addPath(secondary);
           ctx.clip(combined, 'evenodd');
