@@ -919,7 +919,7 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(video, /maskOperation: \['add','subtract','intersect','xor'\]\.includes\(c\.maskOperation\)/);
   assert.match(video, /binding\('video-mask-operation', 'maskOperation', v => \['add','subtract','intersect','xor'\]\.includes\(v\)/);
   assert.match(video, /else if \(c\.maskOperation === 'xor'\) \{[\s\S]*?exclusive\.addPath\(primary\); exclusive\.addPath\(secondary\);[\s\S]*?ctx\.clip\(exclusive, 'evenodd'\);/);
-  assert.match(video, /maskType: \['none','rectangle','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
+  assert.match(video, /maskType: \['none','rectangle','roundRect','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
   assert.match(video, /binding\('video-mask-size', 'maskSize'/);
   assert.match(video, /strokeColor: \/\^#\[0-9a-f\]\{6\}\$\/i\.test\(c\.strokeColor \|\| ''\)/);
   assert.match(video, /strokeWidth: Math\.max\(0, Math\.min\(30, Number\(c\.strokeWidth\) \|\| 0\)\)/);
@@ -1008,4 +1008,13 @@ test('maskerposities zijn beschikbaar voor keyframes en blijven in projectsnapsh
     assert.match(motion, new RegExp(`${property}: '[^']+'`), `Ontbrekend curve-label voor ${property}`);
     assert.ok(video.includes(`'${property}'`), `Projectopslag mist ${property}`);
   }
+});
+
+
+test('Motion Studio supports rounded rectangle masks in both mask slots', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(html, /<option value="roundRect">Afgeronde rechthoek<\/option>/);
+  assert.match(video, /path\.roundRect\(centerX - W \* scale \/ 2, centerY - H \* scale \/ 2, W \* scale, H \* scale, Math\.min\(W \* scale, H \* scale\) \* 0\.12\)/);
+  assert.match(video, /\['none','rectangle','roundRect','ellipse'\]\.includes\(c\.maskType\)/);
+  assert.match(video, /\['none','rectangle','roundRect','ellipse'\]\.includes\(c\.maskSecondaryType\)/);
 });
