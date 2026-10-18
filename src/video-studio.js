@@ -674,7 +674,7 @@
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
     document.querySelectorAll('.video-video-controls').forEach(element => element.classList.toggle('hidden', c.type !== 'video'));
     $('video-motion-controls').classList.toggle('hidden', c.type === 'audio');
-    document.querySelectorAll('.video-audio-controls').forEach(element => element.classList.toggle('hidden', c.type === 'title');
+    document.querySelectorAll('.video-audio-controls').forEach(element => element.classList.toggle('hidden', c.type === 'title'));
     ['video-in','video-out','video-speed','video-volume'].forEach(id => { $(id).disabled = c.missing; });
   }
   function refresh() {
