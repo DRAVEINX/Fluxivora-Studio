@@ -698,6 +698,7 @@ test('Motion Studio kan proxybestanden koppelen zonder de originele media te ver
 
 test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op unieke bestandsnaam', () => {
   const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   assert.match(html, /id="video-proxy-relink-all"/);
   assert.match(html, /id="video-proxy-relink-files" type="file" accept="video\/\*" multiple/);
   assert.match(motion, /function relinkKnownProxyFiles\(files\)/);
