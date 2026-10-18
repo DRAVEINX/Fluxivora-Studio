@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskSecondaryType','maskSecondarySize','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
