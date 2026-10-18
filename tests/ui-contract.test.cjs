@@ -719,6 +719,13 @@ test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op
 });
 
 
+test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wordt gekoppeld', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /const expectedDuration = Number\(asset\.duration\) \|\| 0/);
+  assert.match(motion, /Math\.abs\(expectedDuration - probe\.duration\) > Math\.max\(1, expectedDuration \* 0\.03\)/);
+  assert.match(motion, /de opnieuw gekoppelde bron heeft een andere duur dan verwacht/);
+});
+
 test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
   for (const id of ['video-multicam-selection-count','video-multicam-create','video-multicam-groups','video-multicam-group','video-multicam-attach','video-multicam-angle','video-multicam-cut']) {
     assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend multicam-element: ' + id);
