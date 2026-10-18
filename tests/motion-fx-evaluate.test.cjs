@@ -81,3 +81,30 @@ test('evaluateert de volledige laagtransformatie op een gekozen frame', () => {
     x: 100, y: 50, anchorX: 0.5, anchorY: 0.5, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.75
   });
 });
+
+test('compositie-evaluatie combineert oudertransformaties en opacity', () => {
+  const composition = { layers: [
+    { id: 'child', name: 'Kind', type: 'shape', parentId: 'parent', enabled: true,
+      transform: { x: 10, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 }, keyframes: [] },
+    { id: 'parent', name: 'Ouder', type: 'null', parentId: null, enabled: true,
+      transform: { x: 100, y: 20, rotation: 0, scaleX: 2, scaleY: 2, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 20 }, keyframes: [] }
+  ] };
+  const result = Eval.evaluateCompositionAtFrame(composition, 5);
+  assert.deepEqual(result.map(layer => layer.id), ['parent', 'child']);
+  assert.deepEqual(result[1].worldTransform, { a: 2, b: 0, c: 0, d: 2, e: 120, f: 20 });
+  assert.equal(result[1].opacity, 0.4);
+  assert.equal(result[1].visible, true);
+});
+
+test('inactieve ouder verbergt afhankelijke lagen en ontbrekende compositie wordt geweigerd', () => {
+  const composition = { layers: [
+    { id: 'parent', parentId: null, enabled: false, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] },
+    { id: 'child', parentId: 'parent', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] }
+  ] };
+  const result = Eval.evaluateCompositionAtFrame(composition, 2);
+  assert.equal(result[0].visible, false);
+  assert.equal(result[1].visible, false);
+  assert.throws(() => Eval.evaluateCompositionAtFrame(null, 0), /Compositie/);
+});
