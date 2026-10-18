@@ -254,3 +254,19 @@ body:not(.motionfx-mode) #motionfx-layer-panel{display:none}
 .motionfx-layer-actions button.active{color:#f1dcff;border-color:#8b7be9;background:#30284c}
 .motionfx-layer-actions button:disabled{opacity:.35;cursor:not-allowed}
 .motionfx-layer-help{margin:9px 0 0;color:#77839e}
+
+/* Reusable Motion Graphics compositions */
+body:not(.motionfx-mode) #motionfx-compositions{display:none}
+.motionfx-compositions{margin:0 0 14px;padding:11px;border:1px solid #34304b;border-radius:9px;background:linear-gradient(155deg,#171b2b,#10131e)}
+.motionfx-composition-name{display:flex;flex-direction:column;gap:5px;margin:8px 0;color:#a5aec7;font-size:8px;font-weight:800;letter-spacing:.04em}
+.motionfx-composition-name input{width:100%;box-sizing:border-box;min-width:0;padding:8px;background:#0d111c;border:1px solid #343b52;border-radius:6px;color:#f1f2ff;font-size:10px;letter-spacing:0}
+.motionfx-composition-save{width:100%;padding:8px;font-size:9px}
+.motionfx-composition-list{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+.motionfx-composition-empty{margin:0;padding:9px;border:1px dashed #30364b;border-radius:6px;color:#77839e;font-size:9px;line-height:1.5}
+.motionfx-composition-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px;border:1px solid #2b3043;border-radius:7px;background:#121725}
+.motionfx-composition-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.motionfx-composition-copy strong{font-size:9px;color:#e1e4f6;overflow-wrap:anywhere}
+.motionfx-composition-copy small{font-size:8px;color:#808ba8}
+.motionfx-composition-actions{display:flex;gap:4px}
+.motionfx-composition-actions button{width:27px;height:27px;border:1px solid #393653;border-radius:6px;background:#211e37;color:#c6bcff;font-size:14px;cursor:pointer}
+.motionfx-composition-actions button:last-child{color:#e2a9b7;border-color:#4a303e;background:#261923}
