@@ -34,7 +34,7 @@ function createComposition(options = {}) {
 
 function createLayer(type, options = {}) {
   const allowed = new Set(['shape', 'text', 'media', 'null']);
-  if (!allowed.has(type)) throw new TypeError('Onbekend la type: ' + type);
+  if (!allowed.has(type)) throw new TypeError('Onbekend laagtype: ' + type);
   const now = new Date().toISOString();
   const layer = {
     id: String(options.id || makeId(type)).slice(0, 128),
@@ -103,6 +103,10 @@ function validateComposition(value) {
 
 function normalizeComposition(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Ongeldig Motion FX-project.');
+  if (value.format !== FORMAT) throw new TypeError('Onbekend Motion FX-projectformaat.');
+  if (value.version !== VERSION) throw new TypeError('Niet-ondersteunde Motion FX-projectversie.');
+  if (typeof value.id !== 'string' || !value.id || value.id.length > 128) throw new TypeError('Ongeldige compositie-ID.');
+  if (typeof value.name !== 'string' || !value.name || value.name.length > 128) throw new TypeError('Ongeldige compositienaam.');
   const settings = value.settings || {};
   const composition = createComposition({
     id: value.id, name: value.name, width: settings.width, height: settings.height,
