@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.7 (proxy-generatie in verificatie))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.10)
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -36,6 +36,9 @@
 - Om beta.2 te accepteren moet de Windows-praktijktest opslaan/sluiten/heropenen, PNG/SVG/PDF-export en herstelkopieën bevestigen. Daarna volgen de tests voor installeren, bijwerken en verwijderen vóór 1.0.0.
 
 ## Fase 3 — solide grafische basis
+
+- Toolinventaris voor Pixel Lab, Vector Forge, Page Studio en Motion Studio staat in `docs/TOOL-INVENTORY.md`; dit is een code-inventaris en geen vervanging voor handmatige acceptatie.
+- Uitbreidingen uit de toolinventaris worden gefaseerd gebouwd en moeten per fase automatische regressietests en handmatige acceptatie doorlopen.
 
 - Betrouwbare undo/redo voor alle eigenschappen en niet-destructieve bewerkingsstappen.
 - Echte rasterlagen, gegroepeerde lagen, laag-blending en aanpasbare laagtypen.
