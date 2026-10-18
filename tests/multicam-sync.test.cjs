@@ -1,6 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { estimateWaveformOffset } = require('../src/multicam-sync.js');
+const { createRmsEnvelope, estimateWaveformOffset } = require('../src/multicam-sync.js');
+
+test('RMS envelope summarizes local audio channels into bounded samples', () => {
+  const left = Float32Array.from({ length: 1024 }, (_, index) => index < 512 ? 0.25 : 0.75);
+  const right = Float32Array.from({ length: 1024 }, (_, index) => index < 512 ? 0.25 : 0.75);
+  const envelope = createRmsEnvelope([left, right], { frameSize: 64, maxSamples: 32 });
+  assert.equal(envelope.length, 16);
+  assert.ok(envelope.slice(0, 8).every(value => Math.abs(value - 0.25) < 1e-6));
+  assert.ok(envelope.slice(8).every(value => Math.abs(value - 0.75) < 1e-6));
+});
+
+test('RMS envelope validates channel and processing limits', () => {
+  assert.throws(() => createRmsEnvelope([]), TypeError);
+  assert.throws(() => createRmsEnvelope([Float32Array.from([1, 2])], { frameSize: 8 }), RangeError);
+  assert.throws(() => createRmsEnvelope([Float32Array.from({ length: 512 }, () => NaN)], { frameSize: 64 }), TypeError);
+});
 
 test('waveform correlation estimates a positive offset when the candidate is delayed', () => {
   const reference = [0, 1, 0, 0.4, 0, 0.8, 0.2, 0.1, 0.7, 0.3, 0.9, 0.2, 0.5, 0.1, 0.6, 0.4];
