@@ -1108,3 +1108,21 @@ test('Motion FX curve editor exposes rotation with matching degree limits', () =
   assert.match(motionPro, /rotation: \[-3600, 3600\]/);
   assert.match(motionPro, /rotation: 'Rotatie \(°\)'/);
 });
+
+
+test('keyframe-curve-editor exposes all supported mask position properties', () => {
+  const selectorStart = html.indexOf('<select id="video-curve-property">');
+  const selectorEnd = html.indexOf('</select>', selectorStart);
+  assert.ok(selectorStart >= 0 && selectorEnd > selectorStart, 'Curve property selector exists');
+  const selector = html.slice(selectorStart, selectorEnd);
+  for (const option of [
+    '<option value="maskX">Masker X-positie</option>',
+    '<option value="maskY">Masker Y-positie</option>',
+    '<option value="maskSecondaryX">Tweede masker X-positie</option>',
+    '<option value="maskSecondaryY">Tweede masker Y-positie</option>'
+  ]) assert.ok(selector.includes(option), 'Missing curve property option: ' + option);
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.ok(motion.includes(property + ':'), 'Motion curve support missing: ' + property);
+  }
+});
