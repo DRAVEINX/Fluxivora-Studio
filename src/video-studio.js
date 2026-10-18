@@ -494,6 +494,7 @@
         const centerY = H / 2 + Math.max(-50, Math.min(50, Number(offsetY) || 0)) * H / 100;
         const path = new Path2D();
         if (type === 'ellipse') path.ellipse(centerX, centerY, W * scale / 2, H * scale / 2, 0, 0, Math.PI * 2);
+        // Keep the corner radius proportional to the mask size so the shape scales consistently.
         else if (type === 'roundRect') path.roundRect(centerX - W * scale / 2, centerY - H * scale / 2, W * scale, H * scale, Math.min(W * scale, H * scale) * 0.12);
         else path.rect(centerX - W * scale / 2, centerY - H * scale / 2, W * scale, H * scale);
         return path;
