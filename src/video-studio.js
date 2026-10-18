@@ -189,6 +189,62 @@
     state.activeTrack = t.id;
     return c;
   }
+  function relinkSelectedFile(file) {
+    const clip = selected();
+    if (!file) return;
+    if (!clip || clip.type === 'title' || !clip.missing) {
+      notice('Selecteer eerst een ontbrekende video- of audioclip op de tijdlijn.');
+      return;
+    }
+    const expected = clip.type === 'audio' ? 'audio/' : 'video/';
+    if (!String(file.type || '').startsWith(expected)) {
+      notice(clip.type === 'audio' ? 'Kies een geldig audiobestand.' : 'Kies een geldig videobestand.');
+      return;
+    }
+    const probeUrl = URL.createObjectURL(file);
+    const probe = document.createElement(clip.type === 'audio' ? 'audio' : 'video');
+    probe.preload = 'metadata';
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      probe.removeAttribute('src');
+      probe.load();
+      probe.remove();
+      URL.revokeObjectURL(probeUrl);
+    };
+    probe.onloadedmetadata = () => {
+      if (settled) return;
+      const duration = Number.isFinite(probe.duration) ? Math.max(0, probe.duration) : 0;
+      if (!duration) {
+        finish();
+        notice('Dit bestand heeft geen bruikbare duur en is niet gekoppeld.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      pushHistory();
+      clip.file = file;
+      clip.url = url;
+      clip.sourceName = file.name;
+      clip.duration = duration;
+      clip.in = Math.max(0, Math.min(Number(clip.in) || 0, Math.max(0, duration - 0.1)));
+      clip.out = Math.max(clip.in + Math.min(0.1, duration), Math.min(Number(clip.out) || duration, duration));
+      if (clip.out <= clip.in) { clip.in = 0; clip.out = duration; }
+      clip.missing = false;
+      createMedia(clip);
+      finish();
+      refresh();
+      renderPreview();
+      if (clip.type === 'audio') computeAudioWaveform(file, clip.id);
+      else captureVideoThumbnails(file, clip.id);
+      notice('Bronbestand gekoppeld aan “' + clip.name + '”.');
+    };
+    probe.onerror = () => {
+      finish();
+      notice('Fluxivora kan dit bestand niet lezen: ' + file.name);
+    };
+    probe.src = probeUrl;
+  }
   function importFiles(fileList, kind) {
     const files = [...(fileList || [])];
     if (!files.length) return;
@@ -1438,6 +1494,13 @@
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
     $('video-import-audio').addEventListener('click', () => $('video-audio-files').click());
+    $('video-relink-selected').addEventListener('click', () => {
+      const clip = selected();
+      if (!clip || clip.type === 'title' || !clip.missing) { notice('Selecteer eerst een ontbrekende video- of audioclip op de tijdlijn.'); return; }
+      $('video-relink-files').accept = clip.type === 'audio' ? 'audio/*' : 'video/*';
+      $('video-relink-files').click();
+    });
+    $('video-relink-files').addEventListener('change', e => { relinkSelectedFile(e.target.files?.[0]); e.target.value = ''; });
     $('video-files').addEventListener('change', e => importFiles(e.target.files, 'video'));
     $('video-audio-files').addEventListener('change', e => importFiles(e.target.files, 'audio'));
     $('video-save-session').addEventListener('click', saveSession);
