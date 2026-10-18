@@ -1128,6 +1128,19 @@ test('keyframe-curve-editor exposes all supported mask position properties', () 
 });
 
 
+test('offline export uses the same keyframe interpolation runtime as preview', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const previewStart = video.indexOf('function animatedValue(');
+  const exportStart = video.indexOf('function exportAnimatedValue(');
+  const audioStart = video.indexOf('function exportAudioGain(', exportStart);
+  assert.ok(previewStart >= 0 && exportStart > previewStart && audioStart > exportStart);
+  const preview = video.slice(previewStart, video.indexOf('\n  function ', previewStart + 10));
+  const offlineExport = video.slice(exportStart, audioStart);
+  assert.match(preview, /FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(offlineExport, /FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(offlineExport, /FluxivoraKeyframeCurves\.bezierValue/);
+});
+
 test('Motion Studio keyframes capture, persist, and animate both mask positions and sizes', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   assert.match(video, /maskSize: Number\(c\.maskSize \|\| 90\)/);

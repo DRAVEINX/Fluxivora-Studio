@@ -1238,12 +1238,18 @@
   }
 
   function exportAnimatedValue(clip, key, relativeTime, baseValue) {
-    const frames = Array.isArray(clip.keyframes)
-      ? clip.keyframes.filter(frame => Number.isFinite(frame.time) && Number.isFinite(frame[key])).slice().sort((a, b) => a.time - b.time)
-      : [];
-    if (!frames.length) return Number(baseValue) || 0;
-    if (relativeTime <= frames[0].time) return frames[0][key];
-    if (relativeTime >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
+    const frames = Array.isArray(clip.keyframes) ? clip.keyframes : [];
+    const bezierValue = window.FluxivoraKeyframeCurves && typeof window.FluxivoraKeyframeCurves.bezierValue === 'function'
+      ? (left, right, property, amount) => window.FluxivoraKeyframeCurves.bezierValue(left, right, property, amount)
+      : null;
+    // Keep offline export on the same interpolation path as the live preview.
+    if (window.FluxivoraMotionFxRuntime?.interpolateProperty) {
+      return window.FluxivoraMotionFxRuntime.interpolateProperty(frames, key, relativeTime, Number(baseValue) || 0, { bezierValue });
+    }
+    const validFrames = frames.filter(frame => Number.isFinite(frame.time) && Number.isFinite(frame[key])).slice().sort((a, b) => a.time - b.time);
+    if (!validFrames.length) return Number(baseValue) || 0;
+    if (relativeTime <= validFrames[0].time) return validFrames[0][key];
+    if (relativeTime >= validFrames[validFrames.length - 1].time) return validFrames[validFrames.length - 1][key];
     const curves = {
       linear: value => value,
       easeIn: value => value * value,
@@ -1251,11 +1257,11 @@
       easeInOut: value => value < 0.5 ? 2 * value * value : 1 - Math.pow(-2 * value + 2, 2) / 2,
       hold: () => 0
     };
-    for (let i = 1; i < frames.length; i++) {
-      const left = frames[i - 1], right = frames[i];
+    for (let i = 1; i < validFrames.length; i++) {
+      const left = validFrames[i - 1], right = validFrames[i];
       if (relativeTime <= right.time) {
         const amount = Math.max(0, Math.min(1, (relativeTime - left.time) / Math.max(0.0001, right.time - left.time)));
-        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, amount);
+        if (right.ease === 'bezier' && bezierValue) return bezierValue(left, right, key, amount);
         const t = (curves[right.ease] || curves.linear)(amount);
         return left[key] + (right[key] - left[key]) * t;
       }
