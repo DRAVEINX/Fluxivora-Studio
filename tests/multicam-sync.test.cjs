@@ -25,6 +25,14 @@ test('waveform correlation validates limits and input values', () => {
   assert.throws(() => estimateWaveformOffset([1, 2, 3, 4, 5, 6, 7, Infinity], Array(8).fill(1), { sampleRate: 25, maxLagSamples: 1 }), TypeError);
 });
 
+test('waveform correlation refuses inputs that could freeze the editor', () => {
+  const largeEnvelope = Array(200000).fill(0).map((_, index) => Math.sin(index / 9));
+  assert.throws(
+    () => estimateWaveformOffset(largeEnvelope, largeEnvelope, { sampleRate: 100, maxLagSamples: 50000 }),
+    /too large for a safe synchronous calculation/
+  );
+});
+
 test('weak correlation is reported as unaccepted instead of silently syncing', () => {
   const reference = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
   const candidate = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0];
