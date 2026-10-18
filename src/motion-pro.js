@@ -478,6 +478,85 @@ void main() {
     $('video-multicam-cut').disabled = !clip || clip.type !== 'video' || !group || ids.length < 2 || !angleSelect.value;
   }
 
+  async function readAudioForMulticamSync(asset) {
+    if (!asset || asset.type !== 'video' || asset.missing || !asset.file) {
+      throw new Error('Koppel eerst alle videobronnen aan lokale bestanden.');
+    }
+    if (Number(asset.duration) > 600 || asset.file.size > 300 * 1024 * 1024) {
+      throw new Error('Automatische sync is begrensd tot bronnen van maximaal 10 minuten en 300 MB.');
+    }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Deze omgeving ondersteunt geen lokale audio-analyse.');
+    const context = new AudioContextClass();
+    try {
+      const decoded = await context.decodeAudioData(await asset.file.arrayBuffer());
+      if (!decoded.length || decoded.duration > 600) throw new Error('De audiobron is leeg of langer dan 10 minuten.');
+      const targetRate = 8000;
+      const outputLength = Math.floor(decoded.length * targetRate / decoded.sampleRate);
+      if (outputLength < 120) throw new Error('De bron bevat te weinig audio om betrouwbaar te synchroniseren.');
+      const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) => decoded.getChannelData(index));
+      const mono = new Float32Array(outputLength);
+      const ratio = decoded.sampleRate / targetRate;
+      for (let i = 0; i < outputLength; i += 1) {
+        const start = Math.floor(i * ratio);
+        const end = Math.max(start + 1, Math.min(decoded.length, Math.floor((i + 1) * ratio)));
+        let total = 0;
+        for (const channel of channels) {
+          let channelTotal = 0;
+          for (let j = start; j < end; j += 1) channelTotal += channel[j];
+          total += channelTotal / (end - start);
+        }
+        mono[i] = total / channels.length;
+      }
+      return { samples: mono, sampleRate: targetRate };
+    } finally {
+      await context.close().catch(() => {});
+    }
+  }
+
+  async function syncMulticamGroupFromAudio(group, button) {
+    if (!window.FluxivoraAudioSync) {
+      api.notice('De audio-syncmodule is niet geladen. Herlaad Fluxivora Studio en probeer opnieuw.');
+      return;
+    }
+    const assets = group.angleAssetIds.map(id => state.assets.find(asset => asset.id === id));
+    if (assets.length < 2 || assets.some(asset => !asset || asset.type !== 'video' || asset.missing || !asset.file)) {
+      api.notice('Koppel eerst minstens twee lokale videobronnen aan deze multicamgroep.');
+      return;
+    }
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Audio analyseren…';
+    try {
+      api.notice('Audio-sync gestart. De eerste camerahoek is de referentie; bronnen worden lokaal geanalyseerd.');
+      const reference = await readAudioForMulticamSync(assets[0]);
+      const updates = [];
+      for (const asset of assets.slice(1)) {
+        button.textContent = 'Analyse: ' + asset.name;
+        const candidate = await readAudioForMulticamSync(asset);
+        const result = window.FluxivoraAudioSync.synchronize(reference.samples, candidate.samples, reference.sampleRate, { windowMs: 20, maxOffsetSeconds: 30 });
+        if (!result.ok || result.confidence < 0.45) {
+          throw new Error('Onvoldoende overeenkomst met ' + asset.name + '. Er is niets gewijzigd; stel deze hoek handmatig in.');
+        }
+        // Multicam offsets represent the source time used at timeline zero, so invert the suggested timeline correction.
+        updates.push({ id: asset.id, offset: -result.offsetSeconds, confidence: result.confidence });
+      }
+      api.pushHistory();
+      if (!group.offsets) group.offsets = {};
+      group.offsets[assets[0].id] = 0;
+      updates.forEach(item => { group.offsets[item.id] = clamp(item.offset, -86400, 86400); });
+      group.syncMode = 'audio-correlation';
+      api.refresh();
+      renderMulticamGroups();
+      api.notice('Audio-sync voltooid voor ' + updates.length + ' camerahoek(en). Controleer de uitlijning in de preview.');
+    } catch (error) {
+      api.notice(error?.message || 'Audio-sync is mislukt. Je bestaande offsets zijn behouden.');
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
+
   function renderMulticamGroups() {
     const host = $('video-multicam-groups');
     if (!host) return;
@@ -510,6 +589,13 @@ void main() {
       const hint = document.createElement('small');
       hint.textContent = 'Bron-offset bij tijdlijn 00:00 (s)';
       card.append(hint);
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.className = 'button subtle compact';
+      syncButton.textContent = 'Audio automatisch synchroniseren';
+      syncButton.title = 'Analyseer lokale audio en stel bron-offsets voor; handmatige offsets blijven beschikbaar.';
+      syncButton.addEventListener('click', () => syncMulticamGroupFromAudio(group, syncButton));
+      card.append(syncButton);
       group.angleAssetIds.forEach(assetId => {
         const asset = state.assets.find(item => item.id === assetId);
         const row = document.createElement('label');
@@ -666,7 +752,7 @@ void main() {
 
   async function linkProxyFile(file, assetId = selectedProxyAssetId) {
     const asset = state.assets.find(item => item.id === assetId);
-    if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
+    if (!asset || asset.type !== 'video' || !isCompatibleMediaFile(file, 'video')) {
       api.notice('Kies een videobestand als proxy.');
       return;
     }
@@ -968,17 +1054,34 @@ void main() {
 
   function applyRelink(file) {
     const asset = state.assets.find(item => item.id === $('video-relink-files').dataset.assetId);
-    if (!asset || !file || (asset.type === 'audio' ? !file.type.startsWith('audio/') : !file.type.startsWith('video/'))) {
-      api.notice('Kies een passend bronbestand.');
-      return;
+    return applyRelinkToAsset(asset, file, false);
+  }
+
+  function isCompatibleMediaFile(file, type) {
+    if (!file || !['audio', 'video'].includes(type)) return false;
+    const mime = String(file.type || '').toLowerCase();
+    if (mime.startsWith(type + '/')) return true;
+    // Some browsers and file pickers provide an empty or generic MIME type.
+    const name = String(file.name || '').toLowerCase();
+    const extension = name.includes('.') ? name.split('.').pop() : '';
+    const extensions = type === 'audio'
+      ? ['aac', 'aif', 'aiff', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wav', 'wma']
+      : ['avi', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv'];
+    return extensions.includes(extension);
+  }
+
+  function applyRelinkToAsset(asset, file, quiet) {
+    if (!asset || !isCompatibleMediaFile(file, asset.type)) {
+      if (!quiet) api.notice('Kies een passend audio- of videobestand.');
+      return false;
     }
     const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
+    api.pushHistory();
     asset.file = file;
     asset.url = URL.createObjectURL(file);
     asset.duration = asset.duration || 0;
     asset.missing = false;
     if (matches.length) {
-      api.pushHistory();
       matches.forEach(clip => {
         clip.url = URL.createObjectURL(file);
         clip.file = file;
@@ -1018,9 +1121,55 @@ void main() {
     renderMediaBin();
     api.refresh();
     api.renderPreview();
-    api.notice('Bronbestand gekoppeld aan bibliotheek en bijpassende clips.');
+    if (!quiet) api.notice('Bronbestand gekoppeld aan bibliotheek en bijpassende clips.');
+    return true;
   }
 
+
+  function relinkMissingAssets(files) {
+    const candidates = Array.from(files || []);
+    if (!candidates.length) return;
+    const key = value => String(value || '').trim().toLocaleLowerCase();
+    const missing = state.assets.filter(asset => asset.missing || !asset.url || !asset.file);
+    const usedFiles = new Set();
+    const ambiguousNames = new Set();
+    let linked = 0;
+    let unmatched = 0;
+
+    missing.forEach(asset => {
+      const name = key(asset.name);
+      const matchingAssets = missing.filter(item => item.type === asset.type && key(item.name) === name);
+      const matchingFiles = candidates.filter(file => !usedFiles.has(file) &&
+        key(file.name) === name && isCompatibleMediaFile(file, asset.type));
+
+      // Never guess when duplicate asset names make a filename-only match unsafe.
+      if (matchingAssets.length > 1 || matchingFiles.length > 1) {
+        ambiguousNames.add(asset.name);
+        return;
+      }
+      if (!matchingFiles.length) {
+        unmatched++;
+        return;
+      }
+      const file = matchingFiles[0];
+      if (applyRelinkToAsset(asset, file, true)) {
+        linked++;
+        usedFiles.add(file);
+      } else {
+        unmatched++;
+      }
+    });
+
+    renderMediaBin();
+    api.refresh();
+    api.renderPreview();
+    const details = [];
+    if (ambiguousNames.size) details.push(ambiguousNames.size + ' dubbele bestandsnaam(en) overgeslagen; koppel deze afzonderlijk.');
+    if (unmatched) details.push(unmatched + ' bron(nen) niet gekoppeld.');
+    api.notice(linked
+      ? linked + ' ontbrekende bron' + (linked === 1 ? '' : 'nen') + ' automatisch gekoppeld op unieke bestandsnaam.' + (details.length ? ' ' + details.join(' ') : '')
+      : 'Geen veilige, unieke overeenkomst gevonden.' + (details.length ? ' ' + details.join(' ') : ' Controleer bestandsnamen en media-types.'));
+  }
   function renderEffectStack() {
     const container = $('video-effect-stack');
     const clip = api.selected();
@@ -1469,22 +1618,35 @@ void main() {
   $('video-proxy-files-relink').addEventListener('change', event => {
     const files = [...(event.target.files || [])];
     const pending = state.assets.filter(asset => asset.type === 'video' && asset.proxyName && (!asset.proxyUrl || asset.proxyMissing));
+    const normalize = value => String(value || '').toLocaleLowerCase();
+    const fileCounts = new Map();
+    const assetCounts = new Map();
+    for (const file of files) fileCounts.set(normalize(file.name), (fileCounts.get(normalize(file.name)) || 0) + 1);
+    for (const asset of pending) assetCounts.set(normalize(asset.proxyName), (assetCounts.get(normalize(asset.proxyName)) || 0) + 1);
     let linked = 0;
     let ambiguous = 0;
+    let unmatched = 0;
+    const usedNames = new Set();
     for (const file of files) {
-      const matches = pending.filter(asset => asset.proxyName.toLocaleLowerCase() === file.name.toLocaleLowerCase());
-      if (matches.length === 1) {
-        linkProxyFile(file, matches[0].id);
-        linked++;
-      } else if (matches.length > 1) {
+      const name = normalize(file.name);
+      if (!name || usedNames.has(name)) continue;
+      usedNames.add(name);
+      if ((fileCounts.get(name) || 0) > 1 || (assetCounts.get(name) || 0) > 1) {
         ambiguous++;
+        continue;
+      }
+      const match = pending.find(asset => normalize(asset.proxyName) === name);
+      if (match) {
+        linkProxyFile(file, match.id);
+        linked++;
+      } else {
+        unmatched++;
       }
     }
-    const unmatched = files.length - linked - ambiguous;
     if (linked === 0) {
-      api.notice(ambiguous ? 'Geen proxy gekoppeld: sommige bestandsnamen komen meerdere keren voor. Koppel die proxy’s afzonderlijk.' : 'Geen overeenkomst gevonden. Controleer de proxybestandsnamen.');
+      api.notice(ambiguous ? 'Geen proxy gekoppeld: dubbele bestandsnamen gevonden bij proxybestanden of projectmedia. Koppel deze proxy’s afzonderlijk.' : 'Geen overeenkomst gevonden. Controleer de proxybestandsnamen.');
     } else {
-      api.notice(linked + ' proxybestand(en) gekoppeld op basis van exacte bestandsnaam.' + (ambiguous ? ' ' + ambiguous + ' naam(en) zijn dubbel; die moeten afzonderlijk worden gekoppeld.' : '') + (unmatched ? ' ' + unmatched + ' bestand(en) hadden geen overeenkomst.' : ''));
+      api.notice(linked + ' proxybestand(en) veilig gekoppeld op basis van exacte bestandsnaam.' + (ambiguous ? ' ' + ambiguous + ' dubbele naam(en) overgeslagen; koppel die proxy’s afzonderlijk.' : '') + (unmatched ? ' ' + unmatched + ' bestand(en) hadden geen overeenkomst.' : ''));
     }
     event.target.value = '';
   });
@@ -1511,6 +1673,11 @@ void main() {
   });
   $('video-relink-files').addEventListener('change', event => {
     applyRelink(event.target.files?.[0]);
+    event.target.value = '';
+  });
+  $('video-relink-all').addEventListener('click', () => $('video-relink-batch-files').click());
+  $('video-relink-batch-files').addEventListener('change', event => {
+    relinkMissingAssets(event.target.files);
     event.target.value = '';
   });
   $('video-effect-add').addEventListener('click', () => {

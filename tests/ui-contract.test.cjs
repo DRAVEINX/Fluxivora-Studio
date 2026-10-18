@@ -252,6 +252,13 @@ test('Pixel Lab biedt schaalbare PNG-export met geheugenlimieten', () => {
 });
 
 
+test('proxybestanden accepteren videobestanden met ontbrekend of generiek MIME-type', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /function isCompatibleMediaFile\(file, type\)/);
+  assert.match(motion, /if \(!asset \|\| asset\.type !== 'video' \|\| !isCompatibleMediaFile\(file, 'video'\)\)/);
+  assert.match(motion, /'avi', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'webm', 'wmv'/);
+});
+
 test('Windows-builds controleren de installer en publiceren een SHA-256-checksum', () => {
   const fs = require('node:fs');
   const path = require('node:path');
@@ -830,9 +837,11 @@ test('Motion Studio can batch-relink missing proxies by exact filename without g
   assert.match(html, /id="video-proxy-files-relink"[^>]*multiple/);
   assert.match(html, /id="video-proxy-relink-batch"/);
   assert.match(motion, /function linkProxyFile\(file, assetId = selectedProxyAssetId\)/);
-  assert.match(motion, /asset\.proxyName\.toLocaleLowerCase\(\) === file\.name\.toLocaleLowerCase\(\)/);
-  assert.match(motion, /matches\.length === 1/);
-  assert.match(motion, /matches\.length > 1/);
+  assert.match(motion, /const normalize = value => String\(value \|\| ''\)\.toLocaleLowerCase\(\)/);
+  assert.match(motion, /fileCounts\.get\(name\)/);
+  assert.match(motion, /assetCounts\.get\(name\)/);
+  assert.match(motion, /if \(match\) \{/);
+  assert.match(motion, /dubbele bestandsnamen gevonden bij proxybestanden of projectmedia/);
 });
 
 
