@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.6 (offline MP4-export in verificatie))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.7 (proxy-generatie in verificatie))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -90,7 +90,8 @@
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
 
 ### Volgende fase — proxies en multicam
-- Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.6 biedt handmatig koppelen en proxy-preview.
+- Automatische FFmpeg-proxygeneratie op 540p/720p vanuit de mediabibliotheek, opeenvolgende batch, voortgang, annuleren, unieke outputbestanden en automatische koppeling aan het origineel — toegevoegd in beta.7.
+- Volgende proxyfase: proxy-locaties projectbewust vastleggen, detectie/herstel van ontbrekende proxy's bij heropenen, opnieuw genereren of verwijderen vanuit één beheerweergave en veilig hervatten van onderbroken batches.
 - Automatische synchronisatie van multicambronnen via audiowaveform/tijdcode, live multiview met angle switching, audio-angle routing en robuuste source-offset validatie; beta.5 heeft handmatige offsets en cut-to-angle.
 - Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
 
