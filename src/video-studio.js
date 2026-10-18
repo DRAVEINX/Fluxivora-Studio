@@ -363,25 +363,31 @@
     return state.playhead >= c.start && state.playhead < c.start + clipLength(c);
   }
   function animatedValue(c, key, baseValue) {
-    const frames = Array.isArray(c.keyframes) ? c.keyframes.filter(f => Number.isFinite(f.time) && Number.isFinite(f[key])).slice().sort((a, b) => a.time - b.time) : [];
-    if (!frames.length) return Number(baseValue) || 0;
+    const frames = Array.isArray(c.keyframes) ? c.keyframes : [];
     const t = Math.max(0, state.playhead - c.start);
-    if (t <= frames[0].time) return frames[0][key];
-    if (t >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
-    const easing = value => {
-      const v = Math.max(0, Math.min(1, value));
-      if (value === 'hold') return 0;
-      return v;
-    };
+    const bezierValue = window.FluxivoraKeyframeCurves && typeof window.FluxivoraKeyframeCurves.bezierValue === 'function'
+      ? (left, right, property, progress) => window.FluxivoraKeyframeCurves.bezierValue(left, right, property, progress)
+      : null;
+    // Keep one shared keyframe path for preview and offline rendering.
+    // The browser-safe runtime mirrors the legacy seconds-based keyframe format.
+    if (window.FluxivoraMotionFxRuntime?.interpolateProperty) {
+      return window.FluxivoraMotionFxRuntime.interpolateProperty(frames, key, t, Number(baseValue) || 0, { bezierValue });
+    }
+    const validFrames = frames.filter(f => Number.isFinite(f.time) && Number.isFinite(f[key])).slice().sort((a, b) => a.time - b.time);
+    if (!validFrames.length) return Number(baseValue) || 0;
+    if (t <= validFrames[0].time) return validFrames[0][key];
+    if (t >= validFrames[validFrames.length - 1].time) return validFrames[validFrames.length - 1][key];
     const curves = { linear: v => v, easeIn: v => v * v, easeOut: v => 1 - Math.pow(1 - v, 2), easeInOut: v => v < .5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2, hold: () => 0 };
-    for (let i = 1; i < frames.length; i++) {
-      const left = frames[i - 1], right = frames[i];
+    for (let i = 1; i < validFrames.length; i++) {
+      const left = validFrames[i - 1], right = validFrames[i];
       if (t <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
         const raw = (t - left.time) / span;
-        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, raw);
-        const alpha = (curves[right.ease] || curves.linear)(raw);
-        return left[key] + (right[key] - left[key]) * alpha;
+        if (right.ease === 'bezier' && bezierValue) {
+          const value = bezierValue(left, right, key, raw);
+          if (Number.isFinite(value)) return value;
+        }
+        return left[key] + (right[key] - left[key]) * (curves[right.ease] || curves.linear)(raw);
       }
     }
     return Number(baseValue) || 0;
