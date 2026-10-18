@@ -81,3 +81,9 @@ test('dupliceren maakt nieuwe laag-ID’s en behoudt ouder-kindrelaties en anima
   assert.deepEqual(copy.layers[1].keyframes, composition.layers[1].keyframes);
   assert.deepEqual(MotionFX.validateComposition(copy), []);
 });
+
+test('parser weigert expliciet onbekende projectformaten en versies', () => {
+  const composition = MotionFX.createComposition();
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, format: 'other' })), /projectformaat/);
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, version: 999 })), /projectversie/);
+});
