@@ -9,6 +9,7 @@
 - De proxy wordt direct gekoppeld aan de originele bron en kan worden gebruikt met de bestaande Proxy preview-schakelaar. De originele media wordt niet vervangen.
 - Kies één uitvoermap voor de gemaakte MP4-proxybestanden; bestaande bestandsnamen worden niet overschreven.
 - De gegenereerde preview wordt chunkgewijs ingelezen zodat de volledige MP4 niet als één IPC-bericht hoeft te worden verstuurd.
+- Ontbrekende projectmedia kunnen in bulk opnieuw worden gekoppeld: selecteer de bronbestanden samen en Fluxivora koppelt op exacte bestandsnaam én media-type. Bijpassende clips en bronmetadata worden bijgewerkt; niet-gevonden bestanden blijven als ontbrekend gemarkeerd.
 - Limieten: bronbestand maximaal 20 GB en gegenereerde proxy maximaal 350 MB. Projecten bewaren de proxybestandsnaam, niet de proxy-inhoud; na heropenen kan het proxybestand opnieuw gekoppeld moeten worden.
 - Motion Studio ondersteunt nu kubische Bézier-keyframecurves: schakel de Bézier-interpolatie in en sleep de uit-/in-handles in de curve-editor om het verloop nauwkeurig te sturen. Dezelfde curve-evaluator wordt gebruikt in de preview en offline MP4-export.
 
