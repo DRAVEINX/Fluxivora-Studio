@@ -643,6 +643,12 @@
       if (safeArea > 0 && size.width > safeArea * 2 && size.height > safeArea * 2) {
         overlay.push(svgEl('rect', { x: safeArea, y: safeArea, width: size.width - safeArea * 2, height: size.height - safeArea * 2, fill: 'none', stroke: '#16a34a', 'stroke-dasharray': '3 5', 'stroke-width': 1.5, 'pointer-events': 'none', 'data-page-safe-area-guide': 'true' }));
       }
+      const baselineGrid = Math.max(0, Math.min(100, Number(layout.pageBaselineGrid ?? 24) || 0));
+      if (baselineGrid > 0) {
+        let baselinePath = '';
+        for (let y = baselineGrid; y < size.height; y += baselineGrid) baselinePath += `M 0 ${y} H ${size.width} `;
+        overlay.push(svgEl('path', { d: baselinePath, fill: 'none', stroke: '#64748b', 'stroke-opacity': '0.24', 'stroke-width': 1, 'pointer-events': 'none', 'data-page-baseline-grid': String(baselineGrid) }));
+      }
       if (overlay.length) svg.append(...overlay);
     }
     const baseObjects = workspace === 'vector' ? state.project.vector.objects : size.objects;
@@ -1404,6 +1410,7 @@
     const margin = Number($('page-margin-input').value);
     const columns = Number($('page-columns-select').value);
     const safeArea = Number($('page-safe-area-input').value);
+    const baselineGrid = Number($('page-baseline-grid-input').value);
     const page = state.project.layout.pages[state.project.layout.currentPage];
     if (!Number.isFinite(margin) || margin < 0 || margin > 300 || margin * 2 >= Math.min(page.width, page.height)) {
       notify('Kies een marge tussen 0 en 300 px die kleiner is dan de halve paginazijde.', 'error');
@@ -1416,10 +1423,16 @@
       $('page-safe-area-input').value = String(state.project.layout.pageSafeArea ?? 60);
       return;
     }
+    if (!Number.isInteger(baselineGrid) || baselineGrid < 0 || baselineGrid > 100) {
+      notify('Kies een basislijnraster van 0 tot 100 px (0 schakelt het raster uit).', 'error');
+      $('page-baseline-grid-input').value = String(state.project.layout.pageBaselineGrid ?? 24);
+      return;
+    }
     checkpoint();
     state.project.layout.pageMargins = margin;
     state.project.layout.pageColumns = columns;
     state.project.layout.pageSafeArea = safeArea;
+    state.project.layout.pageBaselineGrid = baselineGrid;
     markDirty('Pagina-hulplijnen gewijzigd');
     renderAll();
     notify('Marges en kolomhulplijnen bijgewerkt. Hulplijnen worden niet afgedrukt.', 'success');
