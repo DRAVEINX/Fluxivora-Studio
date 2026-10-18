@@ -68,7 +68,7 @@ test('Motion FX layer evaluation returns animated values and active state', () =
   const middle = runtime.evaluateLayerAtTime(layer, 3);
   assert.equal(middle.active, true);
   assert.equal(middle.values.x, 10);
-  assert.equal(middle.values.opacity, 0.6);
+  assert.ok(Math.abs(middle.values.opacity - 0.6) < 1e-9);
   assert.equal(middle.values.scale, 1);
   assert.equal(runtime.evaluateLayerAtTime(layer, 6).active, false);
 });
