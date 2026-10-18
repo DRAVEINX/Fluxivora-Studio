@@ -1256,7 +1256,7 @@
         scale: Math.max(.1, Math.min(3, Number(c.scale) || 1)),
         x: Math.max(-100, Math.min(100, Number(c.x) || 0)), y: Math.max(-100, Math.min(100, Number(c.y) || 0)),
         filter: String(c.filter || 'normal'), fit: String(c.fit || 'contain'),
-        effects: Array.isArray(c.effects) ? c.effects.slice(0, 30).filter(e => e && ['grayscale','sepia','blur','soften','boost','desaturate'].includes(e.type)).map(e => ({ id: String(e.id || uid('effect')), type: e.type, enabled: e.enabled !== false })) : [],
+        effects: Array.isArray(c.effects) ? c.effects.slice(0, 30).filter(e => e && ['grayscale','sepia','blur','soften','boost','desaturate','invert','hue','brighten','crush'].includes(e.type)).map(e => ({ id: String(e.id || uid('effect')), type: e.type, enabled: e.enabled !== false })) : [],
         colorAdjustments: {
           exposure: Math.max(-2, Math.min(2, Number(c.colorAdjustments?.exposure) || 0)),
           contrast: Math.max(.5, Math.min(2, c.colorAdjustments?.contrast == null ? 1 : Number(c.colorAdjustments.contrast))),
