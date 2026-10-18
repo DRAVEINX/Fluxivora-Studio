@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const Sync = require('../src/multicam-audio-sync.js');
 
 test('audio envelope groups samples into stable RMS windows', () => {
-  const envelope = Sync.makeEnvelope([1, 1, 0, 0], 1000, 20);
+  const envelope = Sync.makeEnvelope([...Array(20).fill(1), ...Array(20).fill(0)], 1000, 20);
   assert.equal(envelope.length, 2);
   assert.equal(envelope[0], 1);
   assert.equal(envelope[1], 0);
