@@ -750,8 +750,10 @@ test('Motion Studio houdt clipmarkeringen binnen de grenzen van opnieuw gekoppel
   const relinkStart = motion.indexOf('function applyRelink(file)');
   const nextFunction = motion.indexOf('\n  function ', relinkStart + 1);
   const relink = motion.slice(relinkStart, nextFunction);
-  assert.ok((relink.match(/clampRelinkedClipRange\(clip,/g) || []).length >= 3,
-    'Zowel directe bronkoppeling als video- en audiometadata moeten veilige clipgrenzen toepassen');
+  assert.match(relink, /clampRelinkedClipRange\(clip, asset\.duration \|\| clip\.duration\)/,
+    'Directe bronkoppeling moet veilige clipgrenzen toepassen');
+  assert.equal((relink.match(/matches\.forEach\(clip => clampRelinkedClipRange\(clip, probe\.duration\)\)/g) || []).length, 2,
+    'Zowel video- als audiometadata moeten veilige clipgrenzen toepassen');
 });
 
 test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wordt gekoppeld', () => {
