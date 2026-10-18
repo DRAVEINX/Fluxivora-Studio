@@ -916,6 +916,7 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(video, /ctx\.clip\(primary\)/);
   assert.match(video, /ctx\.clip\(outsideSecondary, 'evenodd'\)/);
   assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
+  assert.match(video, /else if \(c\.maskOperation === 'xor'\) \{[\s\S]*?exclusive\.addPath\(primary\); exclusive\.addPath\(secondary\);[\s\S]*?ctx\.clip\(exclusive, 'evenodd'\);/);
   assert.match(video, /maskType: \['none','rectangle','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
   assert.match(video, /binding\('video-mask-size', 'maskSize'/);
   assert.match(video, /strokeColor: \/\^#\[0-9a-f\]\{6\}\$\/i\.test\(c\.strokeColor \|\| ''\)/);
@@ -981,7 +982,7 @@ test('Motion Studio persists and renders two-mask combination operations', () =>
   for (const key of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) assert.match(video, new RegExp(key));
   assert.match(video, /maskPath\(c\.maskType,[^;]+c\.maskX, c\.maskY\)/);
   assert.match(video, /maskPath\(secondaryType,[^;]+c\.maskSecondaryX, c\.maskSecondaryY\)/);
-  for (const operation of ['add', 'subtract', 'intersect']) assert.ok(html.includes('value="' + operation + '"'));
+  for (const operation of ['add', 'subtract', 'intersect', 'xor']) assert.ok(html.includes('value="' + operation + '"'));
   assert.match(video, /maskSecondaryType/);
   assert.match(video, /maskSecondarySize/);
   assert.match(video, /maskOperation/);
