@@ -215,3 +215,6 @@
 #video-export-webm{white-space:nowrap}
 @media(max-width:1120px){.video-render-progress{gap:9px;padding:8px 10px}.video-render-progress-copy{min-width:135px}.video-render-progress-copy strong{font-size:9px}.video-render-progress-copy small{font-size:7px}}
 @media(max-width:900px){.video-render-progress{flex-wrap:wrap}.video-render-progress-copy{flex:1}.video-render-progress progress{order:3;flex-basis:100%}}
+
+#video-screen.offline-rendering .video-workspace,#video-screen.offline-rendering>header{pointer-events:none;opacity:.68;filter:saturate(.7)}
+#video-screen.offline-rendering .video-render-progress{pointer-events:auto;opacity:1;filter:none}
