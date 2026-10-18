@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const fs = require('node:fs/promises');
+const fsConstants = require('node:fs').constants;
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
@@ -66,7 +67,7 @@ async function abortVideoProxy(session) {
   try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
 }
 
-async function uniqueProxyOutputPath(directoryPath, sourceName, preset) {
+async function commitUniqueProxyOutput(partialPath, directoryPath, sourceName, preset) {
   const parsed = path.parse(String(sourceName || 'Fluxivora-video'));
   const stem = safeFileStem(parsed.name || sourceName || 'Fluxivora-video').slice(0, 72);
   const base = stem + '.proxy-' + preset;
@@ -74,9 +75,14 @@ async function uniqueProxyOutputPath(directoryPath, sourceName, preset) {
     const filename = base + (index === 1 ? '' : '-' + index) + '.mp4';
     const candidate = path.join(directoryPath, filename);
     try {
-      await fs.access(candidate);
+      // COPYFILE_EXCL makes choosing the destination atomic: concurrent exports
+      // can never silently replace a proxy that another job already created.
+      await fs.copyFile(partialPath, candidate, fsConstants.COPYFILE_EXCL);
+      await fs.rm(partialPath, { force: true });
+      return { filePath: candidate, filename };
     } catch (error) {
-      if (error?.code === 'ENOENT') return { filePath: candidate, filename };
+      if (error?.code === 'EEXIST') continue;
+      try { await fs.rm(candidate, { force: true }); } catch (_) {}
       throw error;
     }
   }
@@ -548,8 +554,8 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
     const ffmpegPath = resolvedFfmpegPath();
     await fs.access(ffmpegPath);
     if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
-    const { filePath: outputPath, filename } = await uniqueProxyOutputPath(directoryToken.directoryPath, settings.sourceName, settings.preset);
-    session.outputPath = outputPath;
+    // Write to a unique temporary file first. The final name is claimed atomically
+    // only after FFmpeg has finished, so concurrent jobs cannot overwrite one another.
     session.partialPath = path.join(directoryToken.directoryPath, '.fluxivora-proxy-' + crypto.randomUUID() + '.partial.mp4');
     if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
     const args = buildProxyArgs({ inputPath: sourcePath, outputPath: session.partialPath, preset: settings.preset });
@@ -601,7 +607,10 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
     if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
     if (!stat.isFile() || stat.size < 1024) throw new Error('FFmpeg heeft geen geldige proxy geschreven.');
     if (stat.size > MAX_PROXY_OUTPUT_BYTES) throw new Error('De proxy is groter dan de toegestane limiet van 350 MB. Kies een lagere resolutie.');
-    await fs.rename(session.partialPath, session.outputPath);
+    const committed = await commitUniqueProxyOutput(
+      session.partialPath, directoryToken.directoryPath, settings.sourceName, settings.preset
+    );
+    session.outputPath = committed.filePath;
     session.partialPath = null;
     cleanupExpiredProxyReadTokens();
     const readToken = crypto.randomUUID();
@@ -614,7 +623,7 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
     sendProxyProgress(session, 100, settings.durationSeconds);
     return {
       readToken,
-      name: filename,
+      name: committed.filename,
       size: stat.size,
       preset: settings.preset,
       durationSeconds: settings.durationSeconds
