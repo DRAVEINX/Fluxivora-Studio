@@ -35,8 +35,13 @@
   const timelineEnd = () => state.clips.reduce((m, c) => Math.max(m, c.start + clipLength(c)), 0);
   const tc = value => {
     const n = Math.max(0, Number(value) || 0);
+    const timecode = window.FluxivoraTimecode;
+    if (timecode?.framesToTimecode) {
+      const frames = Math.min(timecode.MAX_FRAMES, Math.round(n * SEQUENCE_FPS));
+      return timecode.framesToTimecode(frames);
+    }
     const p = x => String(x).padStart(2, '0');
-    return p(Math.floor(n / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * SEQUENCE_FPS));
+    return p(Math.floor(n / 3600)) + ':' + p(Math.floor((n % 3600) / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * SEQUENCE_FPS));
   };
   function notice(message, kind) {
     const stack = $('toast-stack');
