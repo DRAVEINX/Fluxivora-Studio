@@ -865,3 +865,13 @@ test('Pixel Lab has a non-destructive blur adjustment included in canvas and ima
   assert.match(app, /blur\(\$\{Math\.max\(0, Math\.min\(20, Number\(doc\.blur\) \|\| 0\)\)\}px\)/);
   assert.match(app, /blur: 0/);
 });
+
+
+test('Vector Forge and Page Studio can close and reopen editable Bézier paths', () => {
+  assert.match(html, /id="toggle-bezier-closed-button"/);
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  assert.match(app, /selected\.closed \? 'Pad openen' : 'Pad sluiten'/);
+  assert.match(app, /obj\.closed \? ' Z' : ''/);
+  assert.match(app, /selected\.closed = !selected\.closed/);
+  assert.match(app, /Bézier-pad gesloten/);
+});
