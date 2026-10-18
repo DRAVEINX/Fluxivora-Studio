@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+
 const FPS = 25;
 const SAMPLE_RATE = 48000;
 const MAX_DURATION_SECONDS = 15 * 60;
