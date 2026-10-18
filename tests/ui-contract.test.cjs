@@ -951,6 +951,20 @@ test('Motion Studio houdt proxy-preview gescheiden van de uiteindelijke MP4-expo
     'Zonder proxy-preview moet de preview terugvallen op de originele bron');
 });
 
+test('Motion Studio weigert zowel MP4- als WebM-export bij ontbrekende media of actieve proxy-preview', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const signature of ['async function exportOfflineMp4()', 'async function exportRealtimeWebm()']) {
+    const start = video.indexOf(signature);
+    assert.ok(start >= 0, 'Exportfunctie ontbreekt: ' + signature);
+    const next = video.indexOf('async function ', start + signature.length);
+    const fn = video.slice(start, next > start ? next : video.length);
+    assert.match(fn, /hasProxyPreview\?\.\(\)/,
+      'Export moet actieve proxy-preview controleren: ' + signature);
+    assert.match(fn, /missing[^;]{0,120}Koppel alle ontbrekende bronbestanden voordat je exporteert|Koppel alle ontbrekende bronbestanden voordat je exporteert/,
+      'Export moet ontbrekende bronmedia weigeren: ' + signature);
+  }
+});
+
 test('Motion Studio heropent bron- en proxybestanden expliciet als ontbrekend zonder tijdelijke URLs', () => {
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const start = video.indexOf('async function openSession(file)');
