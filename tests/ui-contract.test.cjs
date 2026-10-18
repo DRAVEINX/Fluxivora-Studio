@@ -913,7 +913,9 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(html, /id="video-shape-stroke-width"/);
   assert.match(html, /id="video-mask-type"/);
   assert.match(html, /id="video-mask-size"/);
-  assert.match(video, /ctx\.clip\(\)/);
+  assert.match(video, /ctx\.clip\(primary\)/);
+  assert.match(video, /ctx\.clip\(combined, 'evenodd'\)/);
+  assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
   assert.match(video, /maskType: \['none','rectangle','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
   assert.match(video, /binding\('video-mask-size', 'maskSize'/);
   assert.match(video, /strokeColor: \/\^#\[0-9a-f\]\{6\}\$\/i\.test\(c\.strokeColor \|\| ''\)/);
