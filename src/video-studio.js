@@ -811,6 +811,7 @@
     $('video-opacity').value = String(c.opacity == null ? 1 : c.opacity);
     $('video-volume').value = String(c.volume == null ? 1 : c.volume);
     $('video-scale').value = String(c.scale || 1);
+    $('video-rotation').value = String(c.rotation || 0);
     $('video-x').value = String(c.x || 0);
     $('video-y').value = String(c.y || 0);
     $('video-keyframe-count').textContent = (c.keyframes || []).length + ' keyframes';
@@ -1843,6 +1844,7 @@
     binding('video-opacity', 'opacity', v => Math.max(0, Math.min(1, Number(v) || 0)));
     binding('video-volume', 'volume', v => Math.max(0, Math.min(2, Number(v) || 0)));
     binding('video-scale', 'scale', v => Math.max(0.1, Math.min(3, Number(v) || 1)));
+    binding('video-rotation', 'rotation', v => Math.max(-3600, Math.min(3600, Number(v) || 0)));
     binding('video-x', 'x', v => Math.max(-100, Math.min(100, Number(v) || 0)));
     binding('video-y', 'y', v => Math.max(-100, Math.min(100, Number(v) || 0)));
     binding('video-filter', 'filter', String);
