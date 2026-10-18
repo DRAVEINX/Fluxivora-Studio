@@ -218,7 +218,7 @@
                 <div class="video-property-grid"><label class="video-field">X-POSITIE (%)<input id="video-x" type="number" min="-100" max="100" step="1" /></label><label class="video-field">Y-POSITIE (%)<input id="video-y" type="number" min="-100" max="100" step="1" /></label></div>
                 <div class="video-property-grid"><label class="video-field">SCHAAL <input id="video-scale" type="number" min="0.1" max="3" step="0.05" /></label><label class="video-field">DEKKING <input id="video-opacity" type="range" min="0" max="1" step="0.05" /></label></div>
                 <div class="video-keyframe-actions"><button id="video-add-keyframe" class="button subtle compact">◇ Keyframe op playhead</button><button id="video-clear-keyframes" class="button subtle compact">Wissen</button></div>
-                <div class="video-keyframe-bottom"><small id="video-keyframe-count" class="video-keyframe-count">0 keyframes</small><label class="video-field">INTERPOLATIE <select id="video-keyframe-easing"><option value="linear">Lineair</option><option value="easeIn">Ease in</option><option value="easeOut">Ease out</option><option value="easeInOut" selected>Ease in/out</option><option value="hold">Vasthouden / hold</option></select></label></div>
+                <div class="video-keyframe-bottom"><small id="video-keyframe-count" class="video-keyframe-count">0 keyframes</small><label class="video-field">INTERPOLATIE <select id="video-keyframe-easing"><option value="linear">Lineair</option><option value="easeIn">Ease in</option><option value="easeOut">Ease out</option><option value="easeInOut" selected>Ease in/out</option><option value="bezier">Bézier-handles</option><option value="hold">Vasthouden / hold</option></select></label></div>
                 <div class="video-curve-section">
                   <div class="video-curve-heading"><strong>KEYFRAME-CURVE</strong><label class="video-field">EIGENSCHAP <select id="video-curve-property"><option value="opacity">Dekking</option><option value="scale">Schaal</option><option value="x">X-positie</option><option value="y">Y-positie</option><option value="volume">Volume</option></select></label></div>
                   <canvas id="video-curve-canvas" width="600" height="150" tabindex="0" role="img" aria-label="Keyframe curve editor. Sleep een punt om tijd en waarde aan te passen."></canvas>
@@ -262,7 +262,7 @@
       </section>
 
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.6</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.7</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>
@@ -270,6 +270,7 @@
   <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-card"><button id="modal-close" class="modal-close" aria-label="Sluiten">×</button><div class="modal-kicker">FLUXIVORA STUDIO</div><h2 id="modal-title">Nieuw ontwerp</h2><p id="modal-description" class="modal-description">Kies een werkruimte en start met creëren.</p><div id="modal-body"></div><div class="modal-actions"><button id="modal-cancel" class="button subtle">Annuleren</button><button id="modal-confirm" class="button primary">Doorgaan</button></div></div></div>
   <script src="core.js"></script>
   <script src="app.js"></script>
+  <script src="keyframe-curves.js"></script>
   <script src="video-studio.js"></script>
   <script src="motion-pro.js"></script>
 </body>
