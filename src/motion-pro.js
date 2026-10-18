@@ -1031,7 +1031,33 @@ void main() {
       const plot = { left: 34, right: 12, top: 12, bottom: 22 };
       const plotW = canvas.width - plot.left - plot.right, plotH = canvas.height - plot.top - plot.bottom;
       const limits = curveLimits[property];
-      const frames = Array.isArray(clip.keyframes) ? clip.keyframes : [];
+      const frames = Array.isArray(clip.keyframes) ? clip.keyframes.slice().sort((a,b)=>a.time-b.time) : [];
+      let nearestHandle = null, handleDistance = 13;
+      if (window.FluxivoraKeyframeCurves) {
+        for (let i = 1; i < frames.length; i++) {
+          const left = frames[i - 1], right = frames[i];
+          if (right.ease !== 'bezier') continue;
+          const controls = window.FluxivoraKeyframeCurves.controlPoints(left, right, property);
+          const points = [
+            { frame: left, other: right, side: 'out', x: plot.left + clamp(controls.x1 / durationForCurve, 0, 1) * plotW, y: plot.top + (1 - (clamp(controls.y1, limits[0], limits[1]) - limits[0]) / (limits[1] - limits[0])) * plotH },
+            { frame: right, other: left, side: 'in', x: plot.left + clamp(controls.x2 / durationForCurve, 0, 1) * plotW, y: plot.top + (1 - (clamp(controls.y2, limits[0], limits[1]) - limits[0]) / (limits[1] - limits[0])) * plotH }
+          ];
+          points.forEach(point => {
+            const distance = Math.hypot(point.x - position.x, point.y - position.y);
+            if (distance < handleDistance) { nearestHandle = point; handleDistance = distance; }
+          });
+        }
+      }
+      if (nearestHandle) {
+        event.preventDefault();
+        api.pushHistory();
+        draggedCurveFrame = {
+          kind: 'handle', clip, frame: nearestHandle.frame, other: nearestHandle.other,
+          side: nearestHandle.side, property, limits, plot, plotW, plotH, duration: durationForCurve
+        };
+        canvas.setPointerCapture?.(event.pointerId);
+        return;
+      }
       let nearest = null, distance = 14;
       frames.forEach(frame => {
         if (!Number.isFinite(frame.time) || !Number.isFinite(frame[property])) return;
@@ -1043,7 +1069,7 @@ void main() {
       if (!nearest) return;
       event.preventDefault();
       api.pushHistory();
-      draggedCurveFrame = { clip, frame: nearest, property, limits, plot, plotW, plotH, duration: durationForCurve };
+      draggedCurveFrame = { kind: 'point', clip, frame: nearest, property, limits, plot, plotW, plotH, duration: durationForCurve };
       canvas.setPointerCapture?.(event.pointerId);
     });
     canvas.addEventListener('pointermove', event => {
@@ -1052,9 +1078,27 @@ void main() {
       const point = curvePointerPosition(event, canvas);
       const x = clamp((point.x - drag.plot.left) / drag.plotW, 0, 1);
       const y = clamp((point.y - drag.plot.top) / drag.plotH, 0, 1);
-      drag.frame.time = x * drag.duration;
-      drag.frame[drag.property] = drag.limits[0] + (1 - y) * (drag.limits[1] - drag.limits[0]);
-      drag.clip.keyframes.sort((a,b)=>a.time-b.time);
+      const value = drag.limits[0] + (1 - y) * (drag.limits[1] - drag.limits[0]);
+      if (drag.kind === 'point') {
+        drag.frame.time = x * drag.duration;
+        drag.frame[drag.property] = value;
+        drag.clip.keyframes.sort((a,b)=>a.time-b.time);
+      } else {
+        const frame = drag.frame, other = drag.other;
+        if (drag.side === 'out') {
+          const span = Math.max(0.0001, other.time - frame.time);
+          const fraction = clamp((x * drag.duration - frame.time) / span, 0.02, 0.48);
+          frame.outHandle = frame.outHandle && typeof frame.outHandle === 'object' ? frame.outHandle : {};
+          frame.outHandle.time = fraction;
+          frame.outHandle[drag.property] = value - frame[drag.property];
+        } else {
+          const span = Math.max(0.0001, frame.time - other.time);
+          const fraction = clamp((frame.time - x * drag.duration) / span, 0.02, 0.48);
+          frame.inHandle = frame.inHandle && typeof frame.inHandle === 'object' ? frame.inHandle : {};
+          frame.inHandle.time = fraction;
+          frame.inHandle[drag.property] = value - frame[drag.property];
+        }
+      }
       event.preventDefault();
       api.renderPreview();
       renderCurveEditor(true);
@@ -1242,7 +1286,9 @@ void main() {
     if (!clip || clip.type === 'audio') return;
     api.pushHistory();
     clip.keyframeEase = event.target.value;
+    (clip.keyframes || []).forEach(frame => { frame.ease = clip.keyframeEase; });
     api.refresh();
+    api.renderPreview();
   });
   window.addEventListener('fluxivora:asset-imported', event => registerImportedClip(event.detail?.clipId));
   window.addEventListener('fluxivora:session-opened', () => {
