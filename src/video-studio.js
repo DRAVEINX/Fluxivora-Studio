@@ -488,18 +488,20 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 14 * (H / 1080);
     if (['rectangle','ellipse'].includes(c.maskType)) {
-      const maskPath = (type, percent) => {
+      const maskPath = (type, percent, offsetX, offsetY) => {
         const scale = Math.max(10, Math.min(100, Number(percent) || 90)) / 100;
+        const centerX = W / 2 + Math.max(-50, Math.min(50, Number(offsetX) || 0)) * W / 100;
+        const centerY = H / 2 + Math.max(-50, Math.min(50, Number(offsetY) || 0)) * H / 100;
         const path = new Path2D();
-        if (type === 'ellipse') path.ellipse(W / 2, H / 2, W * scale / 2, H * scale / 2, 0, 0, Math.PI * 2);
-        else path.rect(W * (1 - scale) / 2, H * (1 - scale) / 2, W * scale, H * scale);
+        if (type === 'ellipse') path.ellipse(centerX, centerY, W * scale / 2, H * scale / 2, 0, 0, Math.PI * 2);
+        else path.rect(centerX - W * scale / 2, centerY - H * scale / 2, W * scale, H * scale);
         return path;
       };
-      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90));
+      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90), c.maskX, c.maskY);
       const secondaryType = c.maskSecondaryType;
       if (!['rectangle','ellipse'].includes(secondaryType)) ctx.clip(primary);
       else {
-        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60));
+        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), c.maskSecondaryX, c.maskSecondaryY);
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'subtract') {
           const combined = new Path2D();
@@ -737,8 +739,12 @@
     $('video-shape-stroke-width').value = String(Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)));
     $('video-mask-type').value = ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none';
     $('video-mask-size').value = String(Math.max(10, Math.min(100, Number(c.maskSize) || 90)));
+    $('video-mask-x').value = String(Math.max(-50, Math.min(50, Number(c.maskX) || 0)));
+    $('video-mask-y').value = String(Math.max(-50, Math.min(50, Number(c.maskY) || 0)));
     $('video-mask-secondary').value = ['none','rectangle','ellipse'].includes(c.maskSecondaryType) ? c.maskSecondaryType : 'none';
     $('video-mask-secondary-size').value = String(Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)));
+    $('video-mask-secondary-x').value = String(Math.max(-50, Math.min(50, Number(c.maskSecondaryX) || 0)));
+    $('video-mask-secondary-y').value = String(Math.max(-50, Math.min(50, Number(c.maskSecondaryY) || 0)));
     $('video-mask-operation').value = ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add';
     $('video-shape-controls').classList.toggle('hidden', c.type !== 'title' || !['rectangle','ellipse'].includes(c.shapeType));
     $('video-title-controls').classList.toggle('hidden', c.type !== 'title');
@@ -1355,8 +1361,12 @@
         strokeWidth: Math.max(0, Math.min(30, Number(c.strokeWidth) || 0)),
         maskType: ['none','rectangle','ellipse'].includes(c.maskType) ? c.maskType : 'none',
         maskSize: Math.max(10, Math.min(100, Number(c.maskSize) || 90)),
+        maskX: Math.max(-50, Math.min(50, Number(c.maskX) || 0)),
+        maskY: Math.max(-50, Math.min(50, Number(c.maskY) || 0)),
         maskSecondaryType: ['none','rectangle','ellipse'].includes(c.maskSecondaryType) ? c.maskSecondaryType : 'none',
         maskSecondarySize: Math.max(10, Math.min(100, Number(c.maskSecondarySize) || 60)),
+        maskSecondaryX: Math.max(-50, Math.min(50, Number(c.maskSecondaryX) || 0)),
+        maskSecondaryY: Math.max(-50, Math.min(50, Number(c.maskSecondaryY) || 0)),
         maskOperation: ['add','subtract','intersect'].includes(c.maskOperation) ? c.maskOperation : 'add',
         url: null, file: null, mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: c.type !== 'title'
       })).map(c => {
@@ -1516,8 +1526,12 @@
     binding('video-shape-stroke-width', 'strokeWidth', v => Math.max(0, Math.min(30, Number(v) || 0)));
     binding('video-mask-type', 'maskType', v => ['none','rectangle','ellipse'].includes(v) ? v : 'none');
     binding('video-mask-size', 'maskSize', v => Math.max(10, Math.min(100, Number(v) || 90)));
+    binding('video-mask-x', 'maskX', v => Math.max(-50, Math.min(50, Number(v) || 0)));
+    binding('video-mask-y', 'maskY', v => Math.max(-50, Math.min(50, Number(v) || 0)));
     binding('video-mask-secondary', 'maskSecondaryType', v => ['none','rectangle','ellipse'].includes(v) ? v : 'none');
     binding('video-mask-secondary-size', 'maskSecondarySize', v => Math.max(10, Math.min(100, Number(v) || 60)));
+    binding('video-mask-secondary-x', 'maskSecondaryX', v => Math.max(-50, Math.min(50, Number(v) || 0)));
+    binding('video-mask-secondary-y', 'maskSecondaryY', v => Math.max(-50, Math.min(50, Number(v) || 0)));
     binding('video-mask-operation', 'maskOperation', v => ['add','subtract','intersect'].includes(v) ? v : 'add');
   }
   function wire() {
