@@ -806,12 +806,20 @@ test('Motion Studio genereert proxies met batchbediening, voortgang en annuleren
   assert.match(motion, /window\.fluxivora\.createVideoProxyForFile/);
   assert.match(motion, /window\.fluxivora\.readVideoProxyChunk/);
   assert.match(motion, /onVideoProxyProgress/);
-  for (const route of ['video:choose-proxy-directory','video:create-proxy','video:cancel-proxy','video:read-proxy-chunk','video:release-proxy-read']) {
+  for (const route of ['video:choose-proxy-directory','video:create-proxy','video:analyze-multicam-audio','video:cancel-proxy','video:read-proxy-chunk','video:release-proxy-read']) {
     assert.ok(main.includes("ipcMain.handle('" + route + "'"), 'Ontbrekende proxy IPC-route: ' + route);
   }
-  for (const api of ['chooseVideoProxyDirectory','createVideoProxyForFile','cancelVideoProxy','readVideoProxyChunk','releaseVideoProxyRead','onVideoProxyProgress']) {
+  for (const api of ['chooseVideoProxyDirectory','createVideoProxyForFile','analyzeMulticamAudioForFile','cancelVideoProxy','readVideoProxyChunk','releaseVideoProxyRead','onVideoProxyProgress']) {
     assert.ok(preload.includes(api + ':'), 'Ontbrekende proxy preload-API: ' + api);
   }
+  assert.match(main, /'-ar', '1000', '-f', 's16le', 'pipe:1'/,
+    'Multicam audio moet lokaal via FFmpeg naar begrensde mono-PCM worden gedecodeerd');
+  assert.match(main, /totalBytes > 400000/,
+    'Multicam audio-IPC moet een harde uitvoerlimiet hebben');
+  assert.match(preload, /webUtils\.getPathForFile\(file\)/,
+    'Multicam audioanalyse moet een lokaal bestandspad ophalen zonder renderer Node-integratie');
+  assert.match(motion, /analyzeMulticamAudioForFile/,
+    'Multicam sync moet de lokale FFmpeg-decoder gebruiken in Electron');
   assert.match(preload, /webUtils\.getPathForFile\(file\)/);
   assert.match(main, /shell: false/);
   assert.match(main, /MAX_PROXY_OUTPUT_BYTES/);
