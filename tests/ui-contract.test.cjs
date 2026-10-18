@@ -909,6 +909,12 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(video, /shapeType = isEllipse \? 'ellipse' : 'rectangle'/);
   assert.match(video, /addShape\('ellipse'\)/);
   assert.match(video, /shapeType: \['rectangle','ellipse'\]\.includes\(c\.shapeType\) \? c\.shapeType : null/);
+  assert.match(html, /id="video-shape-stroke-color"/);
+  assert.match(html, /id="video-shape-stroke-width"/);
+  assert.match(video, /strokeColor: \/\^#\[0-9a-f\]\{6\}\$\/i\.test\(c\.strokeColor \|\| ''\)/);
+  assert.match(video, /strokeWidth: Math\.max\(0, Math\.min\(30, Number\(c\.strokeWidth\) \|\| 0\)\)/);
+  assert.match(video, /ctx\.strokeRect\(x - shapeW \/ 2, y - shapeH \/ 2, shapeW, shapeH\)/);
+  assert.match(video, /binding\('video-shape-stroke-width', 'strokeWidth'/);
   assert.match(video, /animatedValue\(c, 'scale'/);
   assert.match(video, /animatedValue\(c, 'opacity'/);
 });
