@@ -707,6 +707,9 @@ test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op
   assert.match(motion, /matches\.length > 1/);
   assert.match(motion, /const claimedAssetIds = new Set\(\)/);
   assert.match(motion, /claimedAssetIds\.has\(matches\[0\]\.id\)/);
+  assert.match(motion, /const candidateCounts = new Map\(\)/);
+  assert.match(motion, /candidateCounts\.get\(key\) > 1/);
+  assert.match(motion, /Never guess which file is correct when the user selected duplicate names/);
   assert.match(motion, /linkProxyFile\(file, matches\[0\]\.id, \{ silent: true \}\)/);
 });
 
