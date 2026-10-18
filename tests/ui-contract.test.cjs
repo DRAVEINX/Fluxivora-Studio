@@ -699,6 +699,7 @@ test('Motion Studio kan proxybestanden koppelen zonder de originele media te ver
 test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op unieke bestandsnaam', () => {
   const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   assert.match(html, /id="video-proxy-relink-all"/);
   assert.match(html, /id="video-proxy-relink-files" type="file" accept="video\/\*" multiple/);
   assert.match(motion, /function relinkKnownProxyFiles\(files\)/);
@@ -710,6 +711,9 @@ test('Motion Studio kan opgeslagen proxybestanden in batches opnieuw koppelen op
   assert.match(motion, /const candidateCounts = new Map\(\)/);
   assert.match(motion, /candidateCounts\.get\(key\) > 1/);
   assert.match(motion, /Never guess which file is correct when the user selected duplicate names/);
+  assert.match(motion, /asset\.proxySize\) === Number\(file\.size\)/, 'Proxy-herstel moet opgeslagen bestandsgrootte controleren wanneer beschikbaar');
+  assert.match(motion, /asset\.proxySize = Number\.isSafeInteger\(Number\(file\.size\)\)/);
+  assert.match(video, /proxySize: Number\.isSafeInteger\(Number\(a\.proxySize\)\)/, 'Proxy-bestandsgrootte moet in projectbestanden worden bewaard');
   assert.match(motion, /linkProxyFile\(file, matches\[0\]\.id, \{ silent: true \}\)/);
 });
 
