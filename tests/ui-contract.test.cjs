@@ -968,6 +968,10 @@ test('Motion Studio animates mask size through the keyframe curve editor', () =>
   assert.match(video, /animatedValue\(c, 'maskSize', c\.maskSize \|\| 90\)/);
   assert.match(motion, /maskSize: \[10, 100\]/);
   assert.match(motion, /maskSize: 'Maskergrootte'/);
+  assert.match(html, /<option value="maskSecondarySize">Tweede maskergrootte<\/option>/);
+  assert.match(motion, /maskSecondarySize: \[10, 100\]/);
+  assert.match(motion, /maskSecondarySize: 'Tweede maskergrootte'/);
+  assert.match(video, /animatedValue\(c, 'maskSecondarySize', c\.maskSecondarySize \|\| 60\)/);
 });
 
 
