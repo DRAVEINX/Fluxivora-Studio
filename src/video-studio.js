@@ -427,7 +427,7 @@
     };
     (clip && Array.isArray(clip.effects) ? clip.effects : []).filter(e => e && e.enabled !== false).forEach(e => {
       const render = effectMap[e.type];
-      if (render) parts.push(render(Math.max(0, Math.min(100, e.amount == null ? 100 : Number(e.amount))));
+      if (render) parts.push(render(Math.max(0, Math.min(100, e.amount == null ? 100 : Number(e.amount)))));
     });
     return parts.join(' ') || 'none';
   }
