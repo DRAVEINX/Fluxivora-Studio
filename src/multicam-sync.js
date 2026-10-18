@@ -35,6 +35,7 @@
 
     const maxLag = Math.min(maxLagSamples, reference.length - 4, candidate.length - 4);
     let best = { lagSamples: 0, confidence: -2 };
+    let hasValidCorrelation = false;
     for (let lag = -maxLag; lag <= maxLag; lag++) {
       const refStart = Math.max(0, -lag);
       const candStart = Math.max(0, lag);
@@ -56,9 +57,10 @@
       }
       if (varianceA <= 1e-12 || varianceB <= 1e-12) continue;
       const confidence = numerator / Math.sqrt(varianceA * varianceB);
+      hasValidCorrelation = true;
       if (confidence > best.confidence) best = { lagSamples: lag, confidence };
     }
-    if (best.confidence < 0) {
+    if (!hasValidCorrelation) {
       return { accepted: false, reason: 'insufficient-signal', lagSamples: 0, offsetSeconds: 0, confidence: 0 };
     }
     const confidence = Math.max(-1, Math.min(1, best.confidence));
