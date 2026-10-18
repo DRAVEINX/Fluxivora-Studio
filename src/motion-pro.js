@@ -825,6 +825,7 @@ void main() {
     $('video-proxy-batch').disabled = true;
     const preset = $('video-proxy-preset').value === '720p' ? '720p' : '540p';
     let succeeded = 0;
+    let wasCancelled = false;
     const failures = [];
     try {
       for (let index = 0; index < candidates.length; index++) {
@@ -841,6 +842,7 @@ void main() {
         }
       }
     } finally {
+      wasCancelled = proxyCancelRequested;
       proxyBatchRunning = false;
       activeProxyRequestId = null;
       $('video-proxy-cancel').classList.add('hidden');
@@ -850,7 +852,7 @@ void main() {
       renderMediaBin();
     }
     const message = (succeeded ? succeeded + (succeeded === 1 ? ' proxy gemaakt' : ' proxies gemaakt') : 'Geen proxy voltooid') +
-      (proxyCancelRequested ? ' · geannuleerd' : '') +
+      (wasCancelled ? ' · geannuleerd' : '') +
       (failures.length ? ' · ' + failures.length + ' mislukt' : '') + '.';
     if (failures.length) {
       const first = failures.slice(0, 2).join(' | ');
