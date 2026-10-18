@@ -69,3 +69,19 @@ test('onbekende preset en overschrijding van de limiet worden afgewezen', () => 
   }));
   assert.throws(() => Library.addPreset(library, sampleComposition(), 'Te veel'), /maximaal/);
 });
+
+test('Motion FX JSON-import/export is aangesloten op de bestaande editorinterface', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const root = path.join(__dirname, '..');
+  const html = fs.readFileSync(path.join(root, 'src', 'index.html'), 'utf8');
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  for (const id of ['motionfx-export-compositions', 'motionfx-import-compositions', 'motionfx-import-file']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend element: ' + id);
+  }
+  assert.match(video, /function exportMotionCompositions\(/);
+  assert.match(video, /async function importMotionCompositions\(/);
+  assert.match(video, /file\.size > 2 \* 1024 \* 1024/);
+  assert.match(video, /merged\.length > 30/);
+  assert.match(video, /motionfx-import-file.*change/);
+});
