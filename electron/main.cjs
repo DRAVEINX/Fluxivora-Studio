@@ -1,10 +1,10 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const fs = require('node:fs/promises');
-const fsConstants = require('node:fs').constants;
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const FFMPEG_PACKAGE_PATH = require('ffmpeg-static');
+const { commitUniqueProxyOutput } = require('./proxy-output.cjs');
 const {
   SAMPLE_RATE,
   MAX_STREAM_BYTES,
@@ -65,28 +65,6 @@ async function abortVideoProxy(session) {
     new Promise(resolve => setTimeout(resolve, 4000))
   ]);
   try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
-}
-
-async function commitUniqueProxyOutput(partialPath, directoryPath, sourceName, preset) {
-  const parsed = path.parse(String(sourceName || 'Fluxivora-video'));
-  const stem = safeFileStem(parsed.name || sourceName || 'Fluxivora-video').slice(0, 72);
-  const base = stem + '.proxy-' + preset;
-  for (let index = 1; index <= 1000; index++) {
-    const filename = base + (index === 1 ? '' : '-' + index) + '.mp4';
-    const candidate = path.join(directoryPath, filename);
-    try {
-      // COPYFILE_EXCL makes choosing the destination atomic: concurrent exports
-      // can never silently replace a proxy that another job already created.
-      await fs.copyFile(partialPath, candidate, fsConstants.COPYFILE_EXCL);
-      await fs.rm(partialPath, { force: true });
-      return { filePath: candidate, filename };
-    } catch (error) {
-      if (error?.code === 'EEXIST') continue;
-      try { await fs.rm(candidate, { force: true }); } catch (_) {}
-      throw error;
-    }
-  }
-  throw new Error('Er kunnen geen unieke proxybestandsnamen meer worden gemaakt in deze map.');
 }
 
 function cleanupExpiredProxyReadTokens() {
