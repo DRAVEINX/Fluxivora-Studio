@@ -677,7 +677,7 @@ ipcMain.handle('video:analyze-multicam-audio', async (event, payload = {}) => {
       if (code !== 0) return finish(new Error('FFmpeg kon geen audio uit deze video lezen' + (stderr ? ': ' + stderr.slice(-1000) : '.')));
       const pcm = Buffer.concat(chunks);
       if (pcm.length < 1600 || pcm.length % 2 !== 0) return finish(new Error('Deze video bevat geen bruikbare audiotrack of is te kort.'));
-      finish(null, { pcmBase64: pcm.toString('base64'), sampleRate: 1000, sampleCount: pcm.length / 2, truncated: sourceStat.size > 0 });
+      finish(null, { pcmBase64: pcm.toString('base64'), sampleRate: 1000, sampleCount: pcm.length / 2, truncated: pcm.length / 2 >= 180000 });
     });
   });
   if (event.sender.isDestroyed()) throw new Error('Het venster is gesloten.');
