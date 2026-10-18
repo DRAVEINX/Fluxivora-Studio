@@ -752,7 +752,7 @@ void main() {
 
   async function linkProxyFile(file, assetId = selectedProxyAssetId) {
     const asset = state.assets.find(item => item.id === assetId);
-    if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
+    if (!asset || asset.type !== 'video' || !isCompatibleMediaFile(file, 'video')) {
       api.notice('Kies een videobestand als proxy.');
       return;
     }
