@@ -737,6 +737,23 @@ test('Motion Studio koppelt geïmporteerde bestanden niet willekeurig aan ontbre
   assert.match(motion, /findUnambiguousMissingAsset\(detail\.type, String\(detail\.name \|\| file\.name\)\)/);
 });
 
+test('Motion Studio houdt clipmarkeringen binnen de grenzen van opnieuw gekoppelde bronmedia', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const start = motion.indexOf('function clampRelinkedClipRange(clip, duration)');
+  const end = motion.indexOf('\n  function applyRelink(file)', start);
+  assert.ok(start >= 0 && end > start, 'Veilige clipgrensfunctie ontbreekt');
+  const clamp = motion.slice(start, end);
+  assert.match(clamp, /clip\.in = Math\.max\(0, Math\.min\(Number\(clip\.in\) \|\| 0, safeDuration - minimumSpan\)\)/,
+    'In-markering moet binnen de bronduur blijven');
+  assert.match(clamp, /clip\.out = Math\.min\(safeDuration, Math\.max\(clip\.in \+ minimumSpan/,
+    'Uit-markering moet binnen de bronduur blijven, ook als de bron korter is');
+  const relinkStart = motion.indexOf('function applyRelink(file)');
+  const nextFunction = motion.indexOf('\n  function ', relinkStart + 1);
+  const relink = motion.slice(relinkStart, nextFunction);
+  assert.ok((relink.match(/clampRelinkedClipRange\(clip,/g) || []).length >= 3,
+    'Zowel directe bronkoppeling als video- en audiometadata moeten veilige clipgrenzen toepassen');
+});
+
 test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wordt gekoppeld', () => {
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   assert.match(motion, /const expectedDuration = Number\(asset\.duration\) \|\| 0/);
