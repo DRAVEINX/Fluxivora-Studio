@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','sourceName','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -180,7 +180,7 @@
       in: 0, out: duration || 5, speed: 1, volume: 1, opacity: 1, scale: 1, x: 0, y: 0,
       filter: 'normal', fit: 'contain', fadeIn: 0, fadeOut: 0, text: text || 'Jouw titel',
       fontSize: 72, color: '#ffffff', bold: true, keyframes: [], keyframeEase: 'easeInOut', effects: [],
-      colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 }, file: file || null, url: url || null,
+      colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 }, file: file || null, url: url || null, sourceName: file?.name || name || null,
       mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: type !== 'title'
     };
     if (type !== 'title' && url) { c.missing = false; createMedia(c); }
@@ -252,7 +252,7 @@
       const type = kind === 'audio' ? 'audio' : 'video';
       if (type === 'video' && !file.type.startsWith('video/')) { notice('Kies een geldig videobestand.'); continue; }
       if (type === 'audio' && !file.type.startsWith('audio/')) { notice('Kies een geldig audiobestand.'); continue; }
-      const missing = state.clips.find(c => c.missing && c.type === type && c.name.toLowerCase() === file.name.toLowerCase());
+      const missing = state.clips.find(c => c.missing && c.type === type && String(c.sourceName || c.name).toLowerCase() === file.name.toLowerCase());
       const url = URL.createObjectURL(file);
       const probe = document.createElement(type === 'audio' ? 'audio' : 'video');
       probe.preload = 'metadata';
@@ -1298,7 +1298,7 @@
       }));
       if (!state.tracks.length) state.tracks = [{id:'v1',name:'V1',kind:'video',hidden:false,muted:false,locked:false}];
       state.clips = data.clips.map(c => ({
-        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null,
+        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null, sourceName: typeof c.sourceName === 'string' ? c.sourceName.slice(0, 512) : String(c.name || '').slice(0, 512),
         type: ['video','audio','title'].includes(c.type) ? c.type : 'video',
         multicamGroupId: typeof c.multicamGroupId === 'string' ? c.multicamGroupId.slice(0,256) : null,
         activeAngleAssetId: typeof c.activeAngleAssetId === 'string' ? c.activeAngleAssetId.slice(0,256) : null,
