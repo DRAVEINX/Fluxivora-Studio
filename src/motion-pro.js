@@ -1108,9 +1108,9 @@ void main() {
   let lastCurvePaint = 0;
   let draggedCurveFrame = null;
   const curveLimits = {
-    opacity: [0, 1], scale: [0.1, 3], x: [-100, 100], y: [-100, 100], volume: [0, 2]
+    opacity: [0, 1], scale: [0.1, 3], x: [-100, 100], y: [-100, 100], volume: [0, 2], maskSize: [10, 100]
   };
-  const curveNames = { opacity: 'Dekking', scale: 'Schaal', x: 'X-positie', y: 'Y-positie', volume: 'Volume' };
+  const curveNames = { opacity: 'Dekking', scale: 'Schaal', x: 'X-positie', y: 'Y-positie', volume: 'Volume', maskSize: 'Maskergrootte' };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
   const curveEase = {
     linear: value => value,
