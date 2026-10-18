@@ -425,11 +425,16 @@
     const evaluated = state.motionFxLayers.get(clip.id);
     const parent = clip.parentId ? state.motionFxLayers.get(clip.parentId) : null;
     if (evaluated && !evaluated.visible) return;
-    if (!parent) { draw(); return; }
-    const W = ctx.canvas.width, H = ctx.canvas.height, m = parent.worldTransform;
+    const rotation = animatedValue(clip, 'rotation', clip.rotation || 0);
+    if (!parent && !rotation) { draw(); return; }
+    const W = ctx.canvas.width, H = ctx.canvas.height;
     ctx.save();
     ctx.translate(W / 2, H / 2);
-    ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+    if (parent) {
+      const m = parent.worldTransform;
+      ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+    }
+    if (rotation) ctx.rotate(rotation * Math.PI / 180);
     ctx.translate(-W / 2, -H / 2);
     draw();
     ctx.restore();
