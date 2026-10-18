@@ -844,3 +844,15 @@ test('Vector Forge and Page Studio support a visible 40px alignment grid with ma
   assert.match(app, /data-editor-grid/);
   assert.match(app, /magnetisch uitlijnen/);
 });
+
+
+test('Page Studio has persistent margin and column guides plus a PDF preflight check', () => {
+  const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
+  for (const id of ['page-margin-input','page-columns-select','apply-page-guides-button']) assert.match(html, new RegExp('id="' + id + '"'));
+  assert.match(app, /data-page-margin-guide/);
+  assert.match(app, /data-page-column-guides/);
+  assert.match(app, /function applyPageGuides\(/);
+  assert.match(app, /PDF-controle: aandachtspunten/);
+  assert.match(app, /Toch PDF maken/);
+  assert.match(app, /exportLayoutPdf\(true\)/);
+});
