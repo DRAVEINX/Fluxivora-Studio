@@ -1,8 +1,10 @@
 # Fluxivora Studio
 
-**Huidige ontwikkelversie: 0.5.0-beta.8 — automatische proxy-generatie met FFmpeg voor Motion Studio.**
+**Huidige ontwikkelversie: 0.5.0-beta.10 — proxyherstel, veilige batchannulering en betrouwbaardere mediarel koppeling voor Motion Studio.**
 
-### Nieuw in bèta.7 — proxygeneratie en batchworkflow
+> **Beta 10-status:** de Windows CI bouwt een NSIS-installatiebestand (`.exe`), geen MSI. De CI-tests zijn groen, maar de praktijktest op Windows moet nog worden uitgevoerd. Volg [`docs/BETA10-MANUAL-ACCEPTANCE.md`](docs/BETA10-MANUAL-ACCEPTANCE.md) voordat Beta 10 als geaccepteerd wordt beschouwd.
+
+### Proxyworkflow — generatie, herstel en veilige annulering
 
 - Genereer voor elke videobron een lichtere H.264-proxy in 540p of 720p met de meegeleverde lokale FFmpeg-encoder.
 - Genereer proxies voor meerdere video-assets achter elkaar vanuit de mediabibliotheek, met voortgang en annuleren.
