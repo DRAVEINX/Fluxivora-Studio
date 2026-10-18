@@ -31,3 +31,25 @@ test('audio sync reports low confidence rather than inventing an offset', () => 
   assert.equal(result.ok, false);
   assert.equal(result.offsetSeconds, null);
 });
+
+
+test('multicam offset handles a candidate track that starts earlier', () => {
+  const reference = Array.from({ length: 100 }, (_, i) => Math.sin(i * 0.19) + Math.cos(i * 0.071));
+  const candidate = Array.from({ length: 100 }, (_, i) => reference[Math.min(99, i + 7)]);
+  candidate.fill(0, 93);
+  const result = Sync.estimateOffset(reference, candidate, { windowMs: 20, maxOffsetSeconds: 0.2 });
+  assert.equal(result.ok, true);
+  assert.equal(result.offsetSeconds, 0.14);
+  assert.ok(result.confidence > 0.9);
+});
+
+test('multicam offset refuses signals with no useful variation', () => {
+  const result = Sync.estimateOffset(Array(20).fill(0), Array(20).fill(0));
+  assert.equal(result.ok, false);
+  assert.equal(result.offsetSeconds, null);
+  assert.match(result.reason, /overeenkomst/i);
+});
+
+test('multicam offset validates search bounds', () => {
+  assert.throws(() => Sync.estimateOffset([0, 1, 0], [0, 1, 0], { maxOffsetSeconds: 700 }), /instellingen/i);
+});
