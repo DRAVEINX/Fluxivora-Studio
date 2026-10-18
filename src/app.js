@@ -421,6 +421,8 @@
     $('pixel-adjust-section').classList.toggle('hidden', state.activeWorkspace !== 'pixel');
     $('layout-section').classList.toggle('hidden', state.activeWorkspace !== 'layout');
     if ($('page-format-select')) $('page-format-select').value = PAGE_FORMATS[state.project?.layout?.pageFormat] ? state.project.layout.pageFormat : 'a4-portrait';
+    if ($('page-margin-input')) $('page-margin-input').value = String(state.project?.layout?.pageMargins ?? 40);
+    if ($('page-columns-select')) $('page-columns-select').value = String(state.project?.layout?.pageColumns ?? 1);
     document.querySelectorAll('.rail-button[data-workspace]').forEach(btn => btn.classList.toggle('active', btn.dataset.workspace === state.activeWorkspace));
     $('page-status').classList.toggle('hidden', state.activeWorkspace !== 'layout');
     $('import-image-button').textContent = state.activeWorkspace === 'pixel' ? '＋ Afbeelding openen' : state.activeWorkspace === 'layout' ? '＋ Afbeelding plaatsen' : '＋ Afbeelding';
@@ -619,6 +621,22 @@
       for (let x = 0; x <= size.width; x += 40) gridPath += `M ${x} 0 V ${size.height} `;
       for (let y = 0; y <= size.height; y += 40) gridPath += `M 0 ${y} H ${size.width} `;
       svg.append(svgEl('path', { d: gridPath, fill: 'none', stroke: '#94a3b8', 'stroke-opacity': '0.22', 'stroke-width': 1, 'pointer-events': 'none', 'data-editor-grid': 'true' }));
+    }
+    if (workspace === 'layout') {
+      const layout = state.project.layout;
+      const margin = Math.max(0, Math.min(300, Number(layout.pageMargins) || 0));
+      const columns = Math.max(1, Math.min(12, Number(layout.pageColumns) || 1));
+      const overlay = [];
+      if (margin > 0 && size.width > margin * 2 && size.height > margin * 2) {
+        overlay.push(svgEl('rect', { x: margin, y: margin, width: size.width - margin * 2, height: size.height - margin * 2, fill: 'none', stroke: '#e879f9', 'stroke-dasharray': '8 6', 'stroke-width': 1.5, 'pointer-events': 'none', 'data-page-margin-guide': 'true' }));
+      }
+      if (columns > 1 && size.width > margin * 2) {
+        const usable = size.width - margin * 2;
+        let d = '';
+        for (let c = 1; c < columns; c++) { const x = margin + usable * c / columns; d += `M ${x} ${margin} V ${size.height - margin} `; }
+        overlay.push(svgEl('path', { d, fill: 'none', stroke: '#0ea5e9', 'stroke-dasharray': '4 5', 'stroke-width': 1, 'pointer-events': 'none', 'data-page-column-guides': 'true' }));
+      }
+      if (overlay.length) svg.append(...overlay);
     }
     const baseObjects = workspace === 'vector' ? state.project.vector.objects : size.objects;
     const objects = (workspace === state.activeWorkspace && state.draftObject) ? [...(baseObjects || []), state.draftObject] : (baseObjects || []);
@@ -1372,6 +1390,25 @@
     'letter-portrait': { width: 816, height: 1056, cssSize: 'Letter portrait', cssWidth: '8.5in', cssHeight: '11in' }
   };
 
+  function applyPageGuides() {
+    if (!state.project || state.activeWorkspace !== 'layout') return;
+    const margin = Number($('page-margin-input').value);
+    const columns = Number($('page-columns-select').value);
+    const page = state.project.layout.pages[state.project.layout.currentPage];
+    if (!Number.isFinite(margin) || margin < 0 || margin > 300 || margin * 2 >= Math.min(page.width, page.height)) {
+      notify('Kies een marge tussen 0 en 300 px die kleiner is dan de halve paginazijde.', 'error');
+      $('page-margin-input').value = String(state.project.layout.pageMargins ?? 40);
+      return;
+    }
+    if (!Number.isInteger(columns) || columns < 1 || columns > 12) { notify('Kies 1 tot en met 12 kolommen.', 'error'); return; }
+    checkpoint();
+    state.project.layout.pageMargins = margin;
+    state.project.layout.pageColumns = columns;
+    markDirty('Pagina-hulplijnen gewijzigd');
+    renderAll();
+    notify('Marges en kolomhulplijnen bijgewerkt. Hulplijnen worden niet afgedrukt.', 'success');
+  }
+
   function applyPageFormat() {
     if (!state.project || state.activeWorkspace !== 'layout') return;
     const formatKey = $('page-format-select').value;
@@ -1384,9 +1421,40 @@
     notify(`PDF-papierformaat ingesteld op ${format.cssSize} voor alle ${layout.pages.length} pagina’s. De inhoud wordt passend geschaald.`, 'success');
   }
 
-  function exportLayoutPdf() {
+  function exportLayoutPdf(skipPreflight = false) {
     if (!state.project) return;
     const pages = state.project.layout.pages;
+    if (!skipPreflight) {
+      const issues = [];
+      if (!pages.length) issues.push('Het document bevat geen pagina’s.');
+      pages.forEach((page, index) => {
+        if (!(page.width > 0 && page.height > 0)) issues.push(`Pagina ${index + 1}: ongeldige afmetingen.`);
+        if (!(page.objects || []).length) issues.push(`Pagina ${index + 1}: geen inhoud gevonden.`);
+        for (const obj of page.objects || []) {
+          const bounds = objectBounds(obj);
+          if (bounds.x < 0 || bounds.y < 0 || bounds.x + bounds.w > page.width || bounds.y + bounds.h > page.height) {
+            issues.push(`Pagina ${index + 1}: “${String(obj.name || obj.text || obj.type || 'object').slice(0, 50)}” raakt of overschrijdt de paginarand.`);
+            break;
+          }
+        }
+      });
+      if (issues.length) {
+        showModal({
+          title: 'PDF-controle: aandachtspunten',
+          description: 'Controle vóór export. De app kan aflopende afbeeldingen, lettertypen en kleurprofielen niet volledig vooraf controleren.',
+          confirmText: 'Toch PDF maken', cancelText: 'Terug naar document',
+          body: body => {
+            const intro = document.createElement('p'); intro.className = 'muted-note'; intro.textContent = `${issues.length} aandachtspunt(en) gevonden:`;
+            const list = document.createElement('ul'); list.className = 'preflight-issues';
+            for (const issue of issues.slice(0, 30)) { const item = document.createElement('li'); item.textContent = issue; list.append(item); }
+            if (issues.length > 30) { const item = document.createElement('li'); item.textContent = `En nog ${issues.length - 30} aandachtspunt(en).`; list.append(item); }
+            body.append(intro, list);
+          },
+          onConfirm: () => { exportLayoutPdf(true); return true; }
+        });
+        return;
+      }
+    }
     const format = PAGE_FORMATS[state.project.layout.pageFormat] || PAGE_FORMATS['a4-portrait'];
     let printStyle = document.getElementById('print-format-style');
     if (!printStyle) { printStyle = document.createElement('style'); printStyle.id = 'print-format-style'; document.head.append(printStyle); }
@@ -1749,6 +1817,7 @@
   document.querySelectorAll('.inspector-tab').forEach(btn => btn.addEventListener('click', () => { state.inspector = btn.dataset.inspector; renderInspector(); }));
   $('previous-page-button').addEventListener('click', () => switchPage(-1)); $('next-page-button').addEventListener('click', () => switchPage(1)); $('add-page-button').addEventListener('click', addPage); $('duplicate-page-button').addEventListener('click', duplicatePage); $('delete-page-button').addEventListener('click', deletePage);
   $('apply-page-format-button').addEventListener('click', applyPageFormat);
+  $('apply-page-guides-button').addEventListener('click', applyPageGuides);
   $('add-layer-button').addEventListener('click', () => setTool(state.activeWorkspace === 'pixel' ? 'brush' : state.activeWorkspace === 'vector' ? 'rect' : 'text'));
   $('help-button').addEventListener('click', showHelp); $('menu-button').addEventListener('click', handleMenu); $('stage-menu-button').addEventListener('click', () => showModal({ title: 'Canvasopties', description: 'Stel het zichtbare canvas opnieuw in of pas de documentafmetingen aan in Eigenschappen.', confirmText: 'Oké', cancelText: 'Sluiten', body: (body) => { const p = document.createElement('p'); p.className = 'muted-note'; p.textContent = 'De knop “Aanpassen aan scherm” zoomt uit of in totdat de volledige pagina zichtbaar is. De afmetingen in Eigenschappen wijzigen de documentruimte.'; body.append(p); } }));
   $('vector-grid-button').addEventListener('click', () => {
