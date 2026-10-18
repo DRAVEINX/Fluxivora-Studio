@@ -920,6 +920,9 @@ void main() {
       if (time <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
         const amount = clamp((time - left.time) / span, 0, 1);
+        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) {
+          return window.FluxivoraKeyframeCurves.bezierValue(left, right, property, amount);
+        }
         const ease = curveEase[right.ease] || curveEase.linear;
         const t = ease(amount);
         return (Number(left[property]) || 0) + ((Number(right[property]) || 0) - (Number(left[property]) || 0)) * t;
