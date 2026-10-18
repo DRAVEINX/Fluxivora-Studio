@@ -520,20 +520,12 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
   if (!sourcePath || !path.isAbsolute(sourcePath) || !VIDEO_SOURCE_EXTENSIONS.includes(path.extname(sourcePath).toLowerCase())) {
     throw new Error('De bron is geen ondersteund videobestand op schijf.');
   }
-  const sourceStat = await fs.stat(sourcePath);
-  if (!sourceStat.isFile() || sourceStat.size < 1 || sourceStat.size > MAX_PROXY_SOURCE_BYTES) {
-    throw new Error('De videobron is leeg of groter dan de limiet van 20 GB.');
-  }
-  const ffmpegPath = resolvedFfmpegPath();
-  await fs.access(ffmpegPath);
-  const { filePath: outputPath, filename } = await uniqueProxyOutputPath(directoryToken.directoryPath, settings.sourceName, settings.preset);
-  const partialPath = path.join(directoryToken.directoryPath, '.fluxivora-proxy-' + crypto.randomUUID() + '.partial.mp4');
   const session = {
     requestId: settings.requestId,
     ownerId: event.sender.id,
     sender: event.sender,
-    outputPath,
-    partialPath,
+    outputPath: null,
+    partialPath: null,
     durationSeconds: settings.durationSeconds,
     child: null,
     done: null,
@@ -547,7 +539,20 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
   event.sender.once('destroyed', () => { void abortVideoProxy(session); });
 
   try {
-    const args = buildProxyArgs({ inputPath: sourcePath, outputPath: partialPath, preset: settings.preset });
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const sourceStat = await fs.stat(sourcePath);
+    if (!sourceStat.isFile() || sourceStat.size < 1 || sourceStat.size > MAX_PROXY_SOURCE_BYTES) {
+      throw new Error('De videobron is leeg of groter dan de limiet van 20 GB.');
+    }
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const ffmpegPath = resolvedFfmpegPath();
+    await fs.access(ffmpegPath);
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const { filePath: outputPath, filename } = await uniqueProxyOutputPath(directoryToken.directoryPath, settings.sourceName, settings.preset);
+    session.outputPath = outputPath;
+    session.partialPath = path.join(directoryToken.directoryPath, '.fluxivora-proxy-' + crypto.randomUUID() + '.partial.mp4');
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
+    const args = buildProxyArgs({ inputPath: sourcePath, outputPath: session.partialPath, preset: settings.preset });
     const child = spawn(ffmpegPath, args, { windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
     session.child = child;
     session.done = new Promise(resolve => {
@@ -592,29 +597,33 @@ ipcMain.handle('video:create-proxy', async (event, payload = {}) => {
       const detail = session.stderr.trim();
       throw new Error('FFmpeg kon de proxy niet maken' + (detail ? ': ' + detail.slice(-2000) : ' (code ' + result.code + ').'));
     }
-    const stat = await fs.stat(partialPath);
+    const stat = await fs.stat(session.partialPath);
+    if (session.cancelled) throw new Error('Proxy-generatie is geannuleerd.');
     if (!stat.isFile() || stat.size < 1024) throw new Error('FFmpeg heeft geen geldige proxy geschreven.');
     if (stat.size > MAX_PROXY_OUTPUT_BYTES) throw new Error('De proxy is groter dan de toegestane limiet van 350 MB. Kies een lagere resolutie.');
-    await fs.rename(partialPath, outputPath);
+    await fs.rename(session.partialPath, session.outputPath);
+    session.partialPath = null;
     cleanupExpiredProxyReadTokens();
     const readToken = crypto.randomUUID();
     videoProxyReadTokens.set(readToken, {
       ownerId: event.sender.id,
-      filePath: outputPath,
+      filePath: session.outputPath,
       size: stat.size,
       createdAt: Date.now()
     });
     sendProxyProgress(session, 100, settings.durationSeconds);
     return {
       readToken,
-      filePath: outputPath,
+      filePath: session.outputPath,
       name: filename,
       size: stat.size,
       preset: settings.preset,
       durationSeconds: settings.durationSeconds
     };
   } catch (error) {
-    try { await fs.rm(partialPath, { force: true }); } catch (_) {}
+    if (session.partialPath) {
+      try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
+    }
     throw error;
   } finally {
     videoProxyJobs.delete(jobKey);
