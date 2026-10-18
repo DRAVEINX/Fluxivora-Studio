@@ -483,39 +483,71 @@ void main() {
   async function decodeMulticamEnergy(asset) {
     if (!asset || !asset.file || asset.missing) throw new Error('Koppel eerst alle camerabronnen opnieuw.');
     if (asset.file.size > 256 * 1024 * 1024) throw new Error('Bronbestand is groter dan de veilige synchronisatiegrens van 256 MB.');
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) throw new Error('Deze computer ondersteunt geen Web Audio voor automatische synchronisatie.');
     const key = asset.id + ':' + asset.file.size + ':' + asset.file.lastModified;
     if (multicamSyncCache.has(key)) return multicamSyncCache.get(key);
-    const context = new AudioContextClass();
-    try {
-      const decoded = await context.decodeAudioData(await asset.file.arrayBuffer());
-      const windowSeconds = 0.1;
-      const count = Math.floor(Math.min(180, decoded.duration) / windowSeconds);
-      if (count < 20) throw new Error('Er is minder dan twee seconden bruikbare audio in ' + asset.name + '.');
-      const energies = new Float32Array(count);
-      const frameSize = Math.max(1, Math.floor(decoded.sampleRate * windowSeconds));
-      for (let i = 0; i < count; i++) {
-        const start = i * frameSize, end = Math.min(decoded.length, start + frameSize);
-        let sum = 0, samples = 0;
-        for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
-          const data = decoded.getChannelData(ch);
-          for (let j = start; j < end; j += 8) { const v = data[j]; sum += v * v; samples++; }
-        }
-        energies[i] = samples ? Math.sqrt(sum / samples) : 0;
+
+    let sampleRate = 0;
+    let duration = 0;
+    let channelSamples = [];
+    if (window.fluxivora && typeof window.fluxivora.decodeAudioForSync === 'function') {
+      const decoded = await window.fluxivora.decodeAudioForSync(asset.file);
+      if (!decoded || decoded.sampleRate !== 8000 || typeof decoded.base64Data !== 'string') {
+        throw new Error('De lokale audiodecoder gaf geen geldige audiogegevens terug voor ' + asset.name + '.');
       }
-      let mean = 0;
-      for (const value of energies) mean += value;
-      mean /= energies.length;
-      let variance = 0;
-      for (let i = 0; i < energies.length; i++) { energies[i] -= mean; variance += energies[i] * energies[i]; }
-      if (variance < 1e-7) throw new Error('De audio in ' + asset.name + ' bevat te weinig variatie om veilig te synchroniseren.');
-      const result = { energies, windowSeconds, duration: decoded.duration };
-      multicamSyncCache.set(key, result);
-      return result;
-    } finally {
-      await context.close().catch(() => {});
+      const binary = atob(decoded.base64Data);
+      if (binary.length % 4 !== 0 || binary.length > 180 * 8000 * 4) {
+        throw new Error('De audiodecoder gaf een ongeldige of te grote audiotracker terug.');
+      }
+      const pcm = new Float32Array(binary.length / 4);
+      const pcmView = new DataView(new ArrayBuffer(binary.length));
+      for (let i = 0; i < binary.length; i++) pcmView.setUint8(i, binary.charCodeAt(i));
+      const view = new DataView(pcmView.buffer);
+      for (let i = 0; i < pcm.length; i++) pcm[i] = view.getFloat32(i * 4, true);
+      sampleRate = decoded.sampleRate;
+      duration = pcm.length / sampleRate;
+      channelSamples = [pcm];
+    } else {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Deze computer ondersteunt geen lokale audiodecodering voor automatische synchronisatie.');
+      const context = new AudioContextClass();
+      try {
+        const decoded = await context.decodeAudioData(await asset.file.arrayBuffer());
+        sampleRate = decoded.sampleRate;
+        duration = decoded.duration;
+        channelSamples = Array.from({ length: decoded.numberOfChannels }, (_, channel) => decoded.getChannelData(channel));
+      } catch (_) {
+        throw new Error('Kan de audio in ' + asset.name + ' niet lezen. Gebruik een ondersteund videoformaat met audiotrack.');
+      } finally {
+        await context.close().catch(() => {});
+      }
     }
+
+    const windowSeconds = 0.1;
+    const frameSize = Math.max(1, Math.floor(sampleRate * windowSeconds));
+    const sampleLength = Math.min(...channelSamples.map(channel => channel.length), Math.floor(180 * sampleRate));
+    const count = Math.floor(Math.min(180, duration, sampleLength / sampleRate) / windowSeconds);
+    if (count < 20) throw new Error('Er is minder dan twee seconden bruikbare audio in ' + asset.name + '.');
+    const energies = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      const start = i * frameSize, end = Math.min(sampleLength, start + frameSize);
+      let sum = 0, samples = 0;
+      for (const channel of channelSamples) {
+        for (let j = start; j < end; j += 8) {
+          const value = channel[j];
+          if (Number.isFinite(value)) { sum += value * value; samples++; }
+        }
+      }
+      energies[i] = samples ? Math.sqrt(sum / samples) : 0;
+    }
+    let mean = 0;
+    for (const value of energies) mean += value;
+    mean /= energies.length;
+    let variance = 0;
+    for (let i = 0; i < energies.length; i++) { energies[i] -= mean; variance += energies[i] * energies[i]; }
+    if (variance < 1e-7) throw new Error('De audio in ' + asset.name + ' bevat te weinig variatie om veilig te synchroniseren.');
+    const result = { energies, windowSeconds, duration };
+    multicamSyncCache.set(key, result);
+    return result;
   }
 
   function correlateMulticamOffset(reference, candidate) {
