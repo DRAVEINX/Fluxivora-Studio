@@ -45,6 +45,18 @@ function evaluateLayerProperty(layer, property, frame, fallback) {
   return interpolateKeyframes(frames, frame, source);
 }
 
+function evaluateLayerTransform(layer, frame) {
+  const base = layer && layer.transform && typeof layer.transform === 'object' ? layer.transform : {};
+  const properties = ['x', 'y', 'anchorX', 'anchorY', 'rotation', 'scaleX', 'scaleY', 'opacity'];
+  const transform = {};
+  for (const property of properties) {
+    const fallback = Number.isFinite(base[property]) ? base[property] : (property === 'scaleX' || property === 'scaleY' || property === 'opacity' ? 1 : 0);
+    transform[property] = evaluateLayerProperty(layer, property, frame, fallback);
+  }
+  transform.opacity = clamp(transform.opacity, 0, 1);
+  return transform;
+}
+
 function isLayerActive(layer, frame) {
   if (!layer || layer.enabled === false || !layer.timing) return false;
   return Number.isFinite(frame) && frame >= layer.timing.inFrame && frame < layer.timing.outFrame;
@@ -69,4 +81,4 @@ function sortLayersForEvaluation(layers) {
   return result;
 }
 
-module.exports = { interpolateKeyframes, evaluateLayerProperty, isLayerActive, sortLayersForEvaluation };
+module.exports = { interpolateKeyframes, evaluateLayerProperty, evaluateLayerTransform, isLayerActive, sortLayersForEvaluation };
