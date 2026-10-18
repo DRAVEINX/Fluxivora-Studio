@@ -958,3 +958,12 @@ test('Pixel Lab provides persistent non-destructive filter presets', () => {
   assert.match(app, /pixelPresetFilter\(doc\.filterPreset\)/);
   assert.match(app, /filterPreset: 'original'/);
 });
+
+test('Motion Studio animates mask size through the keyframe curve editor', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(html, /option value="maskSize">Maskergrootte<\/option>/);
+  assert.match(video, /animatedValue\(c, 'maskSize', c\.maskSize \|\| 90\)/);
+  assert.match(motion, /maskSize: \[10, 100\]/);
+  assert.match(motion, /maskSize: 'Maskergrootte'/);
+});
