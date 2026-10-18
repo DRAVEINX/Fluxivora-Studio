@@ -828,8 +828,9 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   const shared = fs.readFileSync(path.join(root, 'src', 'keyframe-curves.js'), 'utf8');
-  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, raw\)/);
-  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, amount\)/);
+  assert.match(video, /window\.FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(video, /right\.ease === 'bezier' && bezierValue/);
+  assert.match(video, /window\.FluxivoraKeyframeCurves\.bezierValue\(left, right, property, amount\)/);
   assert.match(video, /outHandle: frame\.outHandle \? \{\.\.\.frame\.outHandle\}/);
   assert.match(video, /ease: \['linear','easeIn','easeOut','easeInOut','bezier','hold'\]/);
   assert.match(motion, /FluxivoraKeyframeCurves\.controlPoints\(left, right, property\)/);
