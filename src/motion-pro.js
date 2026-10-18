@@ -986,6 +986,23 @@ void main() {
         if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
+      if (window.FluxivoraKeyframeCurves) {
+        for (let i = 1; i < frames.length; i++) {
+          const left = frames[i - 1], right = frames[i];
+          if (right.ease !== 'bezier') continue;
+          const controls = window.FluxivoraKeyframeCurves.controlPoints(left, right, property);
+          const x0 = toX(left.time), y0 = toY(left[property]);
+          const x1 = toX(controls.x1), y1 = toY(controls.y1);
+          const x2 = toX(controls.x2), y2 = toY(controls.y2);
+          const x3 = toX(right.time), y3 = toY(right[property]);
+          ctx.strokeStyle = '#6c7197'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.moveTo(x3, y3); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = '#6de1cd'; ctx.strokeStyle = '#183f48'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(x1, y1, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#f6b7d5'; ctx.strokeStyle = '#543247';
+          ctx.beginPath(); ctx.arc(x2, y2, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      }
       frames.forEach(frame => {
         const x = toX(frame.time), y = toY(frame[property]);
         ctx.beginPath(); ctx.fillStyle = '#d6d0ff'; ctx.strokeStyle = '#6c5fd2'; ctx.lineWidth = 2;
