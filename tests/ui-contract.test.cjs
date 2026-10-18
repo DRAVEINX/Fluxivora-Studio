@@ -916,6 +916,8 @@ test('Motion Studio creates persisted and animated rectangle or ellipse shape la
   assert.match(video, /ctx\.clip\(primary\)/);
   assert.match(video, /ctx\.clip\(outsideSecondary, 'evenodd'\)/);
   assert.match(video, /ctx\.clip\(combined, 'nonzero'\)/);
+  assert.match(video, /maskOperation: \['add','subtract','intersect','xor'\]\.includes\(c\.maskOperation\)/);
+  assert.match(video, /binding\('video-mask-operation', 'maskOperation', v => \['add','subtract','intersect','xor'\]\.includes\(v\)/);
   assert.match(video, /else if \(c\.maskOperation === 'xor'\) \{[\s\S]*?exclusive\.addPath\(primary\); exclusive\.addPath\(secondary\);[\s\S]*?ctx\.clip\(exclusive, 'evenodd'\);/);
   assert.match(video, /maskType: \['none','rectangle','ellipse'\]\.includes\(c\.maskType\) \? c\.maskType : 'none'/);
   assert.match(video, /binding\('video-mask-size', 'maskSize'/);
