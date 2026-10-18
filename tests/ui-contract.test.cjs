@@ -1024,3 +1024,15 @@ test('Motion Studio supports rounded rectangle masks in both mask slots', () => 
   assert.match(video, /\['none','rectangle','roundRect','ellipse'\]\.includes\(c\.maskType\)/);
   assert.match(video, /\['none','rectangle','roundRect','ellipse'\]\.includes\(c\.maskSecondaryType\)/);
 });
+
+test('Motion Studio media-import accepteert bekende extensies bij generieke MIME-types', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /function isCompatibleMediaFile\(file, type\)/);
+  assert.match(video, /const genericMime = !mime \|\| \['application\/octet-stream', 'binary\/octet-stream', 'application\/x-unknown', 'application\/unknown'\]/);
+  assert.match(video, /'mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi'/);
+  assert.match(video, /'mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac'/);
+  assert.match(video, /!isCompatibleMediaFile\(file, 'video'\)/);
+  assert.match(video, /!isCompatibleMediaFile\(file, 'audio'\)/);
+  assert.match(video, /if \(!genericMime\) return false/);
+});
+
