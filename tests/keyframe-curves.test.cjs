@@ -50,3 +50,16 @@ test('untrusted handle values are normalized and invalid handle objects are igno
   assert.equal(handle.y, -100);
   assert.equal(handle.volume, 1);
 });
+
+
+test('Bezier curves support all mask position properties exposed in the editor', () => {
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.deepEqual(curves.PROPERTIES[property], [-50, 50]);
+    const left = { time: 0, [property]: -20 };
+    const right = { time: 1, [property]: 20 };
+    assert.equal(curves.bezierValue(left, right, property, 0), -20);
+    assert.equal(curves.bezierValue(left, right, property, 1), 20);
+    const value = curves.bezierValue(left, right, property, 0.5);
+    assert.ok(value >= -50 && value <= 50);
+  }
+});
