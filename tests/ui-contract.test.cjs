@@ -917,3 +917,26 @@ test('Motion Studio bewaart herstelbare proxy-identiteit maar exporteert geen ti
   assert.match(save, /clips:\s*state\.clips\.map\(c => \(\{\.\.\.metaClip\(c\), missing: c\.type !== 'title'\}\)\)/);
   assert.doesNotMatch(save, /proxyUrl:\s*a\.proxyUrl|proxyFile:\s*a\.proxyFile|url:\s*a\.url|file:\s*a\.file/);
 });
+
+test('Motion Studio houdt proxy-preview gescheiden van de uiteindelijke MP4-export', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  const start = video.indexOf('async function exportOfflineMp4()');
+  const end = video.indexOf('\n  async function ', start + 1);
+  assert.ok(start >= 0 && end > start, 'Offline MP4-exportfunctie ontbreekt');
+  const exportFunction = video.slice(start, end);
+  assert.match(exportFunction, /hasProxyPreview\?\.\(\)/,
+    'Offline MP4-export moet proxy-preview expliciet controleren');
+  assert.match(exportFunction, /Zet Proxy preview uit voordat je exporteert/,
+    'Gebruiker moet een duidelijke melding krijgen wanneer proxy-preview actief is');
+  assert.match(exportFunction, /if \(state\.offlineExportActive \|\| state\.exportActive\) return/,
+    'Twee exports mogen niet tegelijk starten');
+  const startPreview = motion.indexOf('function applyProxyPreview()');
+  const endPreview = motion.indexOf('\n  function ', startPreview + 1);
+  assert.ok(startPreview >= 0 && endPreview > startPreview, 'Proxy-previewfunctie ontbreekt');
+  const previewFunction = motion.slice(startPreview, endPreview);
+  assert.match(previewFunction, /const proxy = useProxyPreview && sourceAsset && sourceAsset\.proxyUrl && !sourceAsset\.proxyMissing \? sourceAsset\.proxyUrl : null/,
+    'Alleen expliciet ingeschakelde, aanwezige proxy-preview mag een proxy kiezen');
+  assert.match(previewFunction, /const target = proxy \|\| \(angleAsset \? angleAsset\.url : clip\.url\)/,
+    'Zonder proxy-preview moet de preview terugvallen op de originele bron');
+});
