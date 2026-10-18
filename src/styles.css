@@ -233,3 +233,24 @@
 .video-media-proxy-generate:hover:not(:disabled){border-color:#9385ff;background:#302956;color:#fff}
 .video-media-proxy-generate:disabled{opacity:.4;cursor:default}
 @media(max-width:1150px){.video-proxy-tools{grid-template-columns:1fr}.video-proxy-tools .button{width:100%}}
+
+
+/* Motion Graphics compositing layer stack */
+body:not(.motionfx-mode) #motionfx-layer-panel{display:none}
+.motionfx-layer-panel{margin:0 0 14px;padding:11px;border:1px solid #35304e;border-radius:9px;background:linear-gradient(155deg,#19172a,#10131e)}
+.motionfx-layer-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.motionfx-layer-heading small{font-size:8px;letter-spacing:.14em;color:#a99bff;font-weight:850}
+.motionfx-layer-heading h3{font-size:12px;margin:4px 0 0}
+#motionfx-layer-count{font-size:10px;color:#c7bfff;background:#2a2542;border-radius:6px;padding:4px 7px}
+.motionfx-layer-panel>p,.motionfx-layer-help{display:block;font-size:9px;line-height:1.55;color:#9aa3bd;margin:0 0 9px}
+.motionfx-layer-list{display:flex;flex-direction:column;gap:5px}
+.motionfx-layer-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px;padding:6px;border:1px solid #2b3043;border-radius:6px;background:#131827}
+.motionfx-layer-row.active{border-color:#8a7bf0;background:#211d37}
+.motionfx-layer-select{min-width:0;display:flex;align-items:center;gap:7px;text-align:left;background:transparent;border:0;color:#e6e9f5;cursor:pointer;padding:3px;font-size:10px}
+.motionfx-layer-select strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+.motionfx-layer-kind{display:inline-grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:5px;background:#292744;color:#b8aaff;font-size:10px}
+.motionfx-layer-actions{display:flex;gap:3px}
+.motionfx-layer-actions button{width:24px;height:25px;border:1px solid #353b51;border-radius:5px;background:#1c2233;color:#aeb8d1;cursor:pointer;font-size:10px}
+.motionfx-layer-actions button.active{color:#f1dcff;border-color:#8b7be9;background:#30284c}
+.motionfx-layer-actions button:disabled{opacity:.35;cursor:not-allowed}
+.motionfx-layer-help{margin:9px 0 0;color:#77839e}
