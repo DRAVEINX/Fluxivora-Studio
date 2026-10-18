@@ -1,6 +1,6 @@
 {
   "name": "fluxivora-studio",
-  "version": "0.5.0-beta.5",
+  "version": "0.5.0-beta.6",
   "description": "Free, local-first creative studio for photo editing, vector design, page layout and multi-track video editing on Windows.",
   "main": "electron/main.cjs",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "test": "node --test",
     "dist:win": "electron-builder --win nsis --x64",
     "dist:dir": "electron-builder --dir",
-    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check src/app.js && node --check src/core.js && node --check src/video-studio.js && node --check src/motion-pro.js"
+    "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check src/app.js && node --check src/core.js && node --check src/video-studio.js && node --check src/motion-pro.js && node --check electron/video-render.cjs"
   },
   "devDependencies": {
     "electron": "44.9.0",
@@ -30,7 +30,9 @@
       "assets/**/*",
       "package.json",
       "README.md",
-      "LICENSE"
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.md",
+      "node_modules/ffmpeg-static/**/*"
     ],
     "asar": true,
     "win": {
@@ -52,6 +54,12 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Fluxivora Studio"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ]
+  },
+  "dependencies": {
+    "ffmpeg-static": "5.3.0"
   }
 }

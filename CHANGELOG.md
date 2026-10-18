@@ -1,3 +1,14 @@
+## 0.5.0-beta.6 — offline MP4 rendering
+
+- Added frame-by-frame Motion Studio rendering that no longer depends on real-time playback or MediaRecorder.
+- Bundled FFmpeg 6.1.1 via the pinned ffmpeg-static 5.3.0 package and added a native H.264/AAC MP4 output path at 720p, 1080p and 4K / 25 fps.
+- Added chunked offline audio mixing with source In/Out, timeline placement, speed, volume, fades, volume keyframes and muted-track handling.
+- Added render progress, Escape/button cancellation, editor lock during rendering, cleanup of partial output on errors and a 15-minute maximum in beta.6.
+- Added CI coverage for render request validation, frame/audio-stream validation, encoder availability and a real two-pipe FFmpeg MP4 smoke test.
+- The previous real-time WebM export is retained as a fallback.
+- Limitations: browser-based compositing; audio decode is capped at 256 MB per source; undecodable audio in video containers is skipped with a warning; source media remains external to the project JSON.
+- Third-party licensing details are recorded in THIRD-PARTY-NOTICES.md.
+
 ## 0.5.0-beta.5 — Motion Studio source workflow, grading and scopes
 
 - Added a separate source monitor with playback, scrubbing, source in/out marks and insert-at-playhead alongside the program monitor.

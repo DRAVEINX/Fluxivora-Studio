@@ -107,7 +107,7 @@ test('Windows-buildworkflows proberen npm-registryfouten opnieuw en gebruiken ex
 test('pakket-, core- en zichtbare versienummers zijn gelijk', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const core = fs.readFileSync(path.join(root, 'src', 'core.js'), 'utf8');
-  assert.equal(pkg.version, '0.5.0-beta.5');
+  assert.equal(pkg.version, '0.5.0-beta.6');
   assert.match(core, new RegExp(`const VERSION = '${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}'`));
   assert.match(html, new RegExp(`<b>${pkg.version.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}</b>`));
 });
@@ -521,7 +521,12 @@ test('Motion Studio biedt multitrack-montage, titels, audiomix en projectopslag'
   assert.match(video, /function importFiles\(/);
   assert.match(video, /function renderTracks\(/);
   assert.match(video, /function renderPreview\(/);
-  assert.match(video, /function exportVideo\(/);
+  assert.match(video, /async function exportOfflineMp4\(/);
+  assert.match(video, /async function exportRealtimeWebm\(/);
+  assert.equal([...video.matchAll(/FluxivoraMotionStudio\?\.hasProxyPreview\?\.\(\)/g)].length, 2,
+    'MP4- en WebM-export moeten proxy-preview blokkeren');
+  assert.match(video, /function waitForVideoFrame\(media, name, targetTime\)/);
+  assert.match(video, /return waitForVideoFrame\(clip\.mediaEl, clip\.name, target\)/);
   assert.match(video, /createMediaStreamDestination\(/);
   assert.match(video, /function undo\(/);
   assert.match(video, /fluxivora-video-project/);
@@ -709,4 +714,48 @@ test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcu
   assert.match(motion, /Bron-offset bij tijdlijn 00:00/);
   assert.match(motion, /const angleAsset = clip\.activeAngleAssetId/);
   assert.match(motion, /api\.splitSelectedAtPlayhead\(\{ silent: true \}\)/);
+});
+
+
+test('Motion Studio beta.6 biedt een aparte offline MP4-pijplijn en behoudt realtime WebM als fallback', () => {
+  for (const id of ['video-export','video-export-webm','video-render-progress','video-render-meter','video-render-progress-title','video-render-progress-detail','video-export-cancel']) {
+    assert.match(html, new RegExp('id="' + id + '"'), 'Ontbrekend exportelement: ' + id);
+  }
+  assert.match(html, /Render MP4 · Offline/);
+  assert.match(html, /WebM realtime/);
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+  const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
+  const helper = fs.readFileSync(path.join(root, 'electron', 'video-render.cjs'), 'utf8');
+  const pkg = require(path.join(root, 'package.json'));
+  for (const fn of ['exportOfflineMp4(', 'renderTimelineFrame(', 'renderOfflineAudioChunk(', 'streamOfflineAudio(', 'exportRealtimeWebm(']) {
+    assert.ok(video.includes(fn), 'Ontbrekende renderfunctie: ' + fn);
+  }
+  for (const route of ['video:begin-render','video:write-frame','video:write-audio','video:finish-render','video:cancel-render']) {
+    assert.ok(main.includes("ipcMain.handle('" + route + "'"), 'Ontbrekende main-process route: ' + route);
+  }
+  for (const api of ['beginVideoRender','writeVideoFrame','writeVideoAudio','finishVideoRender','cancelVideoRender']) {
+    assert.ok(preload.includes(api + ':'), 'Ontbrekende preload-API: ' + api);
+  }
+  assert.match(helper, /-f', 'image2pipe'/);
+  assert.match(helper, /-f', 'f32le'/);
+  assert.match(helper, /'libx264'/);
+  assert.match(helper, /'aac'/);
+  assert.equal(pkg.version, '0.5.0-beta.6');
+  assert.equal(pkg.dependencies['ffmpeg-static'], '5.3.0');
+  assert.ok(pkg.build.asarUnpack.includes('node_modules/ffmpeg-static/**'));
+  assert.ok(pkg.build.files.includes('node_modules/ffmpeg-static/**/*'));
+  assert.ok(pkg.build.files.includes('THIRD-PARTY-NOTICES.md'));
+  assert.match(fs.readFileSync(path.join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8'), /GPL-3\.0-or-later/);
+});
+
+
+test('Motion Studio toggles all shared video and audio inspector sections without missing ID lookups', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /querySelectorAll\('\.video-video-controls'\)/);
+  assert.match(video, /querySelectorAll\('\.video-audio-controls'\)/);
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  const idRefs = [...video.matchAll(/\$\('([^']+)'\)/g)].map(match => match[1]);
+  const missing = [...new Set(idRefs.filter(id => !ids.has(id)))];
+  assert.deepEqual(missing, [], 'Een Motion Studio ID wordt gebruikt maar ontbreekt in de HTML');
 });

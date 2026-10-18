@@ -202,3 +202,19 @@
 .video-multicam-inspector select{width:100%;background:#151a29;border:1px solid #2b3247;border-radius:6px;color:#dbe0f5;padding:7px;font-size:9px}
 .video-multicam-inspector p{font-size:8px;line-height:1.55;color:#75809e;margin:7px 0 0}
 .video-multicam-inspector button:disabled{opacity:.35;cursor:default}
+
+/* Motion Studio beta.6 — offline MP4 render progress */
+.video-render-progress{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid #292e43;background:linear-gradient(90deg,#17172a,#101521);min-width:0}
+.video-render-progress-copy{display:flex;flex-direction:column;gap:3px;min-width:190px}
+.video-render-progress-copy strong{font-size:10px;color:#e6e2ff;letter-spacing:.02em}
+.video-render-progress-copy small{font-size:8px;color:#818bab;line-height:1.5}
+.video-render-progress progress{flex:1;min-width:90px;height:8px;accent-color:#9184ff;overflow:hidden;border-radius:99px}
+.video-render-progress progress::-webkit-progress-bar{background:#292e43;border-radius:99px}
+.video-render-progress progress::-webkit-progress-value{background:linear-gradient(90deg,#6d62c7,#79d9c1);border-radius:99px}
+.video-render-progress .button{padding:7px 12px;font-size:9px}
+#video-export-webm{white-space:nowrap}
+@media(max-width:1120px){.video-render-progress{gap:9px;padding:8px 10px}.video-render-progress-copy{min-width:135px}.video-render-progress-copy strong{font-size:9px}.video-render-progress-copy small{font-size:7px}}
+@media(max-width:900px){.video-render-progress{flex-wrap:wrap}.video-render-progress-copy{flex:1}.video-render-progress progress{order:3;flex-basis:100%}}
+
+#video-screen.offline-rendering .video-workspace,#video-screen.offline-rendering>header{pointer-events:none;opacity:.68;filter:saturate(.7)}
+#video-screen.offline-rendering .video-render-progress{pointer-events:auto;opacity:1;filter:none}

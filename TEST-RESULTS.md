@@ -1,4 +1,4 @@
-# Testresultaten — Fluxivora Studio 0.5.0-beta.5
+# Testresultaten — Fluxivora Studio 0.5.0-beta.6
 
 Controles bijgewerkt op 17 oktober 2026.
 
@@ -8,6 +8,14 @@ Controles bijgewerkt op 17 oktober 2026.
 - De opslaghelper gebruikt UUID-gebaseerde tijdelijke bestanden zodat gelijktijdige schrijfacties niet dezelfde tijdelijke bestandsnaam gebruiken.
 - Tests dekken veilige projectbestandsnamen, project-JSON-validatie, atomische bestandsschrijfacties, foutopruiming, projectroundtrip en bescherming van niet-opgeslagen werk.
 - Electron vraagt vóór het sluiten om een laatste herstelkopie. Als de renderer niet antwoordt, sluit het venster na maximaal 3,5 seconden alsnog.
+
+## Motion Studio beta.6 — offline MP4-render
+
+- Added pure unit tests for export limits, supported resolutions, safe names, JPEG frame validation, bounded stereo Float32 audio chunks and FFmpeg argument construction.
+- Added a native FFmpeg smoke test to verify the shipped binary has libx264 and AAC encoders and can create a real MP4 from two streamed JPEG frames plus stereo Float32 audio through fd 3.
+- UI contract tests cover the MP4/WebM controls, cancellation/progress UI, preload APIs, IPC frame/audio streams and bundled FFmpeg packaging settings.
+- The native export is capped at 15 minutes and the browser offline audio decoder at 256 MB per source file; undecodable audio inside video files is skipped and reported, while a standalone audio clip decode failure stops export.
+- The new branch's CI must complete the encoder smoke test and Windows installer/checksum/artifact workflow before this beta is considered ready to merge.
 
 ## Motion Studio beta.5 — nieuwe testscope
 

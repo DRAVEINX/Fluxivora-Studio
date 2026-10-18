@@ -61,6 +61,23 @@ jobs:
       - name: Build Windows installer (disable implicit publishing)
         run: npm run dist:win -- --publish never
 
+      - name: Verify packaged FFmpeg runtime and encoders
+        shell: pwsh
+        run: |
+          $ffmpeg = Join-Path $PWD "release/win-unpacked/resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg.exe"
+          if (-not (Test-Path -Path $ffmpeg -PathType Leaf)) {
+            throw "De FFmpeg-binary ontbreekt in resources/app.asar.unpacked van de Windows-app: $ffmpeg"
+          }
+          $version = & $ffmpeg -hide_banner -version 2>&1
+          if ($LASTEXITCODE -ne 0 -or ($version -join "`n") -notmatch "ffmpeg version") {
+            throw "De in de app verpakte FFmpeg-binary start niet correct."
+          }
+          $encoders = & $ffmpeg -hide_banner -encoders 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "Kan encoderlijst van de verpakte FFmpeg-binary niet lezen." }
+          $encoderText = $encoders -join "`n"
+          if ($encoderText -notmatch "\blibx264\b") { throw "De verpakte FFmpeg-binary mist de H.264/libx264-encoder." }
+          if ($encoderText -notmatch "\baac\b") { throw "De verpakte FFmpeg-binary mist de AAC-encoder." }
+
       - name: Verify installer and create checksum manifest
         shell: pwsh
         run: |

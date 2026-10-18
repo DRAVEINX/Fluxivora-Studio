@@ -1,11 +1,86 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const crypto = require('node:crypto');
+const { spawn } = require('node:child_process');
+const FFMPEG_PACKAGE_PATH = require('ffmpeg-static');
+const {
+  SAMPLE_RATE,
+  MAX_STREAM_BYTES,
+  validateRenderRequest,
+  decodeJpegFrame,
+  decodeFloatAudioChunk,
+  buildFfmpegArgs
+} = require('./video-render.cjs');
 
 const PROJECT_FILTER = [{ name: 'Fluxivora-project', extensions: ['fluxivora', 'json'] }];
 const IMAGE_FILTER = [{ name: 'Afbeeldingen', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] }];
 const MAX_IMAGE_BYTES = 60 * 1024 * 1024;
 const MAX_EXPORT_BYTES = 220 * 1024 * 1024;
+const videoRenderSessions = new Map();
+
+function resolvedFfmpegPath() {
+  if (typeof FFMPEG_PACKAGE_PATH !== 'string' || !FFMPEG_PACKAGE_PATH) {
+    throw new Error('De meegeleverde FFmpeg-encoder ontbreekt in deze installatie.');
+  }
+  if (!app.isPackaged) return FFMPEG_PACKAGE_PATH;
+  return FFMPEG_PACKAGE_PATH.replace(/app\.asar([\\/])/i, 'app.asar.unpacked$1');
+}
+
+function getVideoRenderSession(event, sessionId) {
+  if (typeof sessionId !== 'string' || sessionId.length > 80) throw new Error('Ongeldige render-sessie.');
+  const session = videoRenderSessions.get(sessionId);
+  if (!session || session.ownerId !== event.sender.id || session.finishRequested) {
+    throw new Error('De offline render-sessie bestaat niet meer of hoort bij een ander venster.');
+  }
+  return session;
+}
+
+function writeVideoPipeChunk(pipe, chunk, session) {
+  return new Promise((resolve, reject) => {
+    if (session.processError) return reject(session.processError);
+    if (session.closed || session.exitCode !== undefined || !pipe || pipe.destroyed || pipe.writableEnded) {
+      return reject(new Error('De FFmpeg-encoder heeft de invoerstroom gesloten.'));
+    }
+    let settled = false;
+    const clean = () => {
+      pipe.removeListener('drain', onDrain);
+      pipe.removeListener('error', onError);
+      pipe.removeListener('close', onClose);
+    };
+    const done = (error) => {
+      if (settled) return;
+      settled = true;
+      clean();
+      if (error) reject(error); else resolve();
+    };
+    const onDrain = () => done();
+    const onError = error => done(error);
+    const onClose = () => done(new Error('De FFmpeg-invoerstroom is onverwacht gesloten.'));
+    pipe.once('drain', onDrain);
+    pipe.once('error', onError);
+    pipe.once('close', onClose);
+    try {
+      if (pipe.write(chunk)) done();
+    } catch (error) {
+      done(error);
+    }
+  });
+}
+
+async function abortVideoRender(session) {
+  if (!session) return;
+  session.cancelled = true;
+  if (!session.closed && session.child && !session.child.killed) {
+    try { session.child.kill(); } catch (_) {}
+  }
+  if (session.done) await Promise.race([
+    session.done,
+    new Promise(resolve => setTimeout(resolve, 4000))
+  ]);
+  videoRenderSessions.delete(session.id);
+  try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
+}
 const approvedProjectPaths = new Set();
 const closeStates = new WeakMap();
 const CLOSE_PREPARATION_TIMEOUT_MS = 3500;
@@ -213,6 +288,133 @@ ipcMain.handle('recovery:clear', async () => {
   await fs.unlink(recoveryFilePath()).catch(error => { if (error?.code !== 'ENOENT') throw error; });
   await fs.unlink(`${recoveryFilePath()}.tmp`).catch(error => { if (error?.code !== 'ENOENT') throw error; });
   return true;
+});
+
+ipcMain.handle('video:begin-render', async (event, payload = {}) => {
+  const settings = validateRenderRequest(payload);
+  if ([...videoRenderSessions.values()].some(session => session.ownerId === event.sender.id)) {
+    throw new Error('Er loopt al een offline render in dit venster.');
+  }
+  const ffmpegPath = resolvedFfmpegPath();
+  await fs.access(ffmpegPath);
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(win, {
+    title: 'Motion Studio — MP4 offline renderen',
+    defaultPath: settings.name + '.mp4',
+    filters: [{ name: 'MP4-video (H.264 + AAC)', extensions: ['mp4'] }]
+  });
+  if (result.canceled || !result.filePath) return null;
+  const outputPath = path.extname(result.filePath).toLowerCase() === '.mp4' ? result.filePath : result.filePath + '.mp4';
+  const id = crypto.randomUUID();
+  const partialPath = path.join(path.dirname(outputPath), '.fluxivora-' + id + '.partial.mp4');
+  const args = buildFfmpegArgs({
+    width: settings.width,
+    height: settings.height,
+    fps: settings.fps,
+    frameCount: settings.frameCount,
+    durationSeconds: settings.durationSeconds,
+    outputPath: partialPath
+  });
+  let child;
+  try {
+    child = spawn(ffmpegPath, args, { windowsHide: true, shell: false, stdio: ['pipe', 'ignore', 'pipe', 'pipe'] });
+  } catch (error) {
+    throw new Error('FFmpeg kon niet worden gestart: ' + error.message);
+  }
+  let resolveDone;
+  const done = new Promise(resolve => { resolveDone = resolve; });
+  const session = {
+    id, ownerId: event.sender.id, outputPath, partialPath, child, done,
+    frameCount: settings.frameCount, durationSeconds: settings.durationSeconds,
+    nextFrame: 0, frameBytes: 0, audioBytes: 0,
+    expectedAudioBytes: Math.round(settings.durationSeconds * SAMPLE_RATE) * 2 * 4,
+    finishRequested: false, closed: false, exitCode: undefined,
+    exitSignal: null, processError: null, stderr: '', cancelled: false
+  };
+  child.once('error', error => { session.processError = error; });
+  child.stdin.on('error', error => { session.processError = error; });
+  child.stdio[3].on('error', error => { session.processError = error; });
+  child.stderr.on('data', data => {
+    session.stderr = (session.stderr + data.toString('utf8')).slice(-12000);
+  });
+  child.once('close', (code, signal) => {
+    session.closed = true;
+    session.exitCode = code;
+    session.exitSignal = signal;
+    resolveDone({ code, signal });
+  });
+  videoRenderSessions.set(id, session);
+  event.sender.once('destroyed', () => { void abortVideoRender(session); });
+  return { sessionId: id, frameCount: settings.frameCount, durationSeconds: settings.durationSeconds };
+});
+
+ipcMain.handle('video:write-frame', async (event, payload = {}) => {
+  const session = getVideoRenderSession(event, payload.sessionId);
+  if (session.nextFrame >= session.frameCount || Number(payload.index) !== session.nextFrame) {
+    throw new Error('De offline renderer leverde frames niet in de juiste volgorde aan.');
+  }
+  const frame = decodeJpegFrame(payload.base64Data);
+  if (session.frameBytes + frame.length > MAX_STREAM_BYTES) {
+    await abortVideoRender(session);
+    throw new Error('De framestream overschrijdt de ingestelde exportlimiet. Kies een lagere resolutie of kortere montage.');
+  }
+  await writeVideoPipeChunk(session.child.stdin, frame, session);
+  session.frameBytes += frame.length;
+  session.nextFrame++;
+  return { accepted: session.nextFrame };
+});
+
+ipcMain.handle('video:write-audio', async (event, payload = {}) => {
+  const session = getVideoRenderSession(event, payload.sessionId);
+  const audio = decodeFloatAudioChunk(payload.base64Data);
+  if (session.audioBytes + audio.length > session.expectedAudioBytes) {
+    await abortVideoRender(session);
+    throw new Error('De gemixte audiostream is langer dan de opgegeven montageduur.');
+  }
+  await writeVideoPipeChunk(session.child.stdio[3], audio, session);
+  session.audioBytes += audio.length;
+  return { acceptedBytes: session.audioBytes };
+});
+
+ipcMain.handle('video:finish-render', async (event, payload = {}) => {
+  const session = getVideoRenderSession(event, payload.sessionId);
+  if (session.nextFrame !== session.frameCount) {
+    await abortVideoRender(session);
+    throw new Error('De offline render is onvolledig: niet alle videoframes zijn verwerkt.');
+  }
+  if (session.audioBytes !== session.expectedAudioBytes) {
+    await abortVideoRender(session);
+    throw new Error('De gemixte audiostream is onvolledig; de MP4 is niet opgeslagen.');
+  }
+  session.finishRequested = true;
+  session.child.stdin.end();
+  session.child.stdio[3].end();
+  try {
+    const result = await session.done;
+    if (session.processError) throw session.processError;
+    if (result.code !== 0) {
+      const detail = session.stderr.trim();
+      throw new Error('FFmpeg kon de MP4 niet afronden' + (detail ? ': ' + detail.slice(-2400) : ' (code ' + result.code + ').'));
+    }
+    const stat = await fs.stat(session.partialPath);
+    if (!stat.isFile() || stat.size < 1024) throw new Error('FFmpeg heeft geen geldig MP4-bestand geschreven.');
+    await fs.rm(session.outputPath, { force: true });
+    await fs.rename(session.partialPath, session.outputPath);
+    videoRenderSessions.delete(session.id);
+    return { filePath: session.outputPath, size: stat.size, durationSeconds: session.durationSeconds };
+  } catch (error) {
+    videoRenderSessions.delete(session.id);
+    try { await fs.rm(session.partialPath, { force: true }); } catch (_) {}
+    throw error;
+  }
+});
+
+ipcMain.handle('video:cancel-render', async (event, payload = {}) => {
+  if (typeof payload.sessionId !== 'string') return { cancelled: false };
+  const session = videoRenderSessions.get(payload.sessionId);
+  if (!session || session.ownerId !== event.sender.id) return { cancelled: false };
+  await abortVideoRender(session);
+  return { cancelled: true };
 });
 
 ipcMain.handle('file:export', async (_event, payload = {}) => {

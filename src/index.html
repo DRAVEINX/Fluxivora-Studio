@@ -118,9 +118,15 @@
             <button id="video-undo" class="button subtle compact" title="Ongedaan maken" disabled>↶</button>
             <button id="video-redo" class="button subtle compact" title="Opnieuw" disabled>↷</button>
             <label class="video-export-field">EXPORT<select id="video-export-size"><option value="1080p">1080p</option><option value="720p">720p</option><option value="4k">4K</option></select></label>
-            <button id="video-export" class="button primary compact" disabled>Render WebM</button>
+            <button id="video-export" class="button primary compact" disabled>Render MP4 · Offline</button>
+            <button id="video-export-webm" class="button subtle compact" disabled>WebM realtime</button>
           </div>
         </header>
+        <div id="video-render-progress" class="video-render-progress hidden" role="status" aria-live="polite">
+          <div class="video-render-progress-copy"><strong id="video-render-progress-title">MP4 render voorbereiden</strong><small id="video-render-progress-detail">Je project wordt beeld voor beeld verwerkt.</small></div>
+          <progress id="video-render-meter" max="1" value="0" aria-label="Voortgang van offline MP4-render"></progress>
+          <button id="video-export-cancel" type="button" class="button subtle compact">Annuleren</button>
+        </div>
         <div class="video-workspace">
           <aside class="video-media-panel">
             <div class="video-panel-title"><div><small>PROJECT</small><h3>Projectmedia</h3></div><span id="video-count" class="video-count">0 clips</span></div>
@@ -256,7 +262,7 @@
       </section>
 
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.5</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.6</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>

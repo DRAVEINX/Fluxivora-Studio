@@ -9,7 +9,7 @@
 - Layout: basisobjecten, meerdere pagina’s en afdruk-naar-PDF.
 - Lagen-/objectenlijst, selectie, verplaatsen, basale undo/redo en documentafmetingen.
 
-## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.5 (testkandidaat))
+## Fase 2 — betrouwbaarheid en workflow (huidige basis: 0.5.0-beta.6 (offline MP4-export in verificatie))
 
 - Lagen dupliceren en volgorde aanpassen.
 - Pagina’s dupliceren/verwijderen met minimaal één pagina per document.
@@ -63,7 +63,7 @@
 - GPU-versnelde filters waar stabiel, grote documenten, performance-profielen en crashherstel.
 - Toegankelijkheid, schaalbare UI, licht/donker thema, NL/EN en geautomatiseerde regressietests.
 
-## Motion Studio — professionele montage-uitbouw (beta.5 en volgende fases)
+## Motion Studio — professionele montage-uitbouw (beta.6 en volgende fases)
 
 ### Afgerond in beta.5
 - Afzonderlijke bronmonitor en programmamonitor, bronweergave met afspelen/scrubben, mediabibliotheek met zoeken/filteren, bron-in/out-punten en invoegen op de playhead.
@@ -75,14 +75,22 @@
 - Vooraf gegenereerde proxybestanden aan originele video's koppelen/herkoppelen; preview kan tussen proxy en origineel wisselen en export is geblokkeerd bij proxy-preview.
 - Multicamgroepen maken uit meerdere videobronnen, handmatige bron-offsets bij tijdlijn 00:00 instellen en hoekwisselingen als cuts op de playhead maken; oorspronkelijke audio blijft apart.
 
+### Afgerond in beta.6 — offline MP4-render
+
+- Frame-voor-frame timeline-rendering via de Motion Studio-compositor; elk gerenderd JPEG-frame wordt gestreamd naar de native FFmpeg-encoder.
+- Audio wordt in kleine OfflineAudioContext-blokken gemixt met timelinepositie, in/out, playback-rate, clipvolume, fades, volume-keyframes en gedempte tracks.
+- MP4-output met H.264-video en AAC-audio op 720p, 1080p of 4K bij 25 fps; realtime WebM blijft een aparte fallback.
+- Voortgang, annuleren, edit-lock tijdens renderen, opruimen van gedeeltelijke uitvoer en een CI-smoketest voor de daadwerkelijke H.264/AAC encoder.
+- Bèta-limieten: maximaal 15 minuten per render en 256 MB per audio-decodebron; videocompositing blijft renderer-/canvas-gebaseerd.
+
 ### Volgende fase — kleur en keyframes
 - Bezier-handles, tangents, snelheids-/waarde-curves en uitgebreidere keyframecontrole voor alle animabele eigenschappen.
-- Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.5-LUT is een sequence/output-LUT.
-- Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.5-scopes zijn indicatief en niet gekalibreerd.
+- Per-clip LUT's, LUT-intensiteit, LUT-automatisering en effectstacks met instelbare parameters; de beta.6-LUT is een sequence/output-LUT.
+- Nauwkeurigere scopes en kleurpipelines met expliciete kleur-ruimte, referentieniveaus en testmateriaal; de beta.6-scopes zijn indicatief en niet gekalibreerd.
 - Meer effecttypen en instelbare parameters per effect, maskers en niet-destructieve effect-presets.
 
 ### Volgende fase — proxies en multicam
-- Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.5 biedt al handmatig koppelen en proxy-preview.
+- Automatische proxy-bestanden genereren met transcodepresets, batchworkflow, voortgang, herstel en veilige originele/proxy-relatie; beta.6 biedt handmatig koppelen en proxy-preview.
 - Automatische synchronisatie van multicambronnen via audiowaveform/tijdcode, live multiview met angle switching, audio-angle routing en robuuste source-offset validatie; beta.5 heeft handmatige offsets en cut-to-angle.
 - Geheugenlimieten, codec-detectie en stress tests voor lange clips, hoge resolutie en meerdere actieve tracks.
 
