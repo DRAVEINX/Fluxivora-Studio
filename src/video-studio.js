@@ -35,8 +35,13 @@
   const timelineEnd = () => state.clips.reduce((m, c) => Math.max(m, c.start + clipLength(c)), 0);
   const tc = value => {
     const n = Math.max(0, Number(value) || 0);
+    const timecode = window.FluxivoraTimecode;
+    if (timecode?.framesToTimecode) {
+      const frames = Math.min(timecode.MAX_FRAMES, Math.round(n * SEQUENCE_FPS));
+      return timecode.framesToTimecode(frames);
+    }
     const p = x => String(x).padStart(2, '0');
-    return p(Math.floor(n / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * SEQUENCE_FPS));
+    return p(Math.floor(n / 3600)) + ':' + p(Math.floor((n % 3600) / 60)) + ':' + p(Math.floor(n % 60)) + ':' + p(Math.floor((n % 1) * SEQUENCE_FPS));
   };
   function notice(message, kind) {
     const stack = $('toast-stack');
@@ -49,7 +54,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','keyframes','keyframeEase','effects','colorAdjustments','assetId','sourceName','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -180,7 +185,7 @@
       in: 0, out: duration || 5, speed: 1, volume: 1, opacity: 1, scale: 1, x: 0, y: 0,
       filter: 'normal', fit: 'contain', fadeIn: 0, fadeOut: 0, text: text || 'Jouw titel',
       fontSize: 72, color: '#ffffff', bold: true, keyframes: [], keyframeEase: 'easeInOut', effects: [],
-      colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 }, file: file || null, url: url || null,
+      colorAdjustments: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 }, file: file || null, url: url || null, sourceName: file?.name || name || null,
       mediaEl: null, audioEl: null, audioSource: null, audioGain: null, missing: type !== 'title'
     };
     if (type !== 'title' && url) { c.missing = false; createMedia(c); }
@@ -189,6 +194,62 @@
     state.activeTrack = t.id;
     return c;
   }
+  function relinkSelectedFile(file) {
+    const clip = selected();
+    if (!file) return;
+    if (!clip || clip.type === 'title' || !clip.missing) {
+      notice('Selecteer eerst een ontbrekende video- of audioclip op de tijdlijn.');
+      return;
+    }
+    const expected = clip.type === 'audio' ? 'audio/' : 'video/';
+    if (!String(file.type || '').startsWith(expected)) {
+      notice(clip.type === 'audio' ? 'Kies een geldig audiobestand.' : 'Kies een geldig videobestand.');
+      return;
+    }
+    const probeUrl = URL.createObjectURL(file);
+    const probe = document.createElement(clip.type === 'audio' ? 'audio' : 'video');
+    probe.preload = 'metadata';
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      probe.removeAttribute('src');
+      probe.load();
+      probe.remove();
+      URL.revokeObjectURL(probeUrl);
+    };
+    probe.onloadedmetadata = () => {
+      if (settled) return;
+      const duration = Number.isFinite(probe.duration) ? Math.max(0, probe.duration) : 0;
+      if (!duration) {
+        finish();
+        notice('Dit bestand heeft geen bruikbare duur en is niet gekoppeld.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      pushHistory();
+      clip.file = file;
+      clip.url = url;
+      clip.sourceName = file.name;
+      clip.duration = duration;
+      clip.in = Math.max(0, Math.min(Number(clip.in) || 0, Math.max(0, duration - 0.1)));
+      clip.out = Math.max(clip.in + Math.min(0.1, duration), Math.min(Number(clip.out) || duration, duration));
+      if (clip.out <= clip.in) { clip.in = 0; clip.out = duration; }
+      clip.missing = false;
+      createMedia(clip);
+      finish();
+      refresh();
+      renderPreview();
+      if (clip.type === 'audio') computeAudioWaveform(file, clip.id);
+      else captureVideoThumbnails(file, clip.id);
+      notice('Bronbestand gekoppeld aan “' + clip.name + '”.');
+    };
+    probe.onerror = () => {
+      finish();
+      notice('Fluxivora kan dit bestand niet lezen: ' + file.name);
+    };
+    probe.src = probeUrl;
+  }
   function importFiles(fileList, kind) {
     const files = [...(fileList || [])];
     if (!files.length) return;
@@ -196,7 +257,7 @@
       const type = kind === 'audio' ? 'audio' : 'video';
       if (type === 'video' && !file.type.startsWith('video/')) { notice('Kies een geldig videobestand.'); continue; }
       if (type === 'audio' && !file.type.startsWith('audio/')) { notice('Kies een geldig audiobestand.'); continue; }
-      const missing = state.clips.find(c => c.missing && c.type === type && c.name.toLowerCase() === file.name.toLowerCase());
+      const missing = state.clips.find(c => c.missing && c.type === type && String(c.sourceName || c.name).toLowerCase() === file.name.toLowerCase());
       const url = URL.createObjectURL(file);
       const probe = document.createElement(type === 'audio' ? 'audio' : 'video');
       probe.preload = 'metadata';
@@ -1173,7 +1234,7 @@
   }
   function saveSession() {
     const data = {
-      format: 'fluxivora-video-project', version: '0.5.0-beta.7', name: state.name,
+      format: 'fluxivora-video-project', version: '0.5.0-beta.8', name: state.name,
       sequence: { width: 1920, height: 1080, fps: SEQUENCE_FPS, zoom: state.zoom, markers: state.markers.map(m => ({...m})), lut: state.programLut, multicamGroups: state.multicamGroups.map(g => ({...g, angleAssetIds:[...g.angleAssetIds], offsets:{...g.offsets}})) },
       tracks: state.tracks.map(t => ({...t})),
       assets: state.assets.map(a => ({ id: a.id, name: a.name, type: a.type, duration: a.duration, missing: true, proxyName: a.proxyName || null })),
@@ -1242,7 +1303,7 @@
       }));
       if (!state.tracks.length) state.tracks = [{id:'v1',name:'V1',kind:'video',hidden:false,muted:false,locked:false}];
       state.clips = data.clips.map(c => ({
-        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null,
+        id: String(c.id || uid()), name: String(c.name || 'Clip').slice(0, 512), assetId: typeof c.assetId === 'string' ? c.assetId.slice(0, 256) : null, sourceName: typeof c.sourceName === 'string' ? c.sourceName.slice(0, 512) : String(c.name || '').slice(0, 512),
         type: ['video','audio','title'].includes(c.type) ? c.type : 'video',
         multicamGroupId: typeof c.multicamGroupId === 'string' ? c.multicamGroupId.slice(0,256) : null,
         activeAngleAssetId: typeof c.activeAngleAssetId === 'string' ? c.activeAngleAssetId.slice(0,256) : null,
@@ -1438,6 +1499,13 @@
   function wire() {
     $('video-import').addEventListener('click', () => $('video-files').click());
     $('video-import-audio').addEventListener('click', () => $('video-audio-files').click());
+    $('video-relink-selected').addEventListener('click', () => {
+      const clip = selected();
+      if (!clip || clip.type === 'title' || !clip.missing) { notice('Selecteer eerst een ontbrekende video- of audioclip op de tijdlijn.'); return; }
+      $('video-relink-files').accept = clip.type === 'audio' ? 'audio/*' : 'video/*';
+      $('video-relink-files').click();
+    });
+    $('video-relink-files').addEventListener('change', e => { relinkSelectedFile(e.target.files?.[0]); e.target.value = ''; });
     $('video-files').addEventListener('change', e => importFiles(e.target.files, 'video'));
     $('video-audio-files').addEventListener('change', e => importFiles(e.target.files, 'audio'));
     $('video-save-session').addEventListener('click', saveSession);

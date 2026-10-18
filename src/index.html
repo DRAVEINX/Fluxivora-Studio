@@ -132,6 +132,7 @@
             <div class="video-panel-title"><div><small>PROJECT</small><h3>Projectmedia</h3></div><span id="video-count" class="video-count">0 clips</span></div>
             <button id="video-import" class="button outline video-action-button">＋ Video importeren</button>
             <button id="video-import-audio" class="button outline video-action-button">＋ Audio importeren</button>
+            <button id="video-relink-selected" class="button subtle video-action-button">↻ Geselecteerde ontbrekende media koppelen</button>
             <button id="video-add-title" class="button outline video-action-button">T Titel toevoegen</button>
             <label class="video-insert-toggle"><input id="video-import-to-timeline" type="checkbox" /> Direct ook op de tijdlijn zetten</label>
             <input id="video-files" type="file" accept="video/*" multiple hidden />
@@ -268,7 +269,7 @@
       </section>
 
     </main>
-    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.7</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
+    <footer class="app-footer"><span>Fluxivora Studio <b>0.5.0-beta.8</b></span><span class="footer-center"><i class="status-dot"></i> Offline-first · lokaal op jouw apparaat</span><span id="footer-workspace">Welkom</span></footer>
   </div>
 
   <section id="print-container" aria-hidden="true"></section>
@@ -277,6 +278,7 @@
   <script src="core.js"></script>
   <script src="app.js"></script>
   <script src="keyframe-curves.js"></script>
+  <script src="timecode.js"></script>
   <script src="video-studio.js"></script>
   <script src="motion-pro.js"></script>
 </body>
