@@ -9,6 +9,15 @@ Motion FX is the planned original motion-graphics and compositing workspace insi
 - Preview compositing, offline MP4 render path, WebM export, proxy generation/relinking, multicam grouping and basic scopes.
 - Recent extension: invert, hue shift, brightness and high-contrast effects are now available in the clip effect selector and are included in project-file validation.
 
+## Implemented engineering increments (feature branch)
+- [x] Versioned composition data model with bounded settings, layer data, parent IDs, keyframes, normalization, validation, cloning and JSON serialization.
+- [x] Keyframe evaluator for hold, linear and eased interpolation, transform evaluation, active-layer timing and parent-first ordering with cycle detection.
+- [x] Reusable preset-library model with add, rename, duplicate, remove, strict validation and JSON round-trip tests.
+- [x] Existing Motion Studio composition list supports JSON export/import, merge-on-import, size/count/layer checks and visible editor controls.
+- [x] Windows CI verifies JavaScript syntax, automated/unit and UI contract tests, installer packaging, FFmpeg runtime, checksum manifest and artifact upload.
+
+These increments establish and test the data foundation. The versioned composition model and evaluator are not yet the same thing as a fully integrated dedicated compositing workspace; remaining items below still require UI wiring, preview/export integration and acceptance testing.
+
 ## Motion FX delivery phases
 
 ### Phase 1 — reliable compositing foundations
