@@ -727,6 +727,16 @@ test('Motion Studio koppelt bronclips met dubbele namen niet automatisch aan de 
   assert.match(motion, /Clips zonder opgeslagen bron-ID zijn niet automatisch gekoppeld/);
 });
 
+test('Motion Studio koppelt geïmporteerde bestanden niet willekeurig aan ontbrekende assets met dubbele namen', () => {
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(motion, /function findUnambiguousMissingAsset\(type, name\)/);
+  assert.match(motion, /const matches = state\.assets\.filter\(asset => asset\.missing && asset\.type === type/);
+  assert.match(motion, /if \(matches\.length > 1\)/);
+  assert.match(motion, /Meerdere ontbrekende bronbestanden hebben dezelfde naam/);
+  assert.match(motion, /findUnambiguousMissingAsset\(clip\.type, clip\.name\)/);
+  assert.match(motion, /findUnambiguousMissingAsset\(detail\.type, String\(detail\.name \|\| file\.name\)\)/);
+});
+
 test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wordt gekoppeld', () => {
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   assert.match(motion, /const expectedDuration = Number\(asset\.duration\) \|\| 0/);
