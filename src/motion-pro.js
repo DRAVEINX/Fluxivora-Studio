@@ -1209,6 +1209,15 @@ void main() {
     input.click();
   }
 
+  function clampRelinkedClipRange(clip, duration) {
+    const rawDuration = Number(duration);
+    const safeDuration = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : Math.max(0.04, Number(clip.duration) || 0.04);
+    const minimumSpan = Math.min(0.04, safeDuration);
+    clip.duration = safeDuration;
+    clip.in = Math.max(0, Math.min(Number(clip.in) || 0, safeDuration - minimumSpan));
+    clip.out = Math.min(safeDuration, Math.max(clip.in + minimumSpan, Math.min(Number(clip.out) || safeDuration, safeDuration)));
+  }
+
   function applyRelink(file) {
     const asset = state.assets.find(item => item.id === $('video-relink-files').dataset.assetId);
     if (!asset || !file || (asset.type === 'audio' ? !file.type.startsWith('audio/') : !file.type.startsWith('video/'))) {
@@ -1237,9 +1246,7 @@ void main() {
         clip.url = URL.createObjectURL(file);
         clip.file = file;
         clip.assetId = asset.id;
-        clip.duration = asset.duration || clip.duration;
-        clip.in = Math.max(0, Math.min(clip.in, clip.duration));
-        clip.out = Math.max(clip.in + 0.04, Math.min(clip.out || clip.duration, clip.duration));
+        clampRelinkedClipRange(clip, asset.duration || clip.duration);
         clip.missing = false;
         api.createMedia(clip);
       });
@@ -1253,7 +1260,7 @@ void main() {
             api.notice('Let op: de opnieuw gekoppelde bron heeft een andere duur dan verwacht. Controleer de clipsynchronisatie.');
           }
           asset.duration = probe.duration;
-          matches.forEach(clip => { clip.duration = probe.duration; clip.out = Math.max(clip.in + .04, Math.min(clip.out || probe.duration, probe.duration)); });
+          matches.forEach(clip => clampRelinkedClipRange(clip, probe.duration));
           api.refresh();
         }
         probe.removeAttribute('src'); probe.load();
