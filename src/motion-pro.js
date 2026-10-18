@@ -1437,6 +1437,33 @@ void main() {
     linkProxyFile(event.target.files?.[0]);
     event.target.value = '';
   });
+  $('video-proxy-relink-batch').addEventListener('click', () => {
+    const pending = state.assets.some(asset => asset.type === 'video' && asset.proxyName && (!asset.proxyUrl || asset.proxyMissing));
+    if (!pending) { api.notice('Er zijn geen ontbrekende gekoppelde proxybestanden.'); return; }
+    $('video-proxy-files-relink').click();
+  });
+  $('video-proxy-files-relink').addEventListener('change', event => {
+    const files = [...(event.target.files || [])];
+    const pending = state.assets.filter(asset => asset.type === 'video' && asset.proxyName && (!asset.proxyUrl || asset.proxyMissing));
+    let linked = 0;
+    let ambiguous = 0;
+    for (const file of files) {
+      const matches = pending.filter(asset => asset.proxyName.toLocaleLowerCase() === file.name.toLocaleLowerCase());
+      if (matches.length === 1) {
+        linkProxyFile(file, matches[0].id);
+        linked++;
+      } else if (matches.length > 1) {
+        ambiguous++;
+      }
+    }
+    const unmatched = files.length - linked - ambiguous;
+    if (linked === 0) {
+      api.notice(ambiguous ? 'Geen proxy gekoppeld: sommige bestandsnamen komen meerdere keren voor. Koppel die proxy’s afzonderlijk.' : 'Geen overeenkomst gevonden. Controleer de proxybestandsnamen.');
+    } else {
+      api.notice(linked + ' proxybestand(en) gekoppeld op basis van exacte bestandsnaam.' + (ambiguous ? ' ' + ambiguous + ' naam(en) zijn dubbel; die moeten afzonderlijk worden gekoppeld.' : '') + (unmatched ? ' ' + unmatched + ' bestand(en) hadden geen overeenkomst.' : ''));
+    }
+    event.target.value = '';
+  });
   $('video-proxy-batch').addEventListener('click', () => runProxyGeneration());
   $('video-proxy-cancel').addEventListener('click', cancelProxyGeneration);
   window.fluxivora?.onVideoProxyProgress?.(payload => {
