@@ -681,7 +681,7 @@ void main() {
     for (const file of candidates) {
       const matches = assetsByProxyName.get(normalize(file.name)) || [];
       if (matches.length === 1) {
-        linkProxyFile(file, matches[0].id);
+        linkProxyFile(file, matches[0].id, { silent: true });
         linked++;
       } else if (matches.length > 1) {
         ambiguous++;
@@ -699,7 +699,7 @@ void main() {
     }
   }
 
-  async function linkProxyFile(file, assetId = selectedProxyAssetId) {
+  async function linkProxyFile(file, assetId = selectedProxyAssetId, options = {}) {
     const asset = state.assets.find(item => item.id === assetId);
     if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
       api.notice('Kies een videobestand als proxy.');
@@ -737,7 +737,7 @@ void main() {
     selectedProxyAssetId = null;
     renderMediaBin();
     if (useProxyPreview) applyProxyPreview();
-    api.notice('Proxy gekoppeld: ' + file.name);
+    if (!options.silent) api.notice('Proxy gekoppeld: ' + file.name);
     $('video-proxy-file').value = '';
   }
 
