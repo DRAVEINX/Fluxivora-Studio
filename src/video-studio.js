@@ -11,7 +11,7 @@
       { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
       { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
     ],
-    clips: [], assets: [], programLut: null, multicamGroups: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
+    clips: [], assets: [], programLut: null, multicamGroups: [], motionFxLayers: new Map(), selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, offlineExportActive: false, offlineExportCancel: false, offlineSessionId: null, exportSize: '1080p', snap: true
@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','compositionId','compositionName','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','parentId','start','duration','in','out','speed','volume','opacity','scale','x','y','rotation','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','compositionId','compositionName','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -392,6 +392,48 @@
     }
     return Number(baseValue) || 0;
   }
+  function evaluateMotionFxLayers() {
+    const runtime = window.FluxivoraMotionFxRuntime;
+    if (!runtime?.evaluateCompositionAtFrame) { state.motionFxLayers = new Map(); return; }
+    const frame = Math.max(0, Math.floor(state.playhead * SEQUENCE_FPS));
+    const layers = state.clips.map(c => {
+      const t = track(c.trackId);
+      return {
+        id: c.id, parentId: typeof c.parentId === 'string' ? c.parentId : null,
+        type: c.type, name: c.name, enabled: !c.missing && !(t && t.hidden),
+        transform: {
+          x: animatedValue(c, 'x', c.x || 0) * ($('video-canvas')?.width || 1920) / 100,
+          y: animatedValue(c, 'y', c.y || 0) * ($('video-canvas')?.height || 1080) / 100,
+          scaleX: animatedValue(c, 'scale', c.scale || 1),
+          scaleY: animatedValue(c, 'scale', c.scale || 1),
+          rotation: animatedValue(c, 'rotation', c.rotation || 0),
+          opacity: animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)
+        },
+        timing: { inFrame: Math.max(0, Math.floor(c.start * SEQUENCE_FPS)),
+          outFrame: Math.max(0, Math.ceil((c.start + clipLength(c)) * SEQUENCE_FPS)) },
+        keyframes: []
+      };
+    });
+    try {
+      state.motionFxLayers = new Map(runtime.evaluateCompositionAtFrame({ layers }, frame).map(layer => [layer.id, layer]));
+    } catch (error) {
+      state.motionFxLayers = new Map();
+      notice('Motion FX-laaghierarchie is ongeldig: ' + error.message, 'error');
+    }
+  }
+  function drawWithParentTransform(ctx, clip, draw) {
+    const evaluated = state.motionFxLayers.get(clip.id);
+    const parent = clip.parentId ? state.motionFxLayers.get(clip.parentId) : null;
+    if (evaluated && !evaluated.visible) return;
+    if (!parent) { draw(); return; }
+    const W = ctx.canvas.width, H = ctx.canvas.height, m = parent.worldTransform;
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+    ctx.translate(-W / 2, -H / 2);
+    draw();
+    ctx.restore();
+  }
   function gainFor(c) {
     const t = track(c.trackId);
     return animatedValue(c, 'volume', c.volume) * alphaFor(c) * (t && t.muted ? 0 : 1);
@@ -464,7 +506,8 @@
     return parts.join(' ') || 'none';
   }
   function alphaFor(c) {
-    let alpha = Math.max(0, Math.min(1, animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
+    const evaluated = state.motionFxLayers.get(c.id);
+    let alpha = Math.max(0, Math.min(1, evaluated ? evaluated.opacity : animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
     const elapsed = state.playhead - c.start, remaining = c.start + clipLength(c) - state.playhead;
     if (c.fadeIn > 0 && elapsed < c.fadeIn) alpha *= Math.max(0, elapsed / c.fadeIn);
     if (c.fadeOut > 0 && remaining < c.fadeOut) alpha *= Math.max(0, remaining / c.fadeOut);
@@ -569,10 +612,11 @@
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    evaluateMotionFxLayers();
     const videoTracks = state.tracks.filter(t => t.kind === 'video' && !t.hidden);
     // Composite lower tracks first, then upper tracks.
-    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawVideoClip(ctx, c)));
-    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawTitle(ctx, c)));
+    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c) && (state.motionFxLayers.get(c.id)?.visible !== false)).sort((a, b) => a.start - b.start).forEach(c => drawWithParentTransform(ctx, c, () => drawVideoClip(ctx, c))));
+    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c) && (state.motionFxLayers.get(c.id)?.visible !== false)).sort((a, b) => a.start - b.start).forEach(c => drawWithParentTransform(ctx, c, () => drawTitle(ctx, c))));
     const hasVisibleContent = state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing && !(track(c.trackId) || {}).hidden) || state.clips.some(c => c.type === 'title' && activeAt(c) && !(track(c.trackId) || {}).hidden);
     $('video-empty').classList.toggle('hidden', hasVisibleContent);
     if (window.FluxivoraMotionStudio?.applyProgramLut) window.FluxivoraMotionStudio.applyProgramLut(canvas);
