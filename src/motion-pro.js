@@ -678,12 +678,14 @@ void main() {
     let linked = 0;
     let unmatched = 0;
     let ambiguous = 0;
+    const claimedAssetIds = new Set();
     for (const file of candidates) {
       const matches = assetsByProxyName.get(normalize(file.name)) || [];
-      if (matches.length === 1) {
+      if (matches.length === 1 && !claimedAssetIds.has(matches[0].id)) {
         linkProxyFile(file, matches[0].id, { silent: true });
+        claimedAssetIds.add(matches[0].id);
         linked++;
-      } else if (matches.length > 1) {
+      } else if (matches.length > 1 || (matches.length === 1 && claimedAssetIds.has(matches[0].id))) {
         ambiguous++;
       } else {
         unmatched++;
