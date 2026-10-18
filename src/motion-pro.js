@@ -1205,6 +1205,7 @@ void main() {
       return;
     }
     const matches = state.clips.filter(clip => clip.missing && clip.type === asset.type && (clip.assetId ? clip.assetId === asset.id : clip.name.toLowerCase() === asset.name.toLowerCase()));
+    const expectedDuration = Number(asset.duration) || 0;
     asset.file = file;
     asset.url = URL.createObjectURL(file);
     asset.duration = asset.duration || 0;
@@ -1227,6 +1228,9 @@ void main() {
       probe.preload = 'metadata';
       probe.onloadedmetadata = () => {
         if (Number.isFinite(probe.duration)) {
+          if (expectedDuration > 0 && Math.abs(expectedDuration - probe.duration) > Math.max(1, expectedDuration * 0.03)) {
+            api.notice('Let op: de opnieuw gekoppelde bron heeft een andere duur dan verwacht. Controleer de clipsynchronisatie.');
+          }
           asset.duration = probe.duration;
           matches.forEach(clip => { clip.duration = probe.duration; clip.out = Math.max(clip.in + .04, Math.min(clip.out || probe.duration, probe.duration)); });
           api.refresh();
