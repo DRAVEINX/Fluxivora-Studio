@@ -854,6 +854,53 @@
     try { localStorage.setItem(MOTION_COMPOSITIONS_KEY, JSON.stringify(items.slice(0, 30))); return true; }
     catch (_) { notice('De lokale compositiebibliotheek kan niet worden opgeslagen.'); return false; }
   }
+  function exportMotionCompositions() {
+    const items = readMotionCompositions();
+    const payload = { format: 'fluxivora-motion-compositions', version: 1, exportedAt: new Date().toISOString(), compositions: items };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'fluxivora-motion-compositions.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    notice(items.length + (items.length === 1 ? ' compositie geëxporteerd.' : ' composities geëxporteerd.'));
+  }
+  async function importMotionCompositions(file) {
+    if (!file) return;
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error('Het JSON-bestand is groter dan 2 MB.');
+      const text = await file.text();
+      let parsed;
+      try { parsed = JSON.parse(text); } catch (_) { throw new Error('Het bestand bevat geen geldige JSON.'); }
+      const imported = Array.isArray(parsed) ? parsed : parsed && parsed.format === 'fluxivora-motion-compositions' && parsed.version === 1 ? parsed.compositions : null;
+      if (!Array.isArray(imported) || imported.length > 30) throw new Error('Dit is geen ondersteunde compositiebibliotheek (maximaal 30 composities).');
+      const existing = readMotionCompositions();
+      const merged = existing.slice();
+      const usedIds = new Set(existing.map(item => item.id));
+      for (const candidate of imported) {
+        if (!candidate || typeof candidate !== 'object' || typeof candidate.name !== 'string' || !candidate.name.trim() || candidate.name.trim().length > 60 || !Array.isArray(candidate.layers) || candidate.layers.length < 1 || candidate.layers.length > 30) {
+          throw new Error('Een compositie heeft een ongeldige naam of laagstructuur.');
+        }
+        const layers = candidate.layers.map(layer => {
+          if (!layer || typeof layer !== 'object' || layer.type !== 'title' || typeof layer.name !== 'string' || !layer.name || layer.name.length > 128) {
+            throw new Error('Alleen geldige grafische titel-/vormlagen kunnen worden geïmporteerd.');
+          }
+          return { ...layer, type: 'title', keyframes: Array.isArray(layer.keyframes) ? layer.keyframes.slice(0, 1000) : [], effects: Array.isArray(layer.effects) ? layer.effects.slice(0, 100) : [] };
+        });
+        let id = typeof candidate.id === 'string' && candidate.id.length <= 128 ? candidate.id : uid('composition');
+        if (usedIds.has(id)) id = uid('composition');
+        usedIds.add(id);
+        merged.push({ id, name: candidate.name.trim(), layers });
+      }
+      if (merged.length > 30) throw new Error('Er is ruimte voor maximaal 30 composities. Verwijder eerst composities en probeer opnieuw.');
+      if (!writeMotionCompositions(merged)) return;
+      renderMotionCompositions();
+      notice(imported.length + (imported.length === 1 ? ' compositie geïmporteerd.' : ' composities geïmporteerd.'));
+    } catch (error) {
+      notice('Importeren mislukt: ' + (error && error.message ? error.message : 'ongeldig bestand.'));
+    }
+  }
   function renderMotionCompositions() {
     const list = $('motionfx-composition-list');
     const count = $('motionfx-composition-count');
@@ -1754,6 +1801,12 @@
     $('video-export-webm').addEventListener('click', exportRealtimeWebm);
     $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
     $('motionfx-save-composition').addEventListener('click', saveMotionComposition);
+    $('motionfx-export-compositions').addEventListener('click', exportMotionCompositions);
+    $('motionfx-import-compositions').addEventListener('click', () => $('motionfx-import-file').click());
+    $('motionfx-import-file').addEventListener('change', async event => {
+      await importMotionCompositions(event.target.files?.[0]);
+      event.target.value = '';
+    });
     $('motionfx-composition-list').addEventListener('click', handleMotionCompositionAction);
     $('video-add-title').addEventListener('click', addTitle);
     $('video-add-shape').addEventListener('click', () => addShape('rectangle'));
