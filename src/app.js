@@ -385,7 +385,7 @@
   }
 
   function activateWorkspace(workspace, { keepTool = false } = {}) {
-    if (workspace === 'video') return;
+    if (workspace === 'video' || workspace === 'motionfx') return;
     if (!['pixel', 'vector', 'layout'].includes(workspace)) return showWelcome();
     if (!state.project) return showNewProjectModal(workspace);
     state.project.workspace = workspace;
