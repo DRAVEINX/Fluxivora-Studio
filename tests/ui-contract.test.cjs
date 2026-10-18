@@ -826,7 +826,7 @@ test('Motion Studio genereert proxies met batchbediening, voortgang en annuleren
   assert.match(helper, /function validateProxyRequest\(/);
   assert.match(helper, /function buildProxyArgs\(/);
   assert.match(ffmpegTests, /lower-resolution H\.264\/AAC proxy/);
-  assert.match(JSON.stringify(require(path.join(root, 'package.json'))), /0\.5\.0-beta\.9/);
+  assert.match(JSON.stringify(require(path.join(root, 'package.json'))), /0\.5\.0-beta\.10/);
 });
 
 test('Motion Studio proxy-generation UI references existing HTML elements and keeps generated media separate', () => {
