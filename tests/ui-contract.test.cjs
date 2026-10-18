@@ -1073,3 +1073,30 @@ test('Windows-installer gebruikt NSIS en maakt herkenbare snelkoppelingen', () =
   assert.ok(pkg.build.nsis.createStartMenuShortcut, 'Startmenu-snelkoppeling moet worden aangemaakt');
   assert.equal(pkg.build.nsis.shortcutName, 'Fluxivora Studio');
 });
+
+
+test('alle drie grafische werkruimtes publiceren een niet-lege, testbare gereedschapsset', () => {
+  const match = app.match(/const toolsets = \{([\s\S]*?)\n  \};/);
+  assert.ok(match, 'Toolsets ontbreken in de app');
+  const block = match[1];
+  for (const workspace of ['pixel', 'vector', 'layout']) {
+    const workspaceMatch = block.match(new RegExp(workspace + ': \\[([\\s\\S]*?)\\n    \\](?:,|$)'));
+    assert.ok(workspaceMatch, 'Gereedschapsset ontbreekt: ' + workspace);
+    const entries = [...workspaceMatch[1].matchAll(/\['([^']+)',\s*'[^']*',\s*'([^']+)',\s*'([^']+)'\]/g)];
+    assert.ok(entries.length >= 15, workspace + ' heeft onverwacht weinig gereedschappen: ' + entries.length);
+    assert.ok(entries.every(entry => entry[1] && entry[2] && entry[3]),
+      workspace + ' bevat een gereedschap zonder id, label of uitleg');
+    assert.equal(new Set(entries.map(entry => entry[1])).size, entries.length,
+      workspace + ' bevat dubbele tool-id’s');
+  }
+});
+
+test('gereedschapsinventaris en roadmap noemen alle vier de creatieve werkruimtes', () => {
+  const inventory = fs.readFileSync(path.join(root, 'docs', 'TOOL-INVENTORY.md'), 'utf8');
+  const roadmap = fs.readFileSync(path.join(root, 'docs', 'ROADMAP.md'), 'utf8');
+  for (const label of ['Pixel Lab', 'Vector Forge', 'Page Studio', 'Motion Studio']) {
+    assert.ok(inventory.includes(label), 'Inventaris mist ' + label);
+    assert.ok(roadmap.includes(label), 'Roadmap mist ' + label);
+  }
+  assert.match(roadmap, /0\.5\.0-beta\.10/i, 'Roadmap moet de actuele packageversie vermelden');
+});
