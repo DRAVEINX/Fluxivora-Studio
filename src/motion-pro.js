@@ -662,6 +662,43 @@ void main() {
     return linked;
   }
 
+  function relinkKnownProxyFiles(files) {
+    const candidates = [...(files || [])].filter(file => file && file.type && file.type.startsWith('video/'));
+    if (!candidates.length) {
+      api.notice('Selecteer een of meer videobestanden om als proxy te koppelen.');
+      return;
+    }
+    const normalize = value => String(value || '').trim().toLocaleLowerCase();
+    const assetsByProxyName = new Map();
+    state.assets.filter(asset => asset.type === 'video' && asset.proxyName).forEach(asset => {
+      const key = normalize(asset.proxyName);
+      if (!assetsByProxyName.has(key)) assetsByProxyName.set(key, []);
+      assetsByProxyName.get(key).push(asset);
+    });
+    let linked = 0;
+    let unmatched = 0;
+    let ambiguous = 0;
+    for (const file of candidates) {
+      const matches = assetsByProxyName.get(normalize(file.name)) || [];
+      if (matches.length === 1) {
+        linkProxyFile(file, matches[0].id);
+        linked++;
+      } else if (matches.length > 1) {
+        ambiguous++;
+      } else {
+        unmatched++;
+      }
+    }
+    if (linked) {
+      api.notice(linked + (linked === 1 ? ' proxy opnieuw gekoppeld' : ' proxies opnieuw gekoppeld') +
+        (unmatched ? ' · ' + unmatched + ' niet herkend' : '') +
+        (ambiguous ? ' · ' + ambiguous + ' dubbelzinnige bestandsnamen overgeslagen' : '') + '.');
+    } else {
+      api.notice('Geen proxy automatisch gekoppeld. Bestandsnamen moeten exact overeenkomen met de opgeslagen proxynaam.' +
+        (ambiguous ? ' ' + ambiguous + ' naamconflicten gevonden.' : ''));
+    }
+  }
+
   async function linkProxyFile(file, assetId = selectedProxyAssetId) {
     const asset = state.assets.find(item => item.id === assetId);
     if (!asset || asset.type !== 'video' || !file || !file.type.startsWith('video/')) {
@@ -1435,6 +1472,11 @@ void main() {
   $('video-multicam-cut').addEventListener('click', cutToMulticamAngle);
   $('video-proxy-file').addEventListener('change', event => {
     linkProxyFile(event.target.files?.[0]);
+    event.target.value = '';
+  });
+  $('video-proxy-relink-all').addEventListener('click', () => $('video-proxy-relink-files').click());
+  $('video-proxy-relink-files').addEventListener('change', event => {
+    relinkKnownProxyFiles(event.target.files);
     event.target.value = '';
   });
   $('video-proxy-batch').addEventListener('click', () => runProxyGeneration());
