@@ -724,6 +724,8 @@ test('Motion Studio waarschuwt bij afwijkende duur wanneer bronmedia opnieuw wor
   assert.match(motion, /const expectedDuration = Number\(asset\.duration\) \|\| 0/);
   assert.match(motion, /Math\.abs\(expectedDuration - probe\.duration\) > Math\.max\(1, expectedDuration \* 0\.03\)/);
   assert.match(motion, /de opnieuw gekoppelde bron heeft een andere duur dan verwacht/);
+  assert.equal((motion.match(/de opnieuw gekoppelde bron heeft een andere duur dan verwacht/g) || []).length, 2,
+    'Zowel video als audio moeten waarschuwen bij een afwijkende bronduur');
 });
 
 test('Motion Studio ondersteunt cameragroepen, handmatige sync-offsets en hoekcuts op de playhead', () => {
