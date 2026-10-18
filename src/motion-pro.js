@@ -9,6 +9,7 @@
   let sourceOut = 0;
   let lastScopePaint = 0;
   const gradeHistory = new Set();
+  const effectAmountHistory = new Set();
   const effectLabels = {
     grayscale: 'Zwart-wit', sepia: 'Sepia', blur: 'Blur',
     soften: 'Zachte focus', boost: 'Contrast + kleur', desaturate: 'Gedempt kleur',
@@ -1077,7 +1078,29 @@ void main() {
         clip.effects = clip.effects.filter(item => item.id !== effect.id);
         api.refresh(); api.renderPreview();
       });
-      row.append(toggle, name, moveUp, moveDown, remove);
+      const amount = document.createElement('input');
+      amount.type = 'range';
+      amount.min = '0'; amount.max = '100'; amount.step = '1';
+      amount.className = 'video-effect-amount';
+      amount.setAttribute('aria-label', (effectLabels[effect.type] || effect.type) + ' intensiteit');
+      amount.value = String(Math.max(0, Math.min(100, effect.amount == null ? 100 : Number(effect.amount))));
+      const amountValue = document.createElement('output');
+      amountValue.className = 'video-effect-amount-value';
+      amountValue.textContent = amount.value + '%';
+      amount.addEventListener('input', () => {
+        if (!effectAmountHistory.has(effect.id)) {
+          api.pushHistory();
+          effectAmountHistory.add(effect.id);
+        }
+        effect.amount = Number(amount.value);
+        amountValue.textContent = amount.value + '%';
+        api.renderPreview();
+      });
+      amount.addEventListener('change', () => {
+        effectAmountHistory.delete(effect.id);
+        api.refresh(); api.renderPreview();
+      });
+      row.append(toggle, name, amount, amountValue, moveUp, moveDown, remove);
       container.append(row);
     });
   }
