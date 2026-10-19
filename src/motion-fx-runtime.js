@@ -79,15 +79,18 @@
       else valid.push(item);
     }
     if (!valid.length) return finite(fallback);
-    if (frame <= valid[0].frame) return valid[0].value;
-    if (frame >= valid[valid.length - 1].frame) return valid[valid.length - 1].value;
+    // Keep the public interpolator deterministic even when callers pass an
+    // invalid or out-of-range playhead value.
+    const at = clamp(finite(frame), 0, MAX_FRAME);
+    if (at <= valid[0].frame) return valid[0].value;
+    if (at >= valid[valid.length - 1].frame) return valid[valid.length - 1].value;
     for (let index = 1; index < valid.length; index += 1) {
       const right = valid[index];
-      if (frame > right.frame) continue;
+      if (at > right.frame) continue;
       const left = valid[index - 1];
       const span = right.frame - left.frame;
       if (span <= 0 || left.interpolation === 'hold') return left.value;
-      let progress = clamp((frame - left.frame) / span, 0, 1);
+      let progress = clamp((at - left.frame) / span, 0, 1);
       if (left.interpolation === 'bezier') {
         // Use the editor's real handle-based curve where its property ranges
         // match runtime values; retain smooth easing for unsupported properties.

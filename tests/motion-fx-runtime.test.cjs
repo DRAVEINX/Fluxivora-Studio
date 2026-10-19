@@ -452,3 +452,14 @@ test('Motion FX composition resolves duplicate keyframes at the same frame deter
   assert.equal(runtime.interpolateKeyframes(frames, 0, -1), 0);
   assert.equal(runtime.interpolateKeyframes(frames, 10, -1), 30);
 });
+
+test('Motion FX keyframe interpolation clamps invalid and out-of-range playhead frames safely', () => {
+  const frames = [
+    { frame: 2, property: 'x', value: 20, interpolation: 'linear' },
+    { frame: 8, property: 'x', value: 80, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, -50, 7), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, 50, 7), 80);
+  assert.equal(runtime.interpolateKeyframes(frames, Number.NaN, 7), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, Number.POSITIVE_INFINITY, 7), 20);
+});
