@@ -118,6 +118,8 @@
     if (!composition || !Array.isArray(composition.layers) || !Number.isFinite(frame)) {
       throw new TypeError('Compositie en een geldig frame zijn vereist.');
     }
+    // Use one bounded playhead value for both keyframe evaluation and layer timing.
+    const at = clamp(frame, 0, MAX_FRAME);
     const identifiedLayers = composition.layers.filter(layer => layer && typeof layer.id === 'string');
     const seenIds = new Set();
     for (const layer of identifiedLayers) {
@@ -167,7 +169,7 @@
           : property === 'scaleX' || property === 'scaleY' || property === 'opacity' ? 1 : 0;
         transform[property] = interpolateKeyframes(
           (Array.isArray(layer.keyframes) ? layer.keyframes : []).filter(key => key && key.property === property),
-          frame, finite(base[property], defaultValue));
+          at, finite(base[property], defaultValue));
       }
       transform.opacity = clamp(transform.opacity, 0, 1);
       const localMatrix = matrix(transform);
@@ -175,7 +177,7 @@
       const worldTransform = parent ? multiply(parent.worldTransform, localMatrix) : localMatrix;
       const timing = layer.timing || {};
       const active = layer.enabled !== false && Number.isFinite(timing.inFrame) &&
-        Number.isFinite(timing.outFrame) && frame >= timing.inFrame && frame < timing.outFrame;
+        Number.isFinite(timing.outFrame) && at >= timing.inFrame && at < timing.outFrame;
       const visible = active && (!parent || parent.visible);
       const opacity = clamp(transform.opacity * (parent ? parent.opacity : 1), 0, 1);
       const result = { id: layer.id, type: layer.type, name: layer.name, visible,

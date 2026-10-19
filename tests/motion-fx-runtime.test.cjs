@@ -463,3 +463,21 @@ test('Motion FX keyframe interpolation clamps invalid and out-of-range playhead 
   assert.equal(runtime.interpolateKeyframes(frames, Number.NaN, 7), 20);
   assert.equal(runtime.interpolateKeyframes(frames, Number.POSITIVE_INFINITY, 7), 20);
 });
+
+test('Motion FX composition clamps playhead consistently for keyframes and layer timing', () => {
+  const layers = [
+    { id: 'bounded-playhead', type: 'shape', enabled: true,
+      transform: { x: 5 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'x', value: 10, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ];
+  const beforeStart = runtime.evaluateCompositionAtFrame({ layers }, -10)[0];
+  assert.equal(beforeStart.visible, true);
+  assert.equal(beforeStart.localTransform.x, 0);
+  const afterRange = runtime.evaluateCompositionAtFrame({ layers }, 999999)[0];
+  assert.equal(afterRange.visible, false);
+  assert.equal(afterRange.localTransform.x, 10);
+});
