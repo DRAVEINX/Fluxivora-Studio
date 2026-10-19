@@ -546,3 +546,17 @@ test('Motion FX composition propagates an inactive ancestor through multiple des
   assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').visible, false);
   assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').worldTransform.e, 15);
 });
+ 
+test('Motion FX composition keeps grandchildren hidden when a parent is outside its active range', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'leaf', parentId: 'middle', type: 'shape', enabled: true,
+      transform: { x: 2 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'middle', parentId: 'root-out', type: 'group', enabled: true,
+      transform: { x: 3 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'root-out', type: 'group', enabled: true,
+      transform: { x: 10 }, timing: { inFrame: 0, outFrame: 4 } }
+  ] }, 5);
+  assert.equal(evaluated.find(layer => layer.id === 'root-out').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'middle').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'leaf').visible, false);
+});
