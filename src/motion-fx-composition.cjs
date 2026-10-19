@@ -128,7 +128,7 @@ function validateComposition(value) {
         if (layer.keyframes.length > 10000) errors.push('Te veel keyframes op één laag.');
         for (const keyframe of layer.keyframes) {
           if (!keyframe || !Number.isInteger(keyframe.frame) || keyframe.frame < 0 || keyframe.frame > MAX_FRAMES ||
-              typeof keyframe.property !== 'string' || !keyframe.property || !Number.isFinite(keyframe.value) ||
+              typeof keyframe.property !== 'string' || !keyframe.property.trim() || keyframe.property.length > 128 || !Number.isFinite(keyframe.value) ||
               !['hold', 'linear', 'ease', 'bezier'].includes(keyframe.interpolation)) {
             errors.push('Ongeldig keyframe in laag ' + (layer.id || '(zonder ID)') + '.');
             break;

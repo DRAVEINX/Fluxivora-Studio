@@ -192,3 +192,13 @@ test('validator en parser weigeren laag-ID’s die alleen uit witruimte bestaan'
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Laag-ID ontbreekt/);
 });
 
+test('validator en parser weigeren lege, witruimte-only en te lange keyframe-eigenschappen', () => {
+  for (const property of ['', '   ', 'x'.repeat(129)]) {
+    const composition = MotionFX.createComposition();
+    const layer = MotionFX.createLayer('shape', { id: 'keyframe-property-layer' });
+    layer.keyframes.push({ frame: 1, property, value: 0.5, interpolation: 'linear' });
+    composition.layers.push(layer);
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ongeldig keyframe')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldig keyframe/);
+  }
+});
