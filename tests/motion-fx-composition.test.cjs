@@ -147,3 +147,26 @@ test('validator weigert ontbrekende verplichte achtergrond- en pixelverhoudingin
   delete missingPixelAspect.settings.pixelAspect;
   assert.ok(MotionFX.validateComposition(missingPixelAspect).some(error => error.includes('Pixelverhouding ontbreekt')));
 });
+
+test('validator en parser weigeren lege of te lange laagnamen', () => {
+  for (const name of ['', '   ', 'x'.repeat(129)]) {
+    const composition = MotionFX.createComposition();
+    composition.layers.push(MotionFX.createLayer('shape', { id: 'named-layer', name: 'Valid' }));
+    composition.layers[0].name = name;
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ongeldige laagnaam')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige laagnaam/);
+  }
+});
+
+test('validator en parser weigeren lege, niet-tekstuele of te lange ouderlaag-ID’s', () => {
+  for (const parentId of ['', 42, 'x'.repeat(129)]) {
+    const composition = MotionFX.createComposition();
+    composition.layers.push(MotionFX.createLayer('null', { id: 'parent' }));
+    const child = MotionFX.createLayer('shape', { id: 'child', parentId: 'parent' });
+    child.parentId = parentId;
+    composition.layers.push(child);
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ongeldige ouderlaag-ID')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige ouderlaag-ID/);
+  }
+});
+
