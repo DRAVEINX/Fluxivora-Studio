@@ -64,6 +64,8 @@ test('laagactiviteit volgt enabled en het halfopen in/out-framebereik', () => {
   assert.equal(Eval.isLayerActive(layer, 19), true);
   assert.equal(Eval.isLayerActive(layer, 20), false);
   assert.equal(Eval.isLayerActive({ ...layer, enabled: false }, 15), false);
+  assert.equal(Eval.isLayerActive({ enabled: true, timing: { inFrame: 10, outFrame: 10 } }, 10), false);
+  assert.equal(Eval.isLayerActive({ enabled: true, timing: { inFrame: 20, outFrame: 10 } }, 15), false);
 });
 
 test('directe laagactiviteit begrenst de playhead op hetzelfde maximale frame', () => {

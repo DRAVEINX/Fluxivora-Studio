@@ -73,6 +73,7 @@ function isLayerActive(layer, frame) {
   // Match composition evaluation: direct callers use the same bounded playhead
   // and reject malformed timing instead of relying on JavaScript coercion.
   const at = clamp(frame, 0, MAX_FRAME);
+  if (layer.timing.outFrame <= layer.timing.inFrame) return false;
   return at >= layer.timing.inFrame && at < layer.timing.outFrame;
 }
 

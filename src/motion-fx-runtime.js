@@ -179,7 +179,8 @@
       const worldTransform = parent ? multiply(parent.worldTransform, localMatrix) : localMatrix;
       const timing = layer.timing || {};
       const active = layer.enabled !== false && Number.isFinite(timing.inFrame) &&
-        Number.isFinite(timing.outFrame) && at >= timing.inFrame && at < timing.outFrame;
+        Number.isFinite(timing.outFrame) && timing.outFrame > timing.inFrame &&
+        at >= timing.inFrame && at < timing.outFrame;
       const visible = active && (!parent || parent.visible);
       const opacity = clamp(transform.opacity * (parent ? parent.opacity : 1), 0, 1);
       const result = { id: layer.id, type: layer.type, name: layer.name, visible,
