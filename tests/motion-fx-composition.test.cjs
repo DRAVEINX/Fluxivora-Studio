@@ -124,3 +124,15 @@ test('parser weigert expliciet onbekende projectformaten en versies', () => {
   assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, format: 'other' })), /projectformaat/);
   assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, version: 999 })), /projectversie/);
 });
+
+
+test('parser weigert ongeldige achtergrondkleuren en pixelverhoudingen', () => {
+  const composition = MotionFX.createComposition();
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify({
+    ...composition, settings: { ...composition.settings, background: 'url(javascript:alert(1))' }
+  })), /achtergrondkleur/);
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify({
+    ...composition, settings: { ...composition.settings, pixelAspect: 100 }
+  })), /pixelverhouding/);
+  assert.deepEqual(MotionFX.validateComposition(composition), []);
+});

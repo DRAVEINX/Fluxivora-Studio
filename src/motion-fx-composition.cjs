@@ -84,6 +84,15 @@ function validateComposition(value) {
       !Number.isInteger(settings.durationFrames) || settings.durationFrames < 1 || settings.durationFrames > MAX_FRAMES) {
     errors.push('Ongeldige compositie-instellingen.');
   }
+  // Keep imported background values predictable for canvas, preview and export rendering.
+  if (settings && settings.background != null &&
+      (typeof settings.background !== 'string' || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(settings.background))) {
+    errors.push('Ongeldige achtergrondkleur.');
+  }
+  if (settings && settings.pixelAspect != null &&
+      (!Number.isFinite(settings.pixelAspect) || settings.pixelAspect < 0.1 || settings.pixelAspect > 10)) {
+    errors.push('Ongeldige pixelverhouding.');
+  }
   if (!Array.isArray(value.layers) || value.layers.length > MAX_LAYERS) {
     errors.push('Ongeldige lagenlijst (maximaal ' + MAX_LAYERS + ' lagen).');
   } else {
