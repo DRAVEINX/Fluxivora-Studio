@@ -195,3 +195,29 @@ test('Motion FX composition handles unknown parent identifiers as root layers', 
   assert.equal(layer.worldTransform.f, 4);
   assert.equal(layer.opacity, 0.8);
 });
+
+
+test('Motion FX composition handles reversed timing as inactive', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'reversed', type: 'shape', enabled: true,
+      transform: { x: 1 }, timing: { inFrame: 9, outFrame: 4 } }
+  ] }, 6);
+  assert.equal(layer.visible, false);
+});
+
+test('Motion FX composition ignores malformed keyframes and preserves base values', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'malformed-keys', type: 'shape', enabled: true,
+      transform: { x: 11, opacity: 0.4 },
+      keyframes: [
+        null,
+        { frame: 'bad', property: 'x', value: 99 },
+        { frame: 2, property: 'x', value: Infinity },
+        { frame: 3, property: 'y', value: 42 }
+      ],
+      timing: { inFrame: 0, outFrame: 8 } }
+  ] }, 4);
+  assert.equal(layer.localTransform.x, 11);
+  assert.equal(layer.localTransform.opacity, 0.4);
+  assert.equal(layer.visible, true);
+});
