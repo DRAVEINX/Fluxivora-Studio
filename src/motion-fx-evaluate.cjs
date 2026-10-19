@@ -128,16 +128,18 @@ function evaluateCompositionAtFrame(composition, frame) {
   if (!composition || !Array.isArray(composition.layers) || !Number.isFinite(frame)) {
     throw new TypeError('Compositie en een geldig frame zijn vereist.');
   }
+  // Keep layer timing and keyframe sampling on the same bounded playhead.
+  const at = clamp(frame, 0, MAX_FRAME);
   const ordered = sortLayersForEvaluation(composition.layers);
   const byId = new Map();
   const evaluated = [];
   for (const layer of ordered) {
-    const transform = evaluateLayerTransform(layer, frame);
+    const transform = evaluateLayerTransform(layer, at);
     const localMatrix = transformMatrix(transform);
     const parent = layer.parentId ? byId.get(layer.parentId) : null;
     const worldMatrix = parent ? multiplyMatrices(parent.worldMatrix, localMatrix) : localMatrix;
     const parentVisible = !parent || parent.visible;
-    const visible = isLayerActive(layer, frame) && parentVisible;
+    const visible = isLayerActive(layer, at) && parentVisible;
     const worldOpacity = clamp(transform.opacity * (parent ? parent.worldOpacity : 1), 0, 1);
     const result = {
       id: layer.id,

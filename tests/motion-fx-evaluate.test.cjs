@@ -116,6 +116,19 @@ test('compositie-evaluatie combineert oudertransformaties en opacity', () => {
   assert.equal(result[1].visible, true);
 });
 
+test('compositie begrenst playhead gelijk voor keyframes en laagactiviteit', () => {
+  const composition = { layers: [{
+    id: 'end-layer', enabled: true, parentId: null,
+    transform: { x: 0 }, keyframes: [
+      { frame: 216000, property: 'x', value: 42, interpolation: 'linear' }
+    ],
+    timing: { inFrame: 0, outFrame: 216001 }
+  }] };
+  const result = Eval.evaluateCompositionAtFrame(composition, 999999)[0];
+  assert.equal(result.localTransform.x, 42);
+  assert.equal(result.visible, true);
+});
+
 test('inactieve ouder verbergt afhankelijke lagen en ontbrekende compositie wordt geweigerd', () => {
   const composition = { layers: [
     { id: 'parent', parentId: null, enabled: false, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] },
