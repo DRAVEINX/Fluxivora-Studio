@@ -367,3 +367,18 @@ test('Motion FX composition rejects duplicate layer identifiers before evaluatio
     { id: 'duplicate', type: 'group', transform: { x: 10 }, timing: { inFrame: 0, outFrame: 5 } }
   ] }, 2), /Dubbele Motion FX-laag-ID: duplicate/);
 });
+
+
+test('Motion FX composition evaluates handle-based Bézier keyframes using editor curves', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'bezier-opacity', type: 'shape', enabled: true,
+      transform: { opacity: 0 },
+      keyframes: [
+        { frame: 0, property: 'opacity', value: 0, interpolation: 'bezier', outHandle: { time: 0.1, opacity: 0 } },
+        { frame: 10, property: 'opacity', value: 1, interpolation: 'linear', inHandle: { time: 0.1, opacity: 0 } }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 2);
+  assert.ok(layer.localTransform.opacity < 0.2, 'flat Bézier handles should produce a slower initial rise');
+  assert.equal(layer.opacity, layer.localTransform.opacity);
+});

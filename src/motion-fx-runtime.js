@@ -81,7 +81,22 @@
       const span = right.frame - left.frame;
       if (span <= 0 || left.interpolation === 'hold') return left.value;
       let progress = clamp((frame - left.frame) / span, 0, 1);
-      if (left.interpolation === 'ease' || left.interpolation === 'bezier') {
+      if (left.interpolation === 'bezier') {
+        // Use the editor's real handle-based curve where its property ranges
+        // match runtime values; retain smooth easing for unsupported properties.
+        let curves = typeof globalThis !== 'undefined' ? globalThis.FluxivoraKeyframeCurves : null;
+        if (!curves && typeof require === 'function') {
+          try { curves = require('./keyframe-curves.js'); } catch (_) { curves = null; }
+        }
+        const supported = curves && curves.PROPERTIES && Object.prototype.hasOwnProperty.call(curves.PROPERTIES, left.property);
+        if (supported && typeof curves.bezierValue === 'function') {
+          const leftCurve = { ...left, time: left.frame, [left.property]: left.value };
+          const rightCurve = { ...right, time: right.frame, [right.property]: right.value };
+          const curved = curves.bezierValue(leftCurve, rightCurve, left.property, progress);
+          if (Number.isFinite(curved)) return curved;
+        }
+        progress = progress * progress * (3 - 2 * progress);
+      } else if (left.interpolation === 'ease') {
         progress = progress * progress * (3 - 2 * progress);
       }
       return left.value + (right.value - left.value) * progress;
