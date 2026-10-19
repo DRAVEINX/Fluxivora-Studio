@@ -128,7 +128,11 @@
       if (seenIds.has(layer.id)) throw new TypeError(`Dubbele Motion FX-laag-ID: ${layer.id}`);
       seenIds.add(layer.id);
     }
-    const byId = new Map(identifiedLayers.map(layer => [layer.id, layer]));
+    const byId = new Map();
+    for (const layer of identifiedLayers) {
+      if (byId.has(layer.id)) throw new TypeError(`Dubbele Motion FX-laag-ID: ${layer.id}`);
+      byId.set(layer.id, layer);
+    }
     const ordered = [];
     const visited = new Set();
     const visiting = new Set();

@@ -104,6 +104,14 @@ test('Motion FX composition hides layers with malformed or empty timing ranges',
 });
 
 
+test('Motion FX composition rejects duplicate layer IDs', () => {
+  assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'duplicate', type: 'shape', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'duplicate', type: 'shape', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 5), /Dubbele Motion FX-laag-ID: duplicate/);
+});
+
+
 test('Motion FX composition evaluation rejects circular parent relationships', () => {
   assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
     { id: 'a', parentId: 'b', transform: {}, timing: { inFrame: 0, outFrame: 2 } },
