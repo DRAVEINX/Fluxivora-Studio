@@ -95,11 +95,22 @@ function validateComposition(value) {
       if (!layer?.transform || typeof layer.transform !== 'object' || !layer?.timing || typeof layer.timing !== 'object' || !Array.isArray(layer?.keyframes)) {
         errors.push('Laag mist transform-, timing- of keyframegegevens.');
       } else {
-        for (const property of ['x', 'y', 'anchorX', 'anchorY', 'rotation', 'scaleX', 'scaleY', 'opacity']) {
-          if (!Number.isFinite(layer.transform[property])) errors.push('Ongeldige transformatiewaarde: ' + property + '.');
+        const transformBounds = {
+          x: [-100000, 100000], y: [-100000, 100000],
+          anchorX: [-10, 10], anchorY: [-10, 10],
+          rotation: [-360000, 360000], scaleX: [-100, 100],
+          scaleY: [-100, 100], opacity: [0, 1]
+        };
+        for (const [property, [min, max]] of Object.entries(transformBounds)) {
+          const current = layer.transform[property];
+          if (!Number.isFinite(current) || current < min || current > max) {
+            errors.push('Ongeldige transformatiewaarde: ' + property + '.');
+          }
         }
         if (!Number.isInteger(layer.timing.inFrame) || !Number.isInteger(layer.timing.outFrame) ||
-            layer.timing.inFrame < 0 || layer.timing.outFrame > MAX_FRAMES || layer.timing.outFrame <= layer.timing.inFrame) {
+            layer.timing.inFrame < 0 || layer.timing.inFrame > MAX_FRAMES ||
+            layer.timing.outFrame < 1 || layer.timing.outFrame > MAX_FRAMES ||
+            layer.timing.outFrame <= layer.timing.inFrame) {
           errors.push('Ongeldige laagduur.');
         }
         if (layer.keyframes.length > 10000) errors.push('Te veel keyframes op één laag.');

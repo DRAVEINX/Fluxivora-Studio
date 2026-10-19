@@ -105,6 +105,18 @@ test('validator weigert niet-numerieke transforms en ongeldige keyframes', () =>
   assert.ok(errors.some(error => error.includes('Ongeldige transformatiewaarde: x')));
   assert.ok(errors.some(error => error.includes('Ongeldig keyframe')));
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige transformatiewaarde|Ongeldig keyframe/);
+
+  const invalidOpacity = MotionFX.createComposition();
+  const opacityLayer = MotionFX.createLayer('shape', { id: 'bad-opacity' });
+  opacityLayer.transform.opacity = 1.5;
+  invalidOpacity.layers.push(opacityLayer);
+  assert.ok(MotionFX.validateComposition(invalidOpacity).some(error => error.includes('Ongeldige transformatiewaarde: opacity')));
+
+  const invalidTiming = MotionFX.createComposition();
+  const timingLayer = MotionFX.createLayer('shape', { id: 'bad-timing' });
+  timingLayer.timing.inFrame = MotionFX.MAX_FRAMES + 1;
+  invalidTiming.layers.push(timingLayer);
+  assert.ok(MotionFX.validateComposition(invalidTiming).some(error => error.includes('Ongeldige laagduur')));
 });
 
 test('parser weigert expliciet onbekende projectformaten en versies', () => {
