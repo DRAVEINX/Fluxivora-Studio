@@ -248,3 +248,31 @@ test('Motion FX composition holds values on hold keyframe segments', () => {
   ] }, 5);
   assert.equal(layer.localTransform.x, 10);
 });
+
+
+test('Motion FX composition applies smooth ease interpolation to keyframes', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'eased', type: 'shape', enabled: true,
+      transform: { x: 0 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'ease' },
+        { frame: 10, property: 'x', value: 100, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 2.5);
+  assert.ok(Math.abs(layer.localTransform.x - 15.625) < 1e-9);
+});
+
+test('Motion FX composition builds rotation and scale into the world matrix', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'scaled-rotated', type: 'shape', enabled: true,
+      transform: { x: 3, y: 4, rotation: 90, scaleX: 2, scaleY: 3 },
+      timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 1);
+  assert.ok(Math.abs(layer.worldTransform.a) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.b - 2) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.c + 3) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.d) < 1e-9);
+  assert.equal(layer.worldTransform.e, 3);
+  assert.equal(layer.worldTransform.f, 4);
+});
