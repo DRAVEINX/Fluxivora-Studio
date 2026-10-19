@@ -143,3 +143,29 @@ test('Motion FX composition evaluates transform keyframes and clamps opacity', (
   assert.equal(layer.localTransform.opacity, 1);
   assert.equal(layer.opacity, 1);
 });
+
+
+test('Motion FX composition preserves layer order and parent-first evaluation', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'child-first', parentId: 'parent-later', type: 'shape', enabled: true,
+      transform: { x: 3, y: 0 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'unrelated', type: 'shape', enabled: true,
+      transform: { x: 7, y: 0 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'parent-later', type: 'group', enabled: true,
+      transform: { x: 10, y: 0 }, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['parent-later', 'child-first', 'unrelated']);
+  assert.equal(evaluated.find(layer => layer.id === 'child-first').worldTransform.e, 13);
+});
+
+test('Motion FX composition tolerates missing optional keyframes and transforms', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'minimal', type: 'shape', enabled: true,
+      timing: { inFrame: 0, outFrame: 3 } }
+  ] }, 1);
+  assert.equal(layer.visible, true);
+  assert.equal(layer.localTransform.x, 0);
+  assert.equal(layer.localTransform.scaleX, 1);
+  assert.equal(layer.localTransform.opacity, 1);
+  assert.equal(layer.opacity, 1);
+});
