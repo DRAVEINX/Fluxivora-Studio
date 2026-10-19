@@ -313,3 +313,15 @@ test('kopie behoudt alle compositie-instellingen en is onafhankelijk van het ori
   assert.equal(composition.layers[0].keyframes[0].value, 1);
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('cloneComposition weigert ongeldige broncomposities', () => {
+  const invalid = MotionFX.createComposition();
+  invalid.settings.pixelAspect = 0;
+  assert.throws(() => MotionFX.cloneComposition(invalid), /Ongeldige pixelverhouding/);
+
+  const invalidLayer = MotionFX.createComposition();
+  const layer = MotionFX.createLayer('shape', { id: 'invalid-layer' });
+  layer.transform.opacity = 2;
+  invalidLayer.layers.push(layer);
+  assert.throws(() => MotionFX.cloneComposition(invalidLayer), /Ongeldige transformatiewaarde: opacity/);
+});
