@@ -14,6 +14,17 @@ test('lineaire keyframes interpoleren tussen de twee omliggende frames', () => {
   assert.equal(Eval.interpolateKeyframes(frames, 99), 30);
 });
 
+test('dubbele keyframes na begrenzing gebruiken de laatste invoer, ook bij ongeldige playhead', () => {
+  assert.equal(Eval.interpolateKeyframes([
+    { frame: 0, value: 10, interpolation: 'linear' },
+    { frame: -1, value: 20, interpolation: 'linear' }
+  ], 0), 20);
+  assert.equal(Eval.interpolateKeyframes([
+    { frame: 999999, value: 10, interpolation: 'linear' },
+    { frame: 216000, value: 30, interpolation: 'linear' }
+  ], Number.NaN), 30);
+});
+
 test('hold-interpolatie houdt de vorige waarde vast tot het volgende keyframe', () => {
   const frames = [
     { frame: 0, value: 4, interpolation: 'hold' },

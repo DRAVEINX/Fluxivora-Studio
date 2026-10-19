@@ -9,25 +9,35 @@ function clamp(value, min, max) {
 function interpolateKeyframes(keyframes, frame, fallback = 0) {
   if (!Array.isArray(keyframes) || keyframes.length === 0) return fallback;
   const valid = keyframes
-    .filter(item => item && Number.isFinite(item.frame) && Number.isFinite(item.value))
-    .map(item => ({ ...item, frame: clamp(item.frame, 0, MAX_FRAME) }))
-    .sort((a, b) => a.frame - b.frame);
+    .map((item, index) => ({ item, index }))
+    .filter(entry => entry.item && Number.isFinite(entry.item.frame) && Number.isFinite(entry.item.value))
+    .map(({ item, index }) => ({ ...item, frame: clamp(item.frame, 0, MAX_FRAME), _inputOrder: index }))
+    .sort((a, b) => a.frame - b.frame || a._inputOrder - b._inputOrder);
   if (!valid.length) return fallback;
-  if (frame <= valid[0].frame) return valid[0].value;
-  if (frame >= valid[valid.length - 1].frame) return valid[valid.length - 1].value;
+  // Match the runtime: when frame clamping collapses keyframes onto one
+  // frame, the last keyframe in input order is authoritative.
+  const unique = [];
+  for (const item of valid) {
+    delete item._inputOrder;
+    if (unique.length && unique[unique.length - 1].frame === item.frame) unique[unique.length - 1] = item;
+    else unique.push(item);
+  }
+  const at = clamp(Number.isFinite(frame) ? frame : 0, 0, MAX_FRAME);
+  if (at <= unique[0].frame) return unique[0].value;
+  if (at >= unique[unique.length - 1].frame) return unique[unique.length - 1].value;
 
   let left = valid[0];
   let right = valid[1];
-  for (let index = 1; index < valid.length; index += 1) {
-    if (frame <= valid[index].frame) {
-      left = valid[index - 1];
-      right = valid[index];
+  for (let index = 1; index < unique.length; index += 1) {
+    if (at <= unique[index].frame) {
+      left = unique[index - 1];
+      right = unique[index];
       break;
     }
   }
   const span = right.frame - left.frame;
   if (span <= 0 || left.interpolation === 'hold') return left.value;
-  let t = clamp((frame - left.frame) / span, 0, 1);
+  let t = clamp((at - left.frame) / span, 0, 1);
   if (left.interpolation === 'ease') t = t * t * (3 - 2 * t);
   if (left.interpolation === 'bezier') {
     // Predictable symmetric cubic ease-in-out until custom curve handles are supplied.
