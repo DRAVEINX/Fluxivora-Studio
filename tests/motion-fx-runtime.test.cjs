@@ -89,6 +89,21 @@ test('Motion FX composition evaluation applies parent transforms and inherited v
   assert.equal(child.opacity, 0.25);
 });
 
+test('Motion FX composition hides layers with malformed or empty timing ranges', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'empty', enabled: true, transform: {}, timing: { inFrame: 4, outFrame: 4 } },
+    { id: 'reversed', enabled: true, transform: {}, timing: { inFrame: 8, outFrame: 3 } },
+    { id: 'string-time', enabled: true, transform: {}, timing: { inFrame: '0', outFrame: 10 } },
+    { id: 'infinite-time', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: Infinity } },
+    { id: 'valid', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 5);
+  for (const id of ['empty', 'reversed', 'string-time', 'infinite-time']) {
+    assert.equal(evaluated.find(layer => layer.id === id).visible, false, id);
+  }
+  assert.equal(evaluated.find(layer => layer.id === 'valid').visible, true);
+});
+
+
 test('Motion FX composition evaluation rejects circular parent relationships', () => {
   assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
     { id: 'a', parentId: 'b', transform: {}, timing: { inFrame: 0, outFrame: 2 } },
