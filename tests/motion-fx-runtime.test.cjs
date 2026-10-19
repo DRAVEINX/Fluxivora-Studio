@@ -403,3 +403,38 @@ test('Motion FX Bézier interpolation tolerates missing editor curve module and 
   assert.ok(Number.isFinite(value));
   assert.ok(value >= 0 && value <= 1);
 });
+
+
+test('Motion FX composition inherits parent opacity and visibility', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent-opacity', type: 'group', enabled: true, transform: { opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-opacity', type: 'shape', parentId: 'parent-opacity', enabled: true,
+      transform: { opacity: 0.4 }, timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const child = evaluated.find(layer => layer.id === 'child-opacity');
+  assert.equal(child.opacity, 0.2);
+  assert.equal(child.visible, true);
+  const hiddenParent = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'hidden-parent', type: 'group', enabled: false, transform: { opacity: 1 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'hidden-child', type: 'shape', parentId: 'hidden-parent', transform: { opacity: 1 },
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(hiddenParent.find(layer => layer.id === 'hidden-child').visible, false);
+});
+
+test('Motion FX composition keeps transformed child coordinates finite', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent-transform', type: 'group', transform: { x: 10, y: 20, rotation: 90, scaleX: 1, scaleY: 1 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-transform', type: 'shape', parentId: 'parent-transform',
+      transform: { x: 5, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const child = evaluated.find(layer => layer.id === 'child-transform');
+  assert.ok(Number.isFinite(child.worldTransform.e));
+  assert.ok(Number.isFinite(child.worldTransform.f));
+  assert.ok(Math.abs(child.worldTransform.e - 10) < 1e-9);
+  assert.ok(Math.abs(child.worldTransform.f - 25) < 1e-9);
+});
