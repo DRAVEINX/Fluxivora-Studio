@@ -1,0 +1,562 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const runtime = require('../src/motion-fx-runtime.js');
+
+test('Motion FX interpolation sorts keyframes and interpolates linear values', () => {
+  const frames = [
+    { time: 2, x: 20, ease: 'linear' },
+    { time: 0, x: 0, ease: 'linear' }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'x', 1, 99), 10);
+});
+
+test('Motion FX interpolation clamps to endpoint values and handles empty input', () => {
+  const frames = [{ time: 1, opacity: 0.25 }, { time: 3, opacity: 0.75 }];
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', -5, 1), 0.25);
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', 8, 1), 0.75);
+  assert.equal(runtime.interpolateProperty([], 'opacity', 1, 0.6), 0.6);
+  assert.equal(runtime.interpolateProperty(null, 'opacity', 1, 0.6), 0.6);
+});
+
+test('Motion FX interpolation supports ease curves and hold segments', () => {
+  assert.equal(runtime.interpolateProperty([
+    { time: 0, x: 0, ease: 'linear' }, { time: 2, x: 8, ease: 'easeIn' }
+  ], 'x', 1), 2);
+  assert.equal(runtime.interpolateProperty([
+    { time: 0, x: 0, ease: 'linear' }, { time: 2, x: 8, ease: 'hold' }
+  ], 'x', 1), 0);
+});
+
+test('Motion FX interpolation delegates Bézier segments and accepts only finite results', () => {
+  const frames = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 2, x: 10, ease: 'bezier' }
+  ];
+  let args;
+  const bezierValue = (...values) => { args = values; return 7; };
+  assert.equal(runtime.interpolateProperty(frames, 'x', 1, 0, { bezierValue }), 7);
+  assert.equal(args[2], 'x');
+  assert.equal(args[3], 0.5);
+  assert.equal(runtime.interpolateProperty(frames, 'x', 1, 0, { bezierValue: () => NaN }), 5);
+});
+
+test('Motion FX interpolation ignores malformed frames and uses finite fallback values', () => {
+  const frames = [
+    null,
+    { time: 'bad', x: 10 },
+    { time: 1, x: Infinity },
+    { time: 2, y: 20 }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'x', 1, 12), 12);
+  assert.equal(runtime.interpolateProperty(undefined, 'x', 1, '4'), 4);
+});
+
+
+test('Motion FX layer evaluation returns animated values and active state', () => {
+  const layer = {
+    id: 'layer-a', start: 2, duration: 4, x: 10, y: 5,
+    keyframes: [
+      { time: 0, x: 0, opacity: 0.2, ease: 'linear' },
+      { time: 2, x: 20, opacity: 1, ease: 'linear' }
+    ]
+  };
+  const before = runtime.evaluateLayerAtTime(layer, 1);
+  assert.equal(before.active, false);
+  assert.equal(before.values.x, 0);
+  const middle = runtime.evaluateLayerAtTime(layer, 3);
+  assert.equal(middle.active, true);
+  assert.equal(middle.values.x, 10);
+  assert.ok(Math.abs(middle.values.opacity - 0.6) < 1e-9);
+  assert.equal(middle.values.scale, 1);
+  assert.equal(runtime.evaluateLayerAtTime(layer, 6).active, false);
+});
+
+test('Motion FX composition evaluation applies parent transforms and inherited visibility', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'child', parentId: 'parent', type: 'shape', enabled: true,
+      transform: { x: 10, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'parent', type: 'group', enabled: true,
+      transform: { x: 100, y: 20, rotation: 90, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const child = evaluated.find(layer => layer.id === 'child');
+  assert.equal(child.visible, true);
+  assert.ok(Math.abs(child.worldTransform.e - 100) < 1e-9);
+  assert.ok(Math.abs(child.worldTransform.f - 30) < 1e-9);
+  assert.equal(child.opacity, 0.25);
+});
+
+test('Motion FX composition hides layers with malformed or empty timing ranges', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'empty', enabled: true, transform: {}, timing: { inFrame: 4, outFrame: 4 } },
+    { id: 'reversed', enabled: true, transform: {}, timing: { inFrame: 8, outFrame: 3 } },
+    { id: 'string-time', enabled: true, transform: {}, timing: { inFrame: '0', outFrame: 10 } },
+    { id: 'infinite-time', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: Infinity } },
+    { id: 'valid', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 5);
+  for (const id of ['empty', 'reversed', 'string-time', 'infinite-time']) {
+    assert.equal(evaluated.find(layer => layer.id === id).visible, false, id);
+  }
+  assert.equal(evaluated.find(layer => layer.id === 'valid').visible, true);
+});
+
+
+test('Motion FX composition rejects duplicate layer IDs', () => {
+  assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'duplicate', type: 'shape', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'duplicate', type: 'shape', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 5), /Dubbele Motion FX-laag-ID: duplicate/);
+});
+
+
+test('Motion FX composition evaluation rejects circular parent relationships', () => {
+  assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'a', parentId: 'b', transform: {}, timing: { inFrame: 0, outFrame: 2 } },
+    { id: 'b', parentId: 'a', transform: {}, timing: { inFrame: 0, outFrame: 2 } }
+  ] }, 1), /Circulaire ouder-kindrelatie/);
+});
+
+
+test('Motion FX composition evaluation respects disabled layers and exact timing boundaries', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'disabled-parent', type: 'group', enabled: false,
+      transform: { x: 20, y: 30, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child', parentId: 'disabled-parent', type: 'shape', enabled: true,
+      transform: { x: 5, y: 7, opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'boundary-layer', type: 'shape', enabled: true,
+      transform: {}, timing: { inFrame: 5, outFrame: 8 } }
+  ] }, 8);
+  const parent = evaluated.find(layer => layer.id === 'disabled-parent');
+  const child = evaluated.find(layer => layer.id === 'child');
+  const boundary = evaluated.find(layer => layer.id === 'boundary-layer');
+  assert.equal(parent.visible, false);
+  assert.equal(child.visible, false);
+  assert.equal(boundary.visible, false, 'outFrame is exclusive');
+});
+
+test('Motion FX composition evaluation keeps a layer inactive before its inFrame', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'later', type: 'shape', enabled: true,
+      transform: { x: 12 }, timing: { inFrame: 4, outFrame: 12 } }
+  ] }, 3);
+  assert.equal(layer.visible, false);
+  assert.equal(layer.localTransform.x, 12);
+});
+
+
+test('Motion FX composition evaluates transform keyframes and clamps opacity', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'animated', type: 'shape', enabled: true,
+      transform: { x: 2, y: 4, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'x', value: 100, interpolation: 'linear' },
+        { frame: 0, property: 'opacity', value: 2, interpolation: 'linear' },
+        { frame: 10, property: 'opacity', value: 2, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.x, 50);
+  assert.equal(layer.localTransform.y, 4);
+  assert.equal(layer.localTransform.opacity, 1);
+  assert.equal(layer.opacity, 1);
+});
+
+
+test('Motion FX composition preserves layer order and parent-first evaluation', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'child-first', parentId: 'parent-later', type: 'shape', enabled: true,
+      transform: { x: 3, y: 0 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'unrelated', type: 'shape', enabled: true,
+      transform: { x: 7, y: 0 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'parent-later', type: 'group', enabled: true,
+      transform: { x: 10, y: 0 }, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['parent-later', 'child-first', 'unrelated']);
+  assert.equal(evaluated.find(layer => layer.id === 'child-first').worldTransform.e, 13);
+});
+
+test('Motion FX composition tolerates missing optional keyframes and transforms', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'minimal', type: 'shape', enabled: true,
+      timing: { inFrame: 0, outFrame: 3 } }
+  ] }, 1);
+  assert.equal(layer.visible, true);
+  assert.equal(layer.localTransform.x, 0);
+  assert.equal(layer.localTransform.scaleX, 1);
+  assert.equal(layer.localTransform.opacity, 1);
+  assert.equal(layer.opacity, 1);
+});
+
+
+test('Motion FX composition clamps negative and over-range opacity after inheritance', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent', type: 'group', enabled: true,
+      transform: { opacity: 0.7 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child-high', parentId: 'parent', type: 'shape', enabled: true,
+      transform: { opacity: 2 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child-low', parentId: 'parent', type: 'shape', enabled: true,
+      transform: { opacity: -1 }, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 3);
+  assert.equal(evaluated.find(layer => layer.id === 'child-high').opacity, 0.7);
+  assert.equal(evaluated.find(layer => layer.id === 'child-low').opacity, 0);
+});
+
+test('Motion FX composition handles unknown parent identifiers as root layers', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'orphan', parentId: 'missing-parent', type: 'shape', enabled: true,
+      transform: { x: 9, y: 4, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2);
+  assert.equal(layer.visible, true);
+  assert.equal(layer.worldTransform.e, 9);
+  assert.equal(layer.worldTransform.f, 4);
+  assert.equal(layer.opacity, 0.8);
+});
+
+
+test('Motion FX composition handles reversed timing as inactive', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'reversed', type: 'shape', enabled: true,
+      transform: { x: 1 }, timing: { inFrame: 9, outFrame: 4 } }
+  ] }, 6);
+  assert.equal(layer.visible, false);
+});
+
+test('Motion FX composition ignores malformed keyframes and preserves base values', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'malformed-keys', type: 'shape', enabled: true,
+      transform: { x: 11, opacity: 0.4 },
+      keyframes: [
+        null,
+        { frame: 'bad', property: 'x', value: 99 },
+        { frame: 2, property: 'x', value: Infinity },
+        { frame: 3, property: 'y', value: 42 }
+      ],
+      timing: { inFrame: 0, outFrame: 8 } }
+  ] }, 4);
+  assert.equal(layer.localTransform.x, 11);
+  assert.equal(layer.localTransform.opacity, 0.4);
+  assert.equal(layer.visible, true);
+});
+
+
+test('Motion FX composition applies keyframe values at exact frame boundaries', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'boundary-keys', type: 'shape', enabled: true,
+      transform: { x: 4 },
+      keyframes: [
+        { frame: 2, property: 'x', value: 20, interpolation: 'linear' },
+        { frame: 6, property: 'x', value: 60, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 2);
+  assert.equal(layer.localTransform.x, 20);
+});
+
+test('Motion FX composition holds values on hold keyframe segments', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'held', type: 'shape', enabled: true,
+      transform: { x: 0 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 10, interpolation: 'hold' },
+        { frame: 10, property: 'x', value: 90, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.x, 10);
+});
+
+
+test('Motion FX composition applies smooth ease interpolation to keyframes', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'eased', type: 'shape', enabled: true,
+      transform: { x: 0 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'ease' },
+        { frame: 10, property: 'x', value: 100, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 2.5);
+  assert.ok(Math.abs(layer.localTransform.x - 15.625) < 1e-9);
+});
+
+test('Motion FX composition builds rotation and scale into the world matrix', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'scaled-rotated', type: 'shape', enabled: true,
+      transform: { x: 3, y: 4, rotation: 90, scaleX: 2, scaleY: 3 },
+      timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 1);
+  assert.ok(Math.abs(layer.worldTransform.a) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.b - 2) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.c + 3) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.d) < 1e-9);
+  assert.equal(layer.worldTransform.e, 3);
+  assert.equal(layer.worldTransform.f, 4);
+});
+
+
+test('Motion FX property interpolation supports ease-in and ease-out curves', () => {
+  const keyframes = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 10, x: 100, ease: 'easeIn' },
+    { time: 20, x: 200, ease: 'easeOut' }
+  ];
+  assert.equal(runtime.interpolateProperty(keyframes, 'x', 5, -1), 25);
+  assert.equal(runtime.interpolateProperty(keyframes, 'x', 15, -1), 175);
+});
+
+test('Motion FX property interpolation uses a supplied Bézier evaluator when available', () => {
+  const keyframes = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 10, x: 100, ease: 'bezier' }
+  ];
+  const value = runtime.interpolateProperty(keyframes, 'x', 5, 0, {
+    bezierValue: (left, right, property, progress) => {
+      assert.equal(left.time, 0);
+      assert.equal(right.time, 10);
+      assert.equal(property, 'x');
+      assert.equal(progress, 0.5);
+      return 42;
+    }
+  });
+  assert.equal(value, 42);
+});
+
+
+test('Motion FX composition animates rotation and scale keyframes independently', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'animated-transform', type: 'shape', enabled: true,
+      transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      keyframes: [
+        { frame: 0, property: 'rotation', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'rotation', value: 180, interpolation: 'linear' },
+        { frame: 0, property: 'scaleX', value: 1, interpolation: 'linear' },
+        { frame: 10, property: 'scaleX', value: 3, interpolation: 'linear' },
+        { frame: 0, property: 'scaleY', value: 2, interpolation: 'linear' },
+        { frame: 10, property: 'scaleY', value: 4, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.rotation, 90);
+  assert.equal(layer.localTransform.scaleX, 2);
+  assert.equal(layer.localTransform.scaleY, 3);
+  assert.ok(Math.abs(layer.worldTransform.a) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.b - 2) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.c + 3) < 1e-9);
+});
+
+test('Motion FX composition preserves input order for duplicate-free independent layers', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'one', type: 'shape', transform: { x: 1 }, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'two', type: 'shape', transform: { x: 2 }, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'three', type: 'shape', transform: { x: 3 }, timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['one', 'two', 'three']);
+  assert.deepEqual(evaluated.map(layer => layer.worldTransform.e), [1, 2, 3]);
+});
+
+
+test('Motion FX interpolation ignores invalid time and property values', () => {
+  const frames = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 'bad', x: 100, ease: 'linear' },
+    { time: 5, x: Infinity, ease: 'linear' },
+    null,
+    { time: 10, x: 100, ease: 'linear' }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'x', 5, 7), 50);
+  assert.equal(runtime.interpolateProperty(frames, 'y', 5, 7), 7);
+});
+
+test('Motion FX interpolation clamps negative playback time and preserves endpoint values', () => {
+  const frames = [
+    { time: 2, opacity: 0.25, ease: 'linear' },
+    { time: 4, opacity: 0.75, ease: 'linear' }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', -100, 1), 0.25);
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', 100, 1), 0.75);
+});
+
+
+test('Motion FX composition rejects duplicate layer identifiers before evaluation', () => {
+  assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'duplicate', type: 'shape', transform: {}, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'duplicate', type: 'group', transform: { x: 10 }, timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2), /Dubbele Motion FX-laag-ID: duplicate/);
+});
+
+
+test('Motion FX composition evaluates handle-based Bézier keyframes using editor curves', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'bezier-opacity', type: 'shape', enabled: true,
+      transform: { opacity: 0 },
+      keyframes: [
+        { frame: 0, property: 'opacity', value: 0, interpolation: 'bezier', outHandle: { time: 0.1, opacity: 0 } },
+        { frame: 10, property: 'opacity', value: 1, interpolation: 'linear', inHandle: { time: 0.1, opacity: 0 } }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 2);
+  assert.ok(layer.localTransform.opacity < 0.2, 'flat Bézier handles should produce a slower initial rise');
+  assert.equal(layer.opacity, layer.localTransform.opacity);
+});
+
+
+test('Motion FX Bézier interpolation preserves exact endpoints and falls back for unsupported properties', () => {
+  const frames = [
+    { frame: 0, property: 'customValue', value: 0, interpolation: 'bezier' },
+    { frame: 10, property: 'customValue', value: 10, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, 0, 99), 0);
+  assert.equal(runtime.interpolateKeyframes(frames, 10, 99), 10);
+  assert.equal(runtime.interpolateKeyframes(frames, 5, 99), 5);
+});
+
+test('Motion FX Bézier interpolation tolerates missing editor curve module and keeps output finite', () => {
+  const frames = [
+    { frame: 0, property: 'opacity', value: 0, interpolation: 'bezier' },
+    { frame: 8, property: 'opacity', value: 1, interpolation: 'linear' }
+  ];
+  const value = runtime.interpolateKeyframes(frames, 3, 0);
+  assert.ok(Number.isFinite(value));
+  assert.ok(value >= 0 && value <= 1);
+});
+
+
+test('Motion FX composition inherits parent opacity and visibility', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent-opacity', type: 'group', enabled: true, transform: { opacity: 0.5 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-opacity', type: 'shape', parentId: 'parent-opacity', enabled: true,
+      transform: { opacity: 0.4 }, timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const child = evaluated.find(layer => layer.id === 'child-opacity');
+  assert.equal(child.opacity, 0.2);
+  assert.equal(child.visible, true);
+  const hiddenParent = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'hidden-parent', type: 'group', enabled: false, transform: { opacity: 1 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'hidden-child', type: 'shape', parentId: 'hidden-parent', transform: { opacity: 1 },
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(hiddenParent.find(layer => layer.id === 'hidden-child').visible, false);
+});
+
+test('Motion FX composition keeps transformed child coordinates finite', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent-transform', type: 'group', transform: { x: 10, y: 20, rotation: 90, scaleX: 1, scaleY: 1 },
+      timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-transform', type: 'shape', parentId: 'parent-transform',
+      transform: { x: 5, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const child = evaluated.find(layer => layer.id === 'child-transform');
+  assert.ok(Number.isFinite(child.worldTransform.e));
+  assert.ok(Number.isFinite(child.worldTransform.f));
+  assert.ok(Math.abs(child.worldTransform.e - 10) < 1e-9);
+  assert.ok(Math.abs(child.worldTransform.f - 25) < 1e-9);
+});
+
+
+test('Motion FX keyframes clamped to the same frame preserve last-input-wins semantics', () => {
+  assert.equal(runtime.interpolateKeyframes([
+    { frame: 0, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: -1, property: 'x', value: 20, interpolation: 'linear' }
+  ], 0, -1), 20);
+  assert.equal(runtime.interpolateKeyframes([
+    { frame: 999999, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: 216000, property: 'x', value: 30, interpolation: 'linear' }
+  ], 216000, -1), 30);
+});
+
+test('Motion FX composition resolves duplicate keyframes at the same frame deterministically', () => {
+  const frames = [
+    { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+    { frame: 5, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: 5, property: 'x', value: 20, interpolation: 'linear' },
+    { frame: 10, property: 'x', value: 30, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, 5, -1), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, 7.5, -1), 25);
+  assert.equal(runtime.interpolateKeyframes(frames, 0, -1), 0);
+  assert.equal(runtime.interpolateKeyframes(frames, 10, -1), 30);
+});
+
+test('Motion FX keyframe interpolation clamps invalid and out-of-range playhead frames safely', () => {
+  const frames = [
+    { frame: 2, property: 'x', value: 20, interpolation: 'linear' },
+    { frame: 8, property: 'x', value: 80, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, -50, 7), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, 50, 7), 80);
+  assert.equal(runtime.interpolateKeyframes(frames, Number.NaN, 7), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, Number.POSITIVE_INFINITY, 7), 20);
+});
+
+test('Motion FX composition clamps playhead consistently for keyframes and layer timing', () => {
+  const layers = [
+    { id: 'bounded-playhead', type: 'shape', enabled: true,
+      transform: { x: 5 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'x', value: 10, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ];
+  const beforeStart = runtime.evaluateCompositionAtFrame({ layers }, -10)[0];
+  assert.equal(beforeStart.visible, true);
+  assert.equal(beforeStart.localTransform.x, 0);
+  const afterRange = runtime.evaluateCompositionAtFrame({ layers }, 999999)[0];
+  assert.equal(afterRange.visible, false);
+  assert.equal(afterRange.localTransform.x, 10);
+});
+
+test('Motion FX composition resolves multi-level parent chains independent of input order', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'grandchild', parentId: 'child', type: 'shape', enabled: true,
+      transform: { x: 2, y: 0, opacity: 0.5 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child', parentId: 'root', type: 'group', enabled: true,
+      transform: { x: 3, y: 0, opacity: 0.5 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'root', type: 'group', enabled: true,
+      transform: { x: 10, y: 0, opacity: 0.8 }, timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const grandchild = evaluated.find(layer => layer.id === 'grandchild');
+  assert.equal(grandchild.worldTransform.e, 15);
+  assert.equal(grandchild.worldTransform.f, 0);
+  assert.equal(grandchild.opacity, 0.2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['root', 'child', 'grandchild']);
+});
+ 
+test('Motion FX composition propagates an inactive ancestor through multiple descendant levels', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'grandchild-inactive', parentId: 'child-inactive', type: 'shape', enabled: true,
+      transform: { x: 2 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-inactive', parentId: 'ancestor-out-of-range', type: 'group', enabled: true,
+      transform: { x: 3 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'ancestor-out-of-range', type: 'group', enabled: true,
+      transform: { x: 10 }, timing: { inFrame: 0, outFrame: 4 } }
+  ] }, 5);
+  assert.equal(evaluated.find(layer => layer.id === 'ancestor-out-of-range').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'child-inactive').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').worldTransform.e, 15);
+});
+ 
+test('Motion FX composition keeps grandchildren hidden when a parent is outside its active range', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'leaf', parentId: 'middle', type: 'shape', enabled: true,
+      transform: { x: 2 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'middle', parentId: 'root-out', type: 'group', enabled: true,
+      transform: { x: 3 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'root-out', type: 'group', enabled: true,
+      transform: { x: 10 }, timing: { inFrame: 0, outFrame: 4 } }
+  ] }, 5);
+  assert.equal(evaluated.find(layer => layer.id === 'root-out').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'middle').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'leaf').visible, false);
+});

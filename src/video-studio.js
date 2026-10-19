@@ -11,7 +11,7 @@
       { id: 'a2', name: 'A2', kind: 'audio', hidden: false, locked: false, muted: false },
       { id: 't1', name: 'T1', kind: 'title', hidden: false, locked: false, muted: false }
     ],
-    clips: [], assets: [], programLut: null, multicamGroups: [], selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
+    clips: [], assets: [], programLut: null, multicamGroups: [], motionFxLayers: new Map(), selected: null, activeTrack: 'v1', playhead: 0, zoom: 48, playing: false,
     lastTick: 0, raf: 0, lastUi: 0, name: 'Mijn videoproject', media: new Map(),
     history: [], redo: [], audioContext: null, masterGain: null, exportDestination: null,
     recorder: null, exportChunks: [], exportActive: false, offlineExportActive: false, offlineExportCancel: false, offlineSessionId: null, exportSize: '1080p', snap: true
@@ -49,7 +49,7 @@
   }
   function metaClip(c) {
     const result = {};
-    ['id','name','type','trackId','start','duration','in','out','speed','volume','opacity','scale','x','y','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','compositionId','compositionName','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
+    ['id','name','type','trackId','parentId','start','duration','in','out','speed','volume','opacity','scale','x','y','rotation','filter','fit','fadeIn','fadeOut','text','fontSize','color','bold','compositionId','compositionName','shapeType','strokeColor','strokeWidth','maskType','maskSize','maskX','maskY','maskSecondaryType','maskSecondarySize','maskSecondaryX','maskSecondaryY','maskOperation','keyframes','keyframeEase','effects','colorAdjustments','assetId','multicamGroupId','activeAngleAssetId','activeAngleIn'].forEach(k => {
       if (k === 'keyframes') result[k] = Array.isArray(c[k]) ? c[k].map(frame => ({...frame, outHandle: frame.outHandle ? {...frame.outHandle} : null, inHandle: frame.inHandle ? {...frame.inHandle} : null})) : [];
       else if (k === 'effects') result[k] = Array.isArray(c[k]) ? c[k].map(effect => ({...effect})) : [];
       else if (k === 'colorAdjustments') result[k] = { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, ...(c[k] || {}) };
@@ -363,28 +363,81 @@
     return state.playhead >= c.start && state.playhead < c.start + clipLength(c);
   }
   function animatedValue(c, key, baseValue) {
-    const frames = Array.isArray(c.keyframes) ? c.keyframes.filter(f => Number.isFinite(f.time) && Number.isFinite(f[key])).slice().sort((a, b) => a.time - b.time) : [];
-    if (!frames.length) return Number(baseValue) || 0;
+    const frames = Array.isArray(c.keyframes) ? c.keyframes : [];
     const t = Math.max(0, state.playhead - c.start);
-    if (t <= frames[0].time) return frames[0][key];
-    if (t >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
-    const easing = value => {
-      const v = Math.max(0, Math.min(1, value));
-      if (value === 'hold') return 0;
-      return v;
-    };
+    const bezierValue = window.FluxivoraKeyframeCurves && typeof window.FluxivoraKeyframeCurves.bezierValue === 'function'
+      ? (left, right, key, raw) => window.FluxivoraKeyframeCurves.bezierValue(left, right, key, raw)
+      : null;
+    // Keep one shared keyframe path for preview and offline rendering.
+    // The browser-safe runtime mirrors the legacy seconds-based keyframe format.
+    if (window.FluxivoraMotionFxRuntime?.interpolateProperty) {
+      return window.FluxivoraMotionFxRuntime.interpolateProperty(frames, key, t, Number(baseValue) || 0, { bezierValue });
+    }
+    const validFrames = frames.filter(f => Number.isFinite(f.time) && Number.isFinite(f[key])).slice().sort((a, b) => a.time - b.time);
+    if (!validFrames.length) return Number(baseValue) || 0;
+    if (t <= validFrames[0].time) return validFrames[0][key];
+    if (t >= validFrames[validFrames.length - 1].time) return validFrames[validFrames.length - 1][key];
     const curves = { linear: v => v, easeIn: v => v * v, easeOut: v => 1 - Math.pow(1 - v, 2), easeInOut: v => v < .5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2, hold: () => 0 };
-    for (let i = 1; i < frames.length; i++) {
-      const left = frames[i - 1], right = frames[i];
+    for (let i = 1; i < validFrames.length; i++) {
+      const left = validFrames[i - 1], right = validFrames[i];
       if (t <= right.time) {
         const span = Math.max(0.0001, right.time - left.time);
         const raw = (t - left.time) / span;
-        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, raw);
-        const alpha = (curves[right.ease] || curves.linear)(raw);
-        return left[key] + (right[key] - left[key]) * alpha;
+        if (right.ease === 'bezier' && bezierValue) {
+          const value = bezierValue(left, right, key, raw);
+          if (Number.isFinite(value)) return value;
+        }
+        return left[key] + (right[key] - left[key]) * (curves[right.ease] || curves.linear)(raw);
       }
     }
     return Number(baseValue) || 0;
+  }
+  function evaluateMotionFxLayers() {
+    const runtime = window.FluxivoraMotionFxRuntime;
+    if (!runtime?.evaluateCompositionAtFrame) { state.motionFxLayers = new Map(); return; }
+    const frame = Math.max(0, Math.floor(state.playhead * SEQUENCE_FPS));
+    const layers = state.clips.map(c => {
+      const t = track(c.trackId);
+      return {
+        id: c.id, parentId: typeof c.parentId === 'string' ? c.parentId : null,
+        type: c.type, name: c.name, enabled: !c.missing && !(t && t.hidden),
+        transform: {
+          x: animatedValue(c, 'x', c.x || 0) * ($('video-canvas')?.width || 1920) / 100,
+          y: animatedValue(c, 'y', c.y || 0) * ($('video-canvas')?.height || 1080) / 100,
+          scaleX: animatedValue(c, 'scale', c.scale || 1),
+          scaleY: animatedValue(c, 'scale', c.scale || 1),
+          rotation: animatedValue(c, 'rotation', c.rotation || 0),
+          opacity: animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)
+        },
+        timing: { inFrame: Math.max(0, Math.floor(c.start * SEQUENCE_FPS)),
+          outFrame: Math.max(0, Math.ceil((c.start + clipLength(c)) * SEQUENCE_FPS)) },
+        keyframes: []
+      };
+    });
+    try {
+      state.motionFxLayers = new Map(runtime.evaluateCompositionAtFrame({ layers }, frame).map(layer => [layer.id, layer]));
+    } catch (error) {
+      state.motionFxLayers = new Map();
+      // Invalid imported hierarchies are safely ignored until the project is corrected.
+    }
+  }
+  function drawWithParentTransform(ctx, clip, draw) {
+    const evaluated = state.motionFxLayers.get(clip.id);
+    const parent = clip.parentId ? state.motionFxLayers.get(clip.parentId) : null;
+    if (evaluated && !evaluated.visible) return;
+    const rotation = animatedValue(clip, 'rotation', clip.rotation || 0);
+    if (!parent && !rotation) { draw(); return; }
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    if (parent) {
+      const m = parent.worldTransform;
+      ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
+    }
+    if (rotation) ctx.rotate(rotation * Math.PI / 180);
+    ctx.translate(-W / 2, -H / 2);
+    draw();
+    ctx.restore();
   }
   function gainFor(c) {
     const t = track(c.trackId);
@@ -458,7 +511,8 @@
     return parts.join(' ') || 'none';
   }
   function alphaFor(c) {
-    let alpha = Math.max(0, Math.min(1, animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
+    const evaluated = state.motionFxLayers.get(c.id);
+    let alpha = Math.max(0, Math.min(1, evaluated ? evaluated.opacity : animatedValue(c, 'opacity', c.opacity == null ? 1 : c.opacity)));
     const elapsed = state.playhead - c.start, remaining = c.start + clipLength(c) - state.playhead;
     if (c.fadeIn > 0 && elapsed < c.fadeIn) alpha *= Math.max(0, elapsed / c.fadeIn);
     if (c.fadeOut > 0 && remaining < c.fadeOut) alpha *= Math.max(0, remaining / c.fadeOut);
@@ -514,11 +568,11 @@
         else path.rect(centerX - W * scale / 2, centerY - H * scale / 2, W * scale, H * scale);
         return path;
       };
-      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90), c.maskX, c.maskY);
+      const primary = maskPath(c.maskType, animatedValue(c, 'maskSize', c.maskSize || 90), animatedValue(c, 'maskX', c.maskX || 0), animatedValue(c, 'maskY', c.maskY || 0));
       const secondaryType = c.maskSecondaryType;
       if (!['rectangle','roundRect','ellipse'].includes(secondaryType)) ctx.clip(primary);
       else {
-        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), c.maskSecondaryX, c.maskSecondaryY);
+        const secondary = maskPath(secondaryType, animatedValue(c, 'maskSecondarySize', c.maskSecondarySize || 60), animatedValue(c, 'maskSecondaryX', c.maskSecondaryX || 0), animatedValue(c, 'maskSecondaryY', c.maskSecondaryY || 0));
         if (c.maskOperation === 'intersect') { ctx.clip(primary); ctx.clip(secondary); }
         else if (c.maskOperation === 'xor') {
           const exclusive = new Path2D();
@@ -563,10 +617,11 @@
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#05070c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    evaluateMotionFxLayers();
     const videoTracks = state.tracks.filter(t => t.kind === 'video' && !t.hidden);
     // Composite lower tracks first, then upper tracks.
-    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawVideoClip(ctx, c)));
-    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c)).sort((a, b) => a.start - b.start).forEach(c => drawTitle(ctx, c)));
+    videoTracks.slice().reverse().forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'video' && !c.missing && activeAt(c) && (state.motionFxLayers.get(c.id)?.visible !== false)).sort((a, b) => a.start - b.start).forEach(c => drawWithParentTransform(ctx, c, () => drawVideoClip(ctx, c))));
+    state.tracks.filter(t => t.kind === 'title' && !t.hidden).forEach(t => state.clips.filter(c => c.trackId === t.id && c.type === 'title' && activeAt(c) && (state.motionFxLayers.get(c.id)?.visible !== false)).sort((a, b) => a.start - b.start).forEach(c => drawWithParentTransform(ctx, c, () => drawTitle(ctx, c))));
     const hasVisibleContent = state.clips.some(c => c.type === 'video' && activeAt(c) && !c.missing && !(track(c.trackId) || {}).hidden) || state.clips.some(c => c.type === 'title' && activeAt(c) && !(track(c.trackId) || {}).hidden);
     $('video-empty').classList.toggle('hidden', hasVisibleContent);
     if (window.FluxivoraMotionStudio?.applyProgramLut) window.FluxivoraMotionStudio.applyProgramLut(canvas);
@@ -743,6 +798,12 @@
     $('video-selected-name').textContent = c ? c.name : 'Selecteer een clip';
     if (!c) return;
     $('video-clip-name').value = c.name || '';
+    const parentSelect = $('video-parent-layer');
+    if (parentSelect) {
+      parentSelect.replaceChildren(new Option('Geen ouderlaag', ''));
+      state.clips.filter(layer => layer.id !== c.id).forEach(layer => parentSelect.add(new Option(layer.name || layer.id, layer.id)));
+      parentSelect.value = c.parentId && state.clips.some(layer => layer.id === c.parentId) ? c.parentId : '';
+    }
     $('video-clip-start').value = Number(c.start || 0).toFixed(2);
     $('video-in').value = Number(c.in || 0).toFixed(2);
     $('video-out').value = Number(c.out || 0).toFixed(2);
@@ -750,6 +811,7 @@
     $('video-opacity').value = String(c.opacity == null ? 1 : c.opacity);
     $('video-volume').value = String(c.volume == null ? 1 : c.volume);
     $('video-scale').value = String(c.scale || 1);
+    $('video-rotation').value = String(c.rotation || 0);
     $('video-x').value = String(c.x || 0);
     $('video-y').value = String(c.y || 0);
     $('video-keyframe-count').textContent = (c.keyframes || []).length + ' keyframes';
@@ -853,6 +915,61 @@
   function writeMotionCompositions(items) {
     try { localStorage.setItem(MOTION_COMPOSITIONS_KEY, JSON.stringify(items.slice(0, 30))); return true; }
     catch (_) { notice('De lokale compositiebibliotheek kan niet worden opgeslagen.'); return false; }
+  }
+  function exportMotionCompositions() {
+    const items = readMotionCompositions();
+    const payload = { format: 'fluxivora-motion-compositions', version: 1, exportedAt: new Date().toISOString(), compositions: items };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'fluxivora-motion-compositions.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    notice(items.length + (items.length === 1 ? ' compositie geëxporteerd.' : ' composities geëxporteerd.'));
+  }
+  async function importMotionCompositions(file) {
+    if (!file) return;
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error('Het JSON-bestand is groter dan 2 MB.');
+      const text = await file.text();
+      let parsed;
+      try { parsed = JSON.parse(text); } catch (_) { throw new Error('Het bestand bevat geen geldige JSON.'); }
+      const imported = Array.isArray(parsed) ? parsed : parsed && parsed.format === 'fluxivora-motion-compositions' && parsed.version === 1 ? parsed.compositions : null;
+      if (!Array.isArray(imported) || imported.length > 30) throw new Error('Dit is geen ondersteunde compositiebibliotheek (maximaal 30 composities).');
+      const existing = readMotionCompositions();
+      const merged = existing.slice();
+      const usedIds = new Set(existing.map(item => item.id));
+      for (const candidate of imported) {
+        if (!candidate || typeof candidate !== 'object' || typeof candidate.name !== 'string' || !candidate.name.trim() || candidate.name.trim().length > 60 || !Array.isArray(candidate.layers) || candidate.layers.length < 1 || candidate.layers.length > 30) {
+          throw new Error('Een compositie heeft een ongeldige naam of laagstructuur.');
+        }
+        const layers = candidate.layers.map(layer => {
+          if (!layer || typeof layer !== 'object' || Array.isArray(layer) || layer.type !== 'title' || typeof layer.name !== 'string' || !layer.name.trim() || layer.name.length > 128) {
+            throw new Error('Alleen geldige grafische titel-/vormlagen kunnen worden geïmporteerd.');
+          }
+          const keyframes = Array.isArray(layer.keyframes) ? layer.keyframes.slice(0, 1000) : [];
+          if (keyframes.some(frame => !frame || typeof frame !== 'object' || Array.isArray(frame) || !Number.isFinite(frame.time) || frame.time < 0)) {
+            throw new Error('Een grafische laag bevat ongeldige keyframes.');
+          }
+          const effects = Array.isArray(layer.effects) ? layer.effects.slice(0, 100) : [];
+          if (effects.some(effect => !effect || typeof effect !== 'object' || Array.isArray(effect))) {
+            throw new Error('Een grafische laag bevat ongeldige effecten.');
+          }
+          return { ...layer, type: 'title', keyframes, effects };
+        });
+        let id = typeof candidate.id === 'string' && candidate.id.length <= 128 ? candidate.id : uid('composition');
+        if (usedIds.has(id)) id = uid('composition');
+        usedIds.add(id);
+        merged.push({ id, name: candidate.name.trim(), layers });
+      }
+      if (merged.length > 30) throw new Error('Er is ruimte voor maximaal 30 composities. Verwijder eerst composities en probeer opnieuw.');
+      if (!writeMotionCompositions(merged)) return;
+      renderMotionCompositions();
+      notice(imported.length + (imported.length === 1 ? ' compositie geïmporteerd.' : ' composities geïmporteerd.'));
+    } catch (error) {
+      notice('Importeren mislukt: ' + (error && error.message ? error.message : 'ongeldig bestand.'));
+    }
   }
   function renderMotionCompositions() {
     const list = $('motionfx-composition-list');
@@ -1129,12 +1246,18 @@
   }
 
   function exportAnimatedValue(clip, key, relativeTime, baseValue) {
-    const frames = Array.isArray(clip.keyframes)
-      ? clip.keyframes.filter(frame => Number.isFinite(frame.time) && Number.isFinite(frame[key])).slice().sort((a, b) => a.time - b.time)
-      : [];
-    if (!frames.length) return Number(baseValue) || 0;
-    if (relativeTime <= frames[0].time) return frames[0][key];
-    if (relativeTime >= frames[frames.length - 1].time) return frames[frames.length - 1][key];
+    const frames = Array.isArray(clip.keyframes) ? clip.keyframes : [];
+    const bezierValue = window.FluxivoraKeyframeCurves && typeof window.FluxivoraKeyframeCurves.bezierValue === 'function'
+      ? (left, right, property, amount) => window.FluxivoraKeyframeCurves.bezierValue(left, right, property, amount)
+      : null;
+    // Keep offline export on the same interpolation path as the live preview.
+    if (window.FluxivoraMotionFxRuntime?.interpolateProperty) {
+      return window.FluxivoraMotionFxRuntime.interpolateProperty(frames, key, relativeTime, Number(baseValue) || 0, { bezierValue });
+    }
+    const validFrames = frames.filter(frame => Number.isFinite(frame.time) && Number.isFinite(frame[key])).slice().sort((a, b) => a.time - b.time);
+    if (!validFrames.length) return Number(baseValue) || 0;
+    if (relativeTime <= validFrames[0].time) return validFrames[0][key];
+    if (relativeTime >= validFrames[validFrames.length - 1].time) return validFrames[validFrames.length - 1][key];
     const curves = {
       linear: value => value,
       easeIn: value => value * value,
@@ -1142,11 +1265,11 @@
       easeInOut: value => value < 0.5 ? 2 * value * value : 1 - Math.pow(-2 * value + 2, 2) / 2,
       hold: () => 0
     };
-    for (let i = 1; i < frames.length; i++) {
-      const left = frames[i - 1], right = frames[i];
+    for (let i = 1; i < validFrames.length; i++) {
+      const left = validFrames[i - 1], right = validFrames[i];
       if (relativeTime <= right.time) {
         const amount = Math.max(0, Math.min(1, (relativeTime - left.time) / Math.max(0.0001, right.time - left.time)));
-        if (right.ease === 'bezier' && window.FluxivoraKeyframeCurves) return window.FluxivoraKeyframeCurves.bezierValue(left, right, key, amount);
+        if (right.ease === 'bezier' && bezierValue) return bezierValue(left, right, key, amount);
         const t = (curves[right.ease] || curves.linear)(amount);
         return left[key] + (right[key] - left[key]) * t;
       }
@@ -1547,9 +1670,16 @@
           time: Math.max(0, Math.min(86400, Number(f.time) || 0)),
           opacity: Math.max(0, Math.min(1, Number(f.opacity) || 0)),
           scale: Math.max(0.1, Math.min(3, Number(f.scale) || 1)),
+          rotation: Math.max(-3600, Math.min(3600, Number(f.rotation) || 0)),
           x: Math.max(-100, Math.min(100, Number(f.x) || 0)),
           y: Math.max(-100, Math.min(100, Number(f.y) || 0)),
           volume: Math.max(0, Math.min(2, Number(f.volume) || 0)),
+          maskSize: Math.max(10, Math.min(100, Number(f.maskSize) || 90)),
+          maskSecondarySize: Math.max(10, Math.min(100, Number(f.maskSecondarySize) || 60)),
+          maskX: Math.max(-50, Math.min(50, Number(f.maskX) || 0)),
+          maskY: Math.max(-50, Math.min(50, Number(f.maskY) || 0)),
+          maskSecondaryX: Math.max(-50, Math.min(50, Number(f.maskSecondaryX) || 0)),
+          maskSecondaryY: Math.max(-50, Math.min(50, Number(f.maskSecondaryY) || 0)),
           id: String(f.id || uid('keyframe')),
           outHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.outHandle, f) || null,
           inHandle: window.FluxivoraKeyframeCurves?.normaliseHandle(f.inHandle, f) || null,
@@ -1668,7 +1798,10 @@
     const time = Math.max(0, Math.min(clipLength(c), state.playhead - c.start));
     const frame = {
       time, opacity: Number(c.opacity == null ? 1 : c.opacity), scale: Number(c.scale || 1),
-      x: Number(c.x || 0), y: Number(c.y || 0), volume: Number(c.volume == null ? 1 : c.volume)
+      x: Number(c.x || 0), y: Number(c.y || 0), rotation: Number(c.rotation || 0), volume: Number(c.volume == null ? 1 : c.volume),
+      maskSize: Number(c.maskSize || 90), maskSecondarySize: Number(c.maskSecondarySize || 60),
+      maskX: Number(c.maskX || 0), maskY: Number(c.maskY || 0),
+      maskSecondaryX: Number(c.maskSecondaryX || 0), maskSecondaryY: Number(c.maskSecondaryY || 0)
     };
     if (!Array.isArray(c.keyframes)) c.keyframes = [];
     const existing = c.keyframes.findIndex(item => Math.abs(item.time - time) < 0.04);
@@ -1696,6 +1829,20 @@
   }
   function wireProperties() {
     $('video-clip-name').addEventListener('change', () => applyProperty('video-clip-name', 'name', v => String(v).slice(0, 512)));
+    $('video-parent-layer').addEventListener('change', () => {
+      const c = selected(); if (!c) return;
+      const parentId = $('video-parent-layer').value || null;
+      let cursor = parentId, cycle = false; const seen = new Set();
+      while (cursor) {
+        if (cursor === c.id || seen.has(cursor)) { cycle = true; break; }
+        seen.add(cursor);
+        cursor = state.clips.find(layer => layer.id === cursor)?.parentId || null;
+      }
+      if (cycle) { $('video-parent-layer').value = c.parentId || ''; notice('Deze ouderlaag veroorzaakt een circulaire relatie.'); return; }
+      if ((c.parentId || null) === parentId) return;
+      pushHistory(); c.parentId = parentId; refresh(); renderPreview();
+      notice(parentId ? 'Ouderlaag gekoppeld.' : 'Ouderlaag losgekoppeld.');
+    });
     $('video-clip-start').addEventListener('change', () => {
       const c = selected(); if (!c) return;
       const v = snapTime(Math.max(0, Number($('video-clip-start').value) || 0), c.id);
@@ -1721,6 +1868,7 @@
     binding('video-opacity', 'opacity', v => Math.max(0, Math.min(1, Number(v) || 0)));
     binding('video-volume', 'volume', v => Math.max(0, Math.min(2, Number(v) || 0)));
     binding('video-scale', 'scale', v => Math.max(0.1, Math.min(3, Number(v) || 1)));
+    binding('video-rotation', 'rotation', v => Math.max(-3600, Math.min(3600, Number(v) || 0)));
     binding('video-x', 'x', v => Math.max(-100, Math.min(100, Number(v) || 0)));
     binding('video-y', 'y', v => Math.max(-100, Math.min(100, Number(v) || 0)));
     binding('video-filter', 'filter', String);
@@ -1754,6 +1902,12 @@
     $('video-export-webm').addEventListener('click', exportRealtimeWebm);
     $('video-export-cancel').addEventListener('click', cancelOfflineMp4);
     $('motionfx-save-composition').addEventListener('click', saveMotionComposition);
+    $('motionfx-export-compositions').addEventListener('click', exportMotionCompositions);
+    $('motionfx-import-compositions').addEventListener('click', () => $('motionfx-import-file').click());
+    $('motionfx-import-file').addEventListener('change', async event => {
+      await importMotionCompositions(event.target.files?.[0]);
+      event.target.value = '';
+    });
     $('motionfx-composition-list').addEventListener('click', handleMotionCompositionAction);
     $('video-add-title').addEventListener('click', addTitle);
     $('video-add-shape').addEventListener('click', () => addShape('rectangle'));

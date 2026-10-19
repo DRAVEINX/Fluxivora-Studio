@@ -828,8 +828,9 @@ test('Motion Studio beta.7 has draggable cubic Bezier handles with the same inte
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
   const shared = fs.readFileSync(path.join(root, 'src', 'keyframe-curves.js'), 'utf8');
-  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, raw\)/);
-  assert.match(video, /FluxivoraKeyframeCurves\.bezierValue\(left, right, key, amount\)/);
+  assert.match(video, /window\.FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(video, /right\.ease === 'bezier' && bezierValue/);
+  assert.match(video, /window\.FluxivoraKeyframeCurves\.bezierValue\(left, right, property, amount\)/);
   assert.match(video, /outHandle: frame\.outHandle \? \{\.\.\.frame\.outHandle\}/);
   assert.match(video, /ease: \['linear','easeIn','easeOut','easeInOut','bezier','hold'\]/);
   assert.match(motion, /FluxivoraKeyframeCurves\.controlPoints\(left, right, property\)/);
@@ -1000,8 +1001,8 @@ test('Motion Studio persists and renders two-mask combination operations', () =>
   const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
   for (const id of ['video-mask-secondary', 'video-mask-secondary-size', 'video-mask-operation', 'video-mask-x', 'video-mask-y', 'video-mask-secondary-x', 'video-mask-secondary-y']) assert.ok(html.includes('id="' + id + '"'));
   for (const key of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) assert.match(video, new RegExp(key));
-  assert.match(video, /maskPath\(c\.maskType,[^;]+c\.maskX, c\.maskY\)/);
-  assert.match(video, /maskPath\(secondaryType,[^;]+c\.maskSecondaryX, c\.maskSecondaryY\)/);
+  assert.match(video, /maskPath\(c\.maskType,[^;]+animatedValue\(c, 'maskX', c\.maskX \|\| 0\), animatedValue\(c, 'maskY', c\.maskY \|\| 0\)\)/);
+  assert.match(video, /maskPath\(secondaryType,[^;]+animatedValue\(c, 'maskSecondaryX', c\.maskSecondaryX \|\| 0\), animatedValue\(c, 'maskSecondaryY', c\.maskSecondaryY \|\| 0\)\)/);
   for (const operation of ['add', 'subtract', 'intersect', 'xor']) assert.ok(html.includes('value="' + operation + '"'));
   assert.match(video, /maskSecondaryType/);
   assert.match(video, /maskSecondarySize/);
@@ -1100,4 +1101,55 @@ test('Motion Graphics kan herbruikbare grafische composities lokaal opslaan en i
   assert.match(motion, /layers\.length > 30/);
   const styles = fs.readFileSync(path.join(root, 'src', 'styles.css'), 'utf8');
   assert.match(styles, /body:not\(\.motionfx-mode\) #motionfx-compositions/);
+});
+
+test('Motion FX curve editor exposes rotation with matching degree limits', () => {
+  const motionPro = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  assert.match(html, /<option value="rotation">Rotatie \(°\)<\/option>/);
+  assert.match(motionPro, /rotation: \[-3600, 3600\]/);
+  assert.match(motionPro, /rotation: 'Rotatie \(°\)'/);
+});
+
+
+test('keyframe-curve-editor exposes all supported mask position properties', () => {
+  const selectorStart = html.indexOf('<select id="video-curve-property">');
+  const selectorEnd = html.indexOf('</select>', selectorStart);
+  assert.ok(selectorStart >= 0 && selectorEnd > selectorStart, 'Curve property selector exists');
+  const selector = html.slice(selectorStart, selectorEnd);
+  for (const option of [
+    '<option value="maskX">Masker X-positie</option>',
+    '<option value="maskY">Masker Y-positie</option>',
+    '<option value="maskSecondaryX">Tweede masker X-positie</option>',
+    '<option value="maskSecondaryY">Tweede masker Y-positie</option>'
+  ]) assert.ok(selector.includes(option), 'Missing curve property option: ' + option);
+  const motion = fs.readFileSync(path.join(root, 'src', 'motion-pro.js'), 'utf8');
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.ok(motion.includes(property + ':'), 'Motion curve support missing: ' + property);
+  }
+});
+
+
+test('offline export uses the same keyframe interpolation runtime as preview', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  const previewStart = video.indexOf('function animatedValue(');
+  const exportStart = video.indexOf('function exportAnimatedValue(');
+  const audioStart = video.indexOf('function exportAudioGain(', exportStart);
+  assert.ok(previewStart >= 0 && exportStart > previewStart && audioStart > exportStart);
+  const preview = video.slice(previewStart, video.indexOf('\n  function ', previewStart + 10));
+  const offlineExport = video.slice(exportStart, audioStart);
+  assert.match(preview, /FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(offlineExport, /FluxivoraMotionFxRuntime\?\.interpolateProperty/);
+  assert.match(offlineExport, /FluxivoraKeyframeCurves\.bezierValue/);
+});
+
+test('Motion Studio keyframes capture, persist, and animate both mask positions and sizes', () => {
+  const video = fs.readFileSync(path.join(root, 'src', 'video-studio.js'), 'utf8');
+  assert.match(video, /maskSize: Number\(c\.maskSize \|\| 90\)/);
+  assert.match(video, /maskSecondarySize: Number\(c\.maskSecondarySize \|\| 60\)/);
+  for (const property of ['maskX', 'maskY', 'maskSecondaryX', 'maskSecondaryY']) {
+    assert.match(video, new RegExp(property + ': Number\\(c\\.' + property + ' \\|\\| 0\\)'));
+    assert.match(video, new RegExp(property + ': Math\\.max\\(-50, Math\\.min\\(50, Number\\(f\\.' + property + '\\) \\|\\| 0\\)'));
+    assert.match(video, new RegExp("animatedValue\\(c, '" + property + "'"));
+  }
+  assert.match(video, /rotation: Math\.max\(-3600, Math\.min\(3600, Number\(f\.rotation\) \|\| 0\)\)/);
 });

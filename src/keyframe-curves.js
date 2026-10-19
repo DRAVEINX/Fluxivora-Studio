@@ -9,6 +9,13 @@
   const PROPERTIES = Object.freeze({
     opacity: Object.freeze([0, 1]),
     scale: Object.freeze([0.1, 3]),
+    rotation: Object.freeze([-3600, 3600]),
+    maskSize: Object.freeze([10, 100]),
+    maskSecondarySize: Object.freeze([10, 100]),
+    maskX: Object.freeze([-50, 50]),
+    maskY: Object.freeze([-50, 50]),
+    maskSecondaryX: Object.freeze([-50, 50]),
+    maskSecondaryY: Object.freeze([-50, 50]),
     x: Object.freeze([-100, 100]),
     y: Object.freeze([-100, 100]),
     volume: Object.freeze([0, 2])
