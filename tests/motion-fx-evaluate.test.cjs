@@ -71,6 +71,8 @@ test('directe laagactiviteit begrenst de playhead op hetzelfde maximale frame', 
   assert.equal(Eval.isLayerActive(layer, 999999), true);
   assert.equal(Eval.isLayerActive(layer, -10), true);
   assert.equal(Eval.isLayerActive(layer, Number.NaN), false);
+  assert.equal(Eval.isLayerActive({ enabled: true, timing: { inFrame: '0', outFrame: 20 } }, 5), false);
+  assert.equal(Eval.isLayerActive({ enabled: true, timing: { inFrame: 0, outFrame: Infinity } }, 5), false);
 });
 
 test('dubbele laag-ID’s worden geweigerd in de compositie-evaluator', () => {
