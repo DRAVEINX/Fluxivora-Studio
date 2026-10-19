@@ -66,6 +66,13 @@ test('laagactiviteit volgt enabled en het halfopen in/out-framebereik', () => {
   assert.equal(Eval.isLayerActive({ ...layer, enabled: false }, 15), false);
 });
 
+test('directe laagactiviteit begrenst de playhead op hetzelfde maximale frame', () => {
+  const layer = { enabled: true, timing: { inFrame: 0, outFrame: 216001 } };
+  assert.equal(Eval.isLayerActive(layer, 999999), true);
+  assert.equal(Eval.isLayerActive(layer, -10), true);
+  assert.equal(Eval.isLayerActive(layer, Number.NaN), false);
+});
+
 test('dubbele laag-ID’s worden geweigerd in de compositie-evaluator', () => {
   assert.throws(() => Eval.sortLayersForEvaluation([
     { id: 'same', parentId: null },

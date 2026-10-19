@@ -68,8 +68,10 @@ function evaluateLayerTransform(layer, frame) {
 }
 
 function isLayerActive(layer, frame) {
-  if (!layer || layer.enabled === false || !layer.timing) return false;
-  return Number.isFinite(frame) && frame >= layer.timing.inFrame && frame < layer.timing.outFrame;
+  if (!layer || layer.enabled === false || !layer.timing || !Number.isFinite(frame)) return false;
+  // Match composition evaluation: direct callers use the same bounded playhead.
+  const at = clamp(frame, 0, MAX_FRAME);
+  return at >= layer.timing.inFrame && at < layer.timing.outFrame;
 }
 
 function sortLayersForEvaluation(layers) {
