@@ -94,6 +94,19 @@ test('validator en parser weigeren circulaire ouder-kindrelaties', () => {
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Circulaire ouder-kindrelatie/);
 });
 
+
+test('validator weigert niet-numerieke transforms en ongeldige keyframes', () => {
+  const composition = MotionFX.createComposition();
+  const layer = MotionFX.createLayer('shape', { id: 'validated-layer' });
+  composition.layers.push(layer);
+  layer.transform.x = '12';
+  layer.keyframes.push({ frame: 3, property: 'opacity', value: Infinity, interpolation: 'linear' });
+  const errors = MotionFX.validateComposition(composition);
+  assert.ok(errors.some(error => error.includes('Ongeldige transformatiewaarde: x')));
+  assert.ok(errors.some(error => error.includes('Ongeldig keyframe')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige transformatiewaarde|Ongeldig keyframe/);
+});
+
 test('parser weigert expliciet onbekende projectformaten en versies', () => {
   const composition = MotionFX.createComposition();
   assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, format: 'other' })), /projectformaat/);

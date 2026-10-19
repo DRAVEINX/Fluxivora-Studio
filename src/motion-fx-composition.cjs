@@ -92,8 +92,28 @@ function validateComposition(value) {
       if (!layer || typeof layer.id !== 'string' || !layer.id || ids.has(layer.id)) errors.push('Laag-ID ontbreekt of is dubbel.');
       else ids.add(layer.id);
       if (!['shape', 'text', 'media', 'null'].includes(layer?.type)) errors.push('Ongeldig laagtype.');
-      if (!layer?.transform || !layer?.timing || !Array.isArray(layer?.keyframes)) errors.push('Laag mist transform-, timing- of keyframegegevens.');
-      if (layer?.timing && (!Number.isInteger(layer.timing.inFrame) || !Number.isInteger(layer.timing.outFrame) || layer.timing.inFrame < 0 || layer.timing.outFrame <= layer.timing.inFrame)) errors.push('Ongeldige laagduur.');
+      if (!layer?.transform || typeof layer.transform !== 'object' || !layer?.timing || typeof layer.timing !== 'object' || !Array.isArray(layer?.keyframes)) {
+        errors.push('Laag mist transform-, timing- of keyframegegevens.');
+      } else {
+        for (const property of ['x', 'y', 'anchorX', 'anchorY', 'rotation', 'scaleX', 'scaleY', 'opacity']) {
+          if (!Number.isFinite(layer.transform[property])) errors.push('Ongeldige transformatiewaarde: ' + property + '.');
+        }
+        if (!Number.isInteger(layer.timing.inFrame) || !Number.isInteger(layer.timing.outFrame) ||
+            layer.timing.inFrame < 0 || layer.timing.outFrame > MAX_FRAMES || layer.timing.outFrame <= layer.timing.inFrame) {
+          errors.push('Ongeldige laagduur.');
+        }
+        if (layer.keyframes.length > 10000) errors.push('Te veel keyframes op één laag.');
+        for (const keyframe of layer.keyframes) {
+          if (!keyframe || !Number.isInteger(keyframe.frame) || keyframe.frame < 0 || keyframe.frame > MAX_FRAMES ||
+              typeof keyframe.property !== 'string' || !keyframe.property || !Number.isFinite(keyframe.value) ||
+              !['hold', 'linear', 'ease', 'bezier'].includes(keyframe.interpolation)) {
+            errors.push('Ongeldig keyframe in laag ' + (layer.id || '(zonder ID)') + '.');
+            break;
+          }
+        }
+      }
+      if (layer?.parentId != null && typeof layer.parentId !== 'string') errors.push('Ongeldige ouderlaag-ID.');
+      if (layer?.data != null && (typeof layer.data !== 'object' || Array.isArray(layer.data))) errors.push('Ongeldige laaggegevens.');
       if (layer?.parentId && layer.parentId === layer.id) errors.push('Een laag kan niet zichzelf als ouder hebben.');
     }
     for (const layer of value.layers) if (layer?.parentId && !ids.has(layer.parentId)) errors.push('Ouderlaag bestaat niet: ' + layer.parentId);
