@@ -184,3 +184,11 @@ test('validator en parser weigeren ontbrekende en te lange laag-ID’s', () => {
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(longId)), /Laag-ID ontbreekt/);
 });
 
+test('validator en parser weigeren laag-ID’s die alleen uit witruimte bestaan', () => {
+  const composition = MotionFX.createComposition();
+  composition.layers.push(MotionFX.createLayer('shape', { id: 'valid-id' }));
+  composition.layers[0].id = '   ';
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Laag-ID ontbreekt')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Laag-ID ontbreekt/);
+});
+

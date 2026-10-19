@@ -100,7 +100,7 @@ function validateComposition(value) {
   } else {
     const ids = new Set();
     for (const layer of value.layers) {
-      if (!layer || typeof layer.id !== 'string' || !layer.id || layer.id.length > 128 || ids.has(layer.id)) errors.push('Laag-ID ontbreekt, is ongeldig of is dubbel.');
+      if (!layer || typeof layer.id !== 'string' || !layer.id.trim() || layer.id.length > 128 || ids.has(layer.id)) errors.push('Laag-ID ontbreekt, is ongeldig of is dubbel.');
       else ids.add(layer.id);
       if (layer && (typeof layer.name !== 'string' || !layer.name.trim() || layer.name.length > 128)) errors.push('Ongeldige laagnaam.');
       if (!['shape', 'text', 'media', 'null'].includes(layer?.type)) errors.push('Ongeldig laagtype.');
