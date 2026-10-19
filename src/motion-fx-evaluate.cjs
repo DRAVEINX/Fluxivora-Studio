@@ -74,7 +74,12 @@ function isLayerActive(layer, frame) {
 
 function sortLayersForEvaluation(layers) {
   if (!Array.isArray(layers)) return [];
-  const byId = new Map(layers.filter(layer => layer && typeof layer.id === 'string').map(layer => [layer.id, layer]));
+  const identified = layers.filter(layer => layer && typeof layer.id === 'string');
+  const byId = new Map();
+  for (const layer of identified) {
+    if (byId.has(layer.id)) throw new TypeError(`Dubbele Motion FX-laag-ID: ${layer.id}`);
+    byId.set(layer.id, layer);
+  }
   const visited = new Set();
   const visiting = new Set();
   const result = [];

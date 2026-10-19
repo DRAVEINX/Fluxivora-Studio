@@ -66,6 +66,13 @@ test('laagactiviteit volgt enabled en het halfopen in/out-framebereik', () => {
   assert.equal(Eval.isLayerActive({ ...layer, enabled: false }, 15), false);
 });
 
+test('dubbele laag-ID’s worden geweigerd in de compositie-evaluator', () => {
+  assert.throws(() => Eval.sortLayersForEvaluation([
+    { id: 'same', parentId: null },
+    { id: 'same', parentId: null }
+  ]), /Dubbele Motion FX-laag-ID: same/);
+});
+
 test('lagen worden ouder-eerst geordend en cycli worden geweigerd', () => {
   const layers = [
     { id: 'child', parentId: 'parent' },
