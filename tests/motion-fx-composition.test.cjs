@@ -250,3 +250,18 @@ test('validator en parser weigeren voor- en achterspaties in laag-ID’s en oude
   assert.ok(MotionFX.validateComposition(paddedParentId).some(error => error.includes('Ongeldige ouderlaag-ID')));
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(paddedParentId)), /Ongeldige ouderlaag-ID/);
 });
+
+test('validator en parser weigeren compositie-ID’s en namen met voor- of achterspaties', () => {
+  for (const id of [' padded-id', 'padded-id ']) {
+    const composition = MotionFX.createComposition();
+    composition.id = id;
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('compositie-ID')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /compositie-ID/);
+  }
+  for (const name of [' padded-name', 'padded-name ']) {
+    const composition = MotionFX.createComposition();
+    composition.name = name;
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('compositienaam')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /compositienaam/);
+  }
+});
