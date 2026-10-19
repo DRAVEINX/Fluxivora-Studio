@@ -440,6 +440,17 @@ test('Motion FX composition keeps transformed child coordinates finite', () => {
 });
 
 
+test('Motion FX keyframes clamped to the same frame preserve last-input-wins semantics', () => {
+  assert.equal(runtime.interpolateKeyframes([
+    { frame: 0, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: -1, property: 'x', value: 20, interpolation: 'linear' }
+  ], 0, -1), 20);
+  assert.equal(runtime.interpolateKeyframes([
+    { frame: 999999, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: 216000, property: 'x', value: 30, interpolation: 'linear' }
+  ], 216000, -1), 30);
+});
+
 test('Motion FX composition resolves duplicate keyframes at the same frame deterministically', () => {
   const frames = [
     { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
