@@ -385,3 +385,24 @@ test('validator en parser begrenzen het aantal lagen op de projectlimiet', () =>
   assert.ok(MotionFX.validateComposition(overLimit).some(error => error.includes('maximaal ' + MotionFX.MAX_LAYERS)));
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(overLimit)), /maximaal 500 lagen/);
 });
+
+test('cloneComposition houdt transforms en timing onafhankelijk van het origineel', () => {
+  const composition = MotionFX.createComposition({ name: 'Transform isolation' });
+  composition.layers.push(MotionFX.createLayer('shape', {
+    id: 'source-transform',
+    transform: { x: 120, y: 240, rotation: 45, scaleX: 2, scaleY: 3, opacity: 0.75 },
+    timing: { inFrame: 10, outFrame: 200 }
+  }));
+
+  const clone = MotionFX.cloneComposition(composition);
+  clone.layers[0].transform.x = 999;
+  clone.layers[0].transform.rotation = 180;
+  clone.layers[0].timing.inFrame = 25;
+  clone.layers[0].timing.outFrame = 150;
+
+  assert.equal(composition.layers[0].transform.x, 120);
+  assert.equal(composition.layers[0].transform.rotation, 45);
+  assert.equal(composition.layers[0].timing.inFrame, 10);
+  assert.equal(composition.layers[0].timing.outFrame, 200);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
