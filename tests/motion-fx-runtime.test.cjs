@@ -382,3 +382,24 @@ test('Motion FX composition evaluates handle-based Bézier keyframes using edito
   assert.ok(layer.localTransform.opacity < 0.2, 'flat Bézier handles should produce a slower initial rise');
   assert.equal(layer.opacity, layer.localTransform.opacity);
 });
+
+
+test('Motion FX Bézier interpolation preserves exact endpoints and falls back for unsupported properties', () => {
+  const frames = [
+    { frame: 0, property: 'customValue', value: 0, interpolation: 'bezier' },
+    { frame: 10, property: 'customValue', value: 10, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, 0, 99), 0);
+  assert.equal(runtime.interpolateKeyframes(frames, 10, 99), 10);
+  assert.equal(runtime.interpolateKeyframes(frames, 5, 99), 5);
+});
+
+test('Motion FX Bézier interpolation tolerates missing editor curve module and keeps output finite', () => {
+  const frames = [
+    { frame: 0, property: 'opacity', value: 0, interpolation: 'bezier' },
+    { frame: 8, property: 'opacity', value: 1, interpolation: 'linear' }
+  ];
+  const value = runtime.interpolateKeyframes(frames, 3, 0);
+  assert.ok(Number.isFinite(value));
+  assert.ok(value >= 0 && value <= 1);
+});
