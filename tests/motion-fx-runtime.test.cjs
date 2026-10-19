@@ -337,3 +337,25 @@ test('Motion FX composition preserves input order for duplicate-free independent
   assert.deepEqual(evaluated.map(layer => layer.id), ['one', 'two', 'three']);
   assert.deepEqual(evaluated.map(layer => layer.worldTransform.e), [1, 2, 3]);
 });
+
+
+test('Motion FX interpolation ignores invalid time and property values', () => {
+  const frames = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 'bad', x: 100, ease: 'linear' },
+    { time: 5, x: Infinity, ease: 'linear' },
+    null,
+    { time: 10, x: 100, ease: 'linear' }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'x', 5, 7), 50);
+  assert.equal(runtime.interpolateProperty(frames, 'y', 5, 7), 7);
+});
+
+test('Motion FX interpolation clamps negative playback time and preserves endpoint values', () => {
+  const frames = [
+    { time: 2, opacity: 0.25, ease: 'linear' },
+    { time: 4, opacity: 0.75, ease: 'linear' }
+  ];
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', -100, 1), 0.25);
+  assert.equal(runtime.interpolateProperty(frames, 'opacity', 100, 1), 0.75);
+});
