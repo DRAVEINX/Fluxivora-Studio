@@ -356,3 +356,18 @@ test('cloneComposition remapt alle ouder-kindrelaties in een diepere laagstructu
   assert.notEqual(clone.layers[2].id, 'leaf');
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('serialize/parse behoudt ouder-kindrelaties bij opslaan en opnieuw openen', () => {
+  const composition = MotionFX.createComposition({ name: 'Hierarchy round trip' });
+  composition.layers.push(
+    MotionFX.createLayer('null', { id: 'root-layer' }),
+    MotionFX.createLayer('null', { id: 'group-layer', parentId: 'root-layer' }),
+    MotionFX.createLayer('shape', { id: 'child-layer', parentId: 'group-layer' })
+  );
+
+  const savedText = MotionFX.serializeComposition(composition);
+  const reopened = MotionFX.parseComposition(savedText);
+
+  assert.deepEqual(reopened.layers.map(layer => layer.parentId), [null, 'root-layer', 'group-layer']);
+  assert.deepEqual(MotionFX.validateComposition(reopened), []);
+});
