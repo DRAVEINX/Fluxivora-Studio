@@ -339,3 +339,20 @@ test('cloneComposition behoudt geneste data zonder gedeelde objectreferenties', 
   assert.equal(composition.layers[0].data.effects[0].settings.radius, 12);
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('cloneComposition remapt alle ouder-kindrelaties in een diepere laagstructuur', () => {
+  const composition = MotionFX.createComposition({ name: 'Parent chain' });
+  composition.layers.push(
+    MotionFX.createLayer('null', { id: 'root' }),
+    MotionFX.createLayer('null', { id: 'middle', parentId: 'root' }),
+    MotionFX.createLayer('shape', { id: 'leaf', parentId: 'middle' })
+  );
+
+  const clone = MotionFX.cloneComposition(composition);
+  assert.equal(clone.layers[1].parentId, clone.layers[0].id);
+  assert.equal(clone.layers[2].parentId, clone.layers[1].id);
+  assert.notEqual(clone.layers[0].id, 'root');
+  assert.notEqual(clone.layers[1].id, 'middle');
+  assert.notEqual(clone.layers[2].id, 'leaf');
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
