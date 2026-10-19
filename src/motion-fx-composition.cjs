@@ -25,7 +25,7 @@ function createComposition(options = {}) {
     version: VERSION,
     id: String(options.id || makeId('comp')).slice(0, 128),
     name: String(options.name || 'Nieuwe compositie').trim().slice(0, 128) || 'Nieuwe compositie',
-    settings: { width, height, fps, durationFrames, background: String(options.background || '#101014').slice(0, 32), pixelAspect: 1 },
+    settings: { width, height, fps, durationFrames, background: String(options.background || '#101014').slice(0, 32), pixelAspect: finite(options.pixelAspect, 1, 0.1, 10) },
     layers: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -177,7 +177,7 @@ function normalizeComposition(value) {
   const settings = value.settings || {};
   const composition = createComposition({
     id: value.id, name: value.name, width: settings.width, height: settings.height,
-    fps: settings.fps, durationFrames: settings.durationFrames, background: settings.background
+    fps: settings.fps, durationFrames: settings.durationFrames, background: settings.background, pixelAspect: settings.pixelAspect
   });
   composition.createdAt = typeof value.createdAt === 'string' ? value.createdAt : composition.createdAt;
   composition.updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : composition.updatedAt;
