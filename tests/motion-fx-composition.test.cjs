@@ -202,3 +202,18 @@ test('validator en parser weigeren lege, witruimte-only en te lange keyframe-eig
     assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldig keyframe/);
   }
 });
+
+test('validator en parser weigeren lege of witruimte-only compositie-ID’s en namen', () => {
+  for (const id of ['', '   ']) {
+    const composition = MotionFX.createComposition();
+    composition.id = id;
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('compositie-ID')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /compositie-ID/);
+  }
+  for (const name of ['', '   ']) {
+    const composition = MotionFX.createComposition();
+    composition.name = name;
+    assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('compositienaam')));
+    assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /compositienaam/);
+  }
+});

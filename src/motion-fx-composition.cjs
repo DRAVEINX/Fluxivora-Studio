@@ -75,8 +75,8 @@ function validateComposition(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return ['Project moet een object zijn.'];
   if (value.format !== FORMAT) errors.push('Onbekend Motion FX-projectformaat.');
   if (value.version !== VERSION) errors.push('Niet-ondersteunde Motion FX-projectversie.');
-  if (typeof value.id !== 'string' || !value.id || value.id.length > 128) errors.push('Ongeldige compositie-ID.');
-  if (typeof value.name !== 'string' || !value.name || value.name.length > 128) errors.push('Ongeldige compositienaam.');
+  if (typeof value.id !== 'string' || !value.id.trim() || value.id.length > 128) errors.push('Ongeldige compositie-ID.');
+  if (typeof value.name !== 'string' || !value.name.trim() || value.name.length > 128) errors.push('Ongeldige compositienaam.');
   const settings = value.settings;
   if (!settings || !Number.isInteger(settings.width) || settings.width < 16 || settings.width > 7680 ||
       !Number.isInteger(settings.height) || settings.height < 16 || settings.height > 4320 ||
