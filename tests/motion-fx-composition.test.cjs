@@ -225,3 +225,13 @@ test('validator en parser weigeren ouderlaag-ID’s die alleen uit witruimte bes
   assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ongeldige ouderlaag-ID')));
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige ouderlaag-ID/);
 });
+
+test('validator en parser herkennen dubbele laag-ID’s ook bij afwijkende spaties', () => {
+  const composition = MotionFX.createComposition();
+  composition.layers.push(
+    MotionFX.createLayer('shape', { id: 'shared-id' }),
+    MotionFX.createLayer('text', { id: ' shared-id ' })
+  );
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Laag-ID ontbreekt, is ongeldig of is dubbel')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Laag-ID ontbreekt, is ongeldig of is dubbel/);
+});
