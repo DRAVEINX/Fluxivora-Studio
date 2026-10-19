@@ -140,6 +140,18 @@ test('compositie begrenst playhead gelijk voor keyframes en laagactiviteit', () 
   assert.equal(result.visible, true);
 });
 
+test('compositie-evaluator markeert lege en omgekeerde tijdsbereiken als inactief', () => {
+  const composition = { layers: [
+    { id: 'empty', enabled: true, transform: {}, timing: { inFrame: 10, outFrame: 10 }, keyframes: [] },
+    { id: 'reversed', enabled: true, transform: {}, timing: { inFrame: 20, outFrame: 10 }, keyframes: [] },
+    { id: 'valid', enabled: true, transform: {}, timing: { inFrame: 0, outFrame: 20 }, keyframes: [] }
+  ] };
+  const result = Eval.evaluateCompositionAtFrame(composition, 10);
+  assert.equal(result.find(layer => layer.id === 'empty').visible, false);
+  assert.equal(result.find(layer => layer.id === 'reversed').visible, false);
+  assert.equal(result.find(layer => layer.id === 'valid').visible, true);
+});
+
 test('inactieve ouder verbergt afhankelijke lagen en ontbrekende compositie wordt geweigerd', () => {
   const composition = { layers: [
     { id: 'parent', parentId: null, enabled: false, transform: {}, timing: { inFrame: 0, outFrame: 10 }, keyframes: [] },
