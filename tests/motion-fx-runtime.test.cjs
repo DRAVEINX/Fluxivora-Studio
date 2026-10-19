@@ -304,3 +304,36 @@ test('Motion FX property interpolation uses a supplied Bézier evaluator when av
   });
   assert.equal(value, 42);
 });
+
+
+test('Motion FX composition animates rotation and scale keyframes independently', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'animated-transform', type: 'shape', enabled: true,
+      transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+      keyframes: [
+        { frame: 0, property: 'rotation', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'rotation', value: 180, interpolation: 'linear' },
+        { frame: 0, property: 'scaleX', value: 1, interpolation: 'linear' },
+        { frame: 10, property: 'scaleX', value: 3, interpolation: 'linear' },
+        { frame: 0, property: 'scaleY', value: 2, interpolation: 'linear' },
+        { frame: 10, property: 'scaleY', value: 4, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.rotation, 90);
+  assert.equal(layer.localTransform.scaleX, 2);
+  assert.equal(layer.localTransform.scaleY, 3);
+  assert.ok(Math.abs(layer.worldTransform.a) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.b - 2) < 1e-9);
+  assert.ok(Math.abs(layer.worldTransform.c + 3) < 1e-9);
+});
+
+test('Motion FX composition preserves input order for duplicate-free independent layers', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'one', type: 'shape', transform: { x: 1 }, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'two', type: 'shape', transform: { x: 2 }, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'three', type: 'shape', transform: { x: 3 }, timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['one', 'two', 'three']);
+  assert.deepEqual(evaluated.map(layer => layer.worldTransform.e), [1, 2, 3]);
+});
