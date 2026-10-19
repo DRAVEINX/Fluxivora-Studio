@@ -135,7 +135,7 @@ function validateComposition(value) {
           }
         }
       }
-      if (layer?.parentId != null && (typeof layer.parentId !== 'string' || !layer.parentId || layer.parentId.length > 128)) errors.push('Ongeldige ouderlaag-ID.');
+      if (layer?.parentId != null && (typeof layer.parentId !== 'string' || !layer.parentId.trim() || layer.parentId.length > 128)) errors.push('Ongeldige ouderlaag-ID.');
       if (layer?.data != null && (typeof layer.data !== 'object' || Array.isArray(layer.data))) errors.push('Ongeldige laaggegevens.');
       if (layer?.parentId && layer.parentId === layer.id) errors.push('Een laag kan niet zichzelf als ouder hebben.');
     }

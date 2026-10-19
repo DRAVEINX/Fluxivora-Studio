@@ -217,3 +217,11 @@ test('validator en parser weigeren lege of witruimte-only compositie-ID’s en n
     assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /compositienaam/);
   }
 });
+
+test('validator en parser weigeren ouderlaag-ID’s die alleen uit witruimte bestaan', () => {
+  const composition = MotionFX.createComposition();
+  const layer = MotionFX.createLayer('shape', { id: 'child', parentId: '   ' });
+  composition.layers.push(layer);
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Ongeldige ouderlaag-ID')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Ongeldige ouderlaag-ID/);
+});
