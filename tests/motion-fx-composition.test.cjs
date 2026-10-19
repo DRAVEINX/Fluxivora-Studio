@@ -278,3 +278,16 @@ test('pixelAspect van een nieuwe compositie blijft binnen veilige grenzen', () =
   assert.equal(MotionFX.createComposition({ pixelAspect: 0 }).settings.pixelAspect, 0.1);
   assert.equal(MotionFX.createComposition({ pixelAspect: 20 }).settings.pixelAspect, 10);
 });
+
+test('gekopieerde compositie behoudt pixelAspect en krijgt eigen identiteit', () => {
+  const composition = MotionFX.createComposition({ id: 'original-comp', name: 'Origineel', pixelAspect: 1.25 });
+  composition.layers.push(MotionFX.createLayer('shape', { id: 'original-layer' }));
+
+  const clone = MotionFX.cloneComposition(composition, 'Kopie');
+
+  assert.equal(clone.settings.pixelAspect, 1.25);
+  assert.equal(clone.name, 'Kopie');
+  assert.notEqual(clone.id, composition.id);
+  assert.notEqual(clone.layers[0].id, composition.layers[0].id);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
