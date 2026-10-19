@@ -481,3 +481,19 @@ test('Motion FX composition clamps playhead consistently for keyframes and layer
   assert.equal(afterRange.visible, false);
   assert.equal(afterRange.localTransform.x, 10);
 });
+
+test('Motion FX composition resolves multi-level parent chains independent of input order', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'grandchild', parentId: 'child', type: 'shape', enabled: true,
+      transform: { x: 2, y: 0, opacity: 0.5 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child', parentId: 'root', type: 'group', enabled: true,
+      transform: { x: 3, y: 0, opacity: 0.5 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'root', type: 'group', enabled: true,
+      transform: { x: 10, y: 0, opacity: 0.8 }, timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  const grandchild = evaluated.find(layer => layer.id === 'grandchild');
+  assert.equal(grandchild.worldTransform.e, 15);
+  assert.equal(grandchild.worldTransform.f, 0);
+  assert.equal(grandchild.opacity, 0.2);
+  assert.deepEqual(evaluated.map(layer => layer.id), ['root', 'child', 'grandchild']);
+});
