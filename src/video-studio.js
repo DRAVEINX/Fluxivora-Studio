@@ -945,10 +945,18 @@
           throw new Error('Een compositie heeft een ongeldige naam of laagstructuur.');
         }
         const layers = candidate.layers.map(layer => {
-          if (!layer || typeof layer !== 'object' || layer.type !== 'title' || typeof layer.name !== 'string' || !layer.name || layer.name.length > 128) {
+          if (!layer || typeof layer !== 'object' || Array.isArray(layer) || layer.type !== 'title' || typeof layer.name !== 'string' || !layer.name.trim() || layer.name.length > 128) {
             throw new Error('Alleen geldige grafische titel-/vormlagen kunnen worden geïmporteerd.');
           }
-          return { ...layer, type: 'title', keyframes: Array.isArray(layer.keyframes) ? layer.keyframes.slice(0, 1000) : [], effects: Array.isArray(layer.effects) ? layer.effects.slice(0, 100) : [] };
+          const keyframes = Array.isArray(layer.keyframes) ? layer.keyframes.slice(0, 1000) : [];
+          if (keyframes.some(frame => !frame || typeof frame !== 'object' || Array.isArray(frame) || !Number.isFinite(frame.time) || frame.time < 0)) {
+            throw new Error('Een grafische laag bevat ongeldige keyframes.');
+          }
+          const effects = Array.isArray(layer.effects) ? layer.effects.slice(0, 100) : [];
+          if (effects.some(effect => !effect || typeof effect !== 'object' || Array.isArray(effect))) {
+            throw new Error('Een grafische laag bevat ongeldige effecten.');
+          }
+          return { ...layer, type: 'title', keyframes, effects };
         });
         let id = typeof candidate.id === 'string' && candidate.id.length <= 128 ? candidate.id : uid('composition');
         if (usedIds.has(id)) id = uid('composition');
