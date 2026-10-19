@@ -146,6 +146,11 @@ function normalizeComposition(value) {
   if (value.version !== VERSION) throw new TypeError('Niet-ondersteunde Motion FX-projectversie.');
   if (typeof value.id !== 'string' || !value.id || value.id.length > 128) throw new TypeError('Ongeldige compositie-ID.');
   if (typeof value.name !== 'string' || !value.name || value.name.length > 128) throw new TypeError('Ongeldige compositienaam.');
+  // Validate the untrusted input before createLayer() normalizes/coerces values.
+  // Otherwise malformed transforms and keyframes (for example a numeric string
+  // or JSON null where Infinity was serialized) could be silently repaired.
+  const inputErrors = validateComposition(value);
+  if (inputErrors.length) throw new TypeError(inputErrors.join(' '));
   const settings = value.settings || {};
   const composition = createComposition({
     id: value.id, name: value.name, width: settings.width, height: settings.height,
