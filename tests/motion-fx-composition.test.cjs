@@ -82,6 +82,18 @@ test('dupliceren maakt nieuwe laag-ID’s en behoudt ouder-kindrelaties en anima
   assert.deepEqual(MotionFX.validateComposition(copy), []);
 });
 
+
+test('validator en parser weigeren circulaire ouder-kindrelaties', () => {
+  const composition = MotionFX.createComposition();
+  composition.layers.push(
+    MotionFX.createLayer('null', { id: 'root-a', parentId: 'group-b' }),
+    MotionFX.createLayer('null', { id: 'group-b', parentId: 'shape-c' }),
+    MotionFX.createLayer('shape', { id: 'shape-c', parentId: 'root-a' })
+  );
+  assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Circulaire ouder-kindrelatie')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Circulaire ouder-kindrelatie/);
+});
+
 test('parser weigert expliciet onbekende projectformaten en versies', () => {
   const composition = MotionFX.createComposition();
   assert.throws(() => MotionFX.parseComposition(JSON.stringify({ ...composition, format: 'other' })), /projectformaat/);

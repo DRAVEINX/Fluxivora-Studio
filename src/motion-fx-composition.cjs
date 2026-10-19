@@ -97,6 +97,25 @@ function validateComposition(value) {
       if (layer?.parentId && layer.parentId === layer.id) errors.push('Een laag kan niet zichzelf als ouder hebben.');
     }
     for (const layer of value.layers) if (layer?.parentId && !ids.has(layer.parentId)) errors.push('Ouderlaag bestaat niet: ' + layer.parentId);
+
+    // Reject parent cycles while the project is being validated/imported,
+    // rather than waiting for the evaluator to discover them at playback.
+    const byId = new Map(value.layers.filter(layer => layer && typeof layer.id === 'string' && layer.id).map(layer => [layer.id, layer]));
+    const visited = new Set();
+    const visiting = new Set();
+    function visitParentChain(layer) {
+      if (visited.has(layer.id)) return;
+      if (visiting.has(layer.id)) {
+        errors.push('Circulaire ouder-kindrelatie gedetecteerd.');
+        return;
+      }
+      visiting.add(layer.id);
+      const parent = layer.parentId && byId.get(layer.parentId);
+      if (parent) visitParentChain(parent);
+      visiting.delete(layer.id);
+      visited.add(layer.id);
+    }
+    for (const layer of byId.values()) visitParentChain(layer);
   }
   return [...new Set(errors)];
 }
