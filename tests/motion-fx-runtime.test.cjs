@@ -221,3 +221,30 @@ test('Motion FX composition ignores malformed keyframes and preserves base value
   assert.equal(layer.localTransform.opacity, 0.4);
   assert.equal(layer.visible, true);
 });
+
+
+test('Motion FX composition applies keyframe values at exact frame boundaries', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'boundary-keys', type: 'shape', enabled: true,
+      transform: { x: 4 },
+      keyframes: [
+        { frame: 2, property: 'x', value: 20, interpolation: 'linear' },
+        { frame: 6, property: 'x', value: 60, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 2);
+  assert.equal(layer.localTransform.x, 20);
+});
+
+test('Motion FX composition holds values on hold keyframe segments', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'held', type: 'shape', enabled: true,
+      transform: { x: 0 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 10, interpolation: 'hold' },
+        { frame: 10, property: 'x', value: 90, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.x, 10);
+});
