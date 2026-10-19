@@ -325,3 +325,17 @@ test('cloneComposition weigert ongeldige broncomposities', () => {
   invalidLayer.layers.push(layer);
   assert.throws(() => MotionFX.cloneComposition(invalidLayer), /Ongeldige transformatiewaarde: opacity/);
 });
+
+test('cloneComposition behoudt geneste data zonder gedeelde objectreferenties', () => {
+  const composition = MotionFX.createComposition({ name: 'Nested data test' });
+  composition.layers.push(MotionFX.createLayer('shape', {
+    id: 'nested-source',
+    data: { effects: [{ name: 'Blur', settings: { radius: 12 } }] }
+  }));
+
+  const clone = MotionFX.cloneComposition(composition);
+  assert.deepEqual(clone.layers[0].data, composition.layers[0].data);
+  clone.layers[0].data.effects[0].settings.radius = 30;
+  assert.equal(composition.layers[0].data.effects[0].settings.radius, 12);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
