@@ -169,3 +169,29 @@ test('Motion FX composition tolerates missing optional keyframes and transforms'
   assert.equal(layer.localTransform.opacity, 1);
   assert.equal(layer.opacity, 1);
 });
+
+
+test('Motion FX composition clamps negative and over-range opacity after inheritance', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'parent', type: 'group', enabled: true,
+      transform: { opacity: 0.7 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child-high', parentId: 'parent', type: 'shape', enabled: true,
+      transform: { opacity: 2 }, timing: { inFrame: 0, outFrame: 10 } },
+    { id: 'child-low', parentId: 'parent', type: 'shape', enabled: true,
+      transform: { opacity: -1 }, timing: { inFrame: 0, outFrame: 10 } }
+  ] }, 3);
+  assert.equal(evaluated.find(layer => layer.id === 'child-high').opacity, 0.7);
+  assert.equal(evaluated.find(layer => layer.id === 'child-low').opacity, 0);
+});
+
+test('Motion FX composition handles unknown parent identifiers as root layers', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'orphan', parentId: 'missing-parent', type: 'shape', enabled: true,
+      transform: { x: 9, y: 4, opacity: 0.8 },
+      timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2);
+  assert.equal(layer.visible, true);
+  assert.equal(layer.worldTransform.e, 9);
+  assert.equal(layer.worldTransform.f, 4);
+  assert.equal(layer.opacity, 0.8);
+});
