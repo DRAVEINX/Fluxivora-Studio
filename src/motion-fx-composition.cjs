@@ -100,7 +100,7 @@ function validateComposition(value) {
   } else {
     const ids = new Set();
     for (const layer of value.layers) {
-      if (!layer || typeof layer.id !== 'string' || !layer.id.trim() || layer.id.length > 128 || ids.has(layer.id.trim())) errors.push('Laag-ID ontbreekt, is ongeldig of is dubbel.');
+      if (!layer || typeof layer.id !== 'string' || !layer.id.trim() || layer.id !== layer.id.trim() || layer.id.length > 128 || ids.has(layer.id.trim())) errors.push('Laag-ID ontbreekt, is ongeldig of is dubbel.');
       else ids.add(layer.id.trim());
       if (layer && (typeof layer.name !== 'string' || !layer.name.trim() || layer.name.length > 128)) errors.push('Ongeldige laagnaam.');
       if (!['shape', 'text', 'media', 'null'].includes(layer?.type)) errors.push('Ongeldig laagtype.');
@@ -135,7 +135,7 @@ function validateComposition(value) {
           }
         }
       }
-      if (layer?.parentId != null && (typeof layer.parentId !== 'string' || !layer.parentId.trim() || layer.parentId.length > 128)) errors.push('Ongeldige ouderlaag-ID.');
+      if (layer?.parentId != null && (typeof layer.parentId !== 'string' || !layer.parentId.trim() || layer.parentId !== layer.parentId.trim() || layer.parentId.length > 128)) errors.push('Ongeldige ouderlaag-ID.');
       if (layer?.data != null && (typeof layer.data !== 'object' || Array.isArray(layer.data))) errors.push('Ongeldige laaggegevens.');
       if (layer?.parentId && layer.parentId === layer.id) errors.push('Een laag kan niet zichzelf als ouder hebben.');
     }

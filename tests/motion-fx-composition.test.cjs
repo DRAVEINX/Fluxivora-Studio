@@ -235,3 +235,18 @@ test('validator en parser herkennen dubbele laag-ID’s ook bij afwijkende spati
   assert.ok(MotionFX.validateComposition(composition).some(error => error.includes('Laag-ID ontbreekt, is ongeldig of is dubbel')));
   assert.throws(() => MotionFX.parseComposition(JSON.stringify(composition)), /Laag-ID ontbreekt, is ongeldig of is dubbel/);
 });
+
+test('validator en parser weigeren voor- en achterspaties in laag-ID’s en ouderlaag-ID’s', () => {
+  const paddedLayerId = MotionFX.createComposition();
+  paddedLayerId.layers.push(MotionFX.createLayer('shape', { id: ' padded-id ' }));
+  assert.ok(MotionFX.validateComposition(paddedLayerId).some(error => error.includes('Laag-ID ontbreekt, is ongeldig of is dubbel')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(paddedLayerId)), /Laag-ID ontbreekt, is ongeldig of is dubbel/);
+
+  const paddedParentId = MotionFX.createComposition();
+  paddedParentId.layers.push(
+    MotionFX.createLayer('shape', { id: 'parent' }),
+    MotionFX.createLayer('text', { id: 'child', parentId: ' parent ' })
+  );
+  assert.ok(MotionFX.validateComposition(paddedParentId).some(error => error.includes('Ongeldige ouderlaag-ID')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(paddedParentId)), /Ongeldige ouderlaag-ID/);
+});
