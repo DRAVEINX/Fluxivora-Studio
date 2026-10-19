@@ -406,3 +406,22 @@ test('cloneComposition houdt transforms en timing onafhankelijk van het originee
   assert.equal(composition.layers[0].timing.outFrame, 200);
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('cloneComposition behoudt enabled en locked status zonder gedeelde lagen', () => {
+  const composition = MotionFX.createComposition({ name: 'Layer flags clone' });
+  composition.layers.push(
+    MotionFX.createLayer('shape', { id: 'hidden-source', enabled: false, locked: true }),
+    MotionFX.createLayer('text', { id: 'active-source', enabled: true, locked: false })
+  );
+
+  const clone = MotionFX.cloneComposition(composition);
+  assert.deepEqual(clone.layers.map(layer => ({ enabled: layer.enabled, locked: layer.locked })), [
+    { enabled: false, locked: true },
+    { enabled: true, locked: false }
+  ]);
+  clone.layers[0].enabled = true;
+  clone.layers[0].locked = false;
+  assert.equal(composition.layers[0].enabled, false);
+  assert.equal(composition.layers[0].locked, true);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
