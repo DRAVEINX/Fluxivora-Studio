@@ -170,3 +170,17 @@ test('validator en parser weigeren lege, niet-tekstuele of te lange ouderlaag-ID
   }
 });
 
+test('validator en parser weigeren ontbrekende en te lange laag-ID’s', () => {
+  const missingId = MotionFX.createComposition();
+  missingId.layers.push(MotionFX.createLayer('shape', { id: 'valid-id' }));
+  missingId.layers[0].id = '';
+  assert.ok(MotionFX.validateComposition(missingId).some(error => error.includes('Laag-ID ontbreekt')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(missingId)), /Laag-ID ontbreekt/);
+
+  const longId = MotionFX.createComposition();
+  longId.layers.push(MotionFX.createLayer('shape', { id: 'valid-id' }));
+  longId.layers[0].id = 'x'.repeat(129);
+  assert.ok(MotionFX.validateComposition(longId).some(error => error.includes('Laag-ID ontbreekt')));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(longId)), /Laag-ID ontbreekt/);
+});
+
