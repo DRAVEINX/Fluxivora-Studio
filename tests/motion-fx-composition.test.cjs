@@ -136,3 +136,14 @@ test('parser weigert ongeldige achtergrondkleuren en pixelverhoudingen', () => {
   })), /pixelverhouding/);
   assert.deepEqual(MotionFX.validateComposition(composition), []);
 });
+
+
+test('validator weigert ontbrekende verplichte achtergrond- en pixelverhoudinginstellingen', () => {
+  const composition = MotionFX.createComposition();
+  const missingBackground = { ...composition, settings: { ...composition.settings } };
+  delete missingBackground.settings.background;
+  assert.ok(MotionFX.validateComposition(missingBackground).some(error => error.includes('Achtergrondkleur ontbreekt')));
+  const missingPixelAspect = { ...composition, settings: { ...composition.settings } };
+  delete missingPixelAspect.settings.pixelAspect;
+  assert.ok(MotionFX.validateComposition(missingPixelAspect).some(error => error.includes('Pixelverhouding ontbreekt')));
+});

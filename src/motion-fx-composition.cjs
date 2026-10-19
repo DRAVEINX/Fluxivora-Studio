@@ -93,6 +93,8 @@ function validateComposition(value) {
       (!Number.isFinite(settings.pixelAspect) || settings.pixelAspect < 0.1 || settings.pixelAspect > 10)) {
     errors.push('Ongeldige pixelverhouding.');
   }
+  if (settings && settings.background == null) errors.push('Achtergrondkleur ontbreekt.');
+  if (settings && settings.pixelAspect == null) errors.push('Pixelverhouding ontbreekt.');
   if (!Array.isArray(value.layers) || value.layers.length > MAX_LAYERS) {
     errors.push('Ongeldige lagenlijst (maximaal ' + MAX_LAYERS + ' lagen).');
   } else {
