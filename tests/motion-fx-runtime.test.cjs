@@ -124,3 +124,22 @@ test('Motion FX composition evaluation keeps a layer inactive before its inFrame
   assert.equal(layer.visible, false);
   assert.equal(layer.localTransform.x, 12);
 });
+
+
+test('Motion FX composition evaluates transform keyframes and clamps opacity', () => {
+  const [layer] = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'animated', type: 'shape', enabled: true,
+      transform: { x: 2, y: 4, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 },
+      keyframes: [
+        { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+        { frame: 10, property: 'x', value: 100, interpolation: 'linear' },
+        { frame: 0, property: 'opacity', value: 2, interpolation: 'linear' },
+        { frame: 10, property: 'opacity', value: 2, interpolation: 'linear' }
+      ],
+      timing: { inFrame: 0, outFrame: 20 } }
+  ] }, 5);
+  assert.equal(layer.localTransform.x, 50);
+  assert.equal(layer.localTransform.y, 4);
+  assert.equal(layer.localTransform.opacity, 1);
+  assert.equal(layer.opacity, 1);
+});
