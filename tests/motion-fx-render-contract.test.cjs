@@ -65,3 +65,31 @@ test('Shared preview renderer evaluates Motion FX layers before drawing clips', 
   assert.match(renderer, /drawWithParentTransform\(ctx, c/);
   assert.match(renderer, /state\.motionFxLayers\.get\(c\.id\)\?\.visible !== false/);
 });
+
+test('Motion FX composition import validates size, format and graphic-layer limits', () => {
+  const start = studio.indexOf('async function importMotionCompositions(file)');
+  assert.notEqual(start, -1, 'composition import handler must exist');
+  const end = studio.indexOf('\n  function renderMotionCompositions', start);
+  assert.ok(end > start, 'composition import handler must have a clear boundary');
+  const importer = studio.slice(start, end);
+  assert.match(importer, /file\.size > 2 \* 1024 \* 1024/);
+  assert.match(importer, /parsed\.format === 'fluxivora-motion-compositions' && parsed\.version === 1/);
+  assert.match(importer, /imported\.length > 30/);
+  assert.match(importer, /candidate\.layers\.length > 30/);
+  assert.match(importer, /layer\.type !== 'title'/);
+  assert.match(importer, /keyframes\.slice\(0, 1000\)/);
+  assert.match(importer, /effects\.slice\(0, 100\)/);
+});
+
+test('Inserting a saved Motion FX composition supports undo and clones animated data', () => {
+  const start = studio.indexOf('function handleMotionCompositionAction(event)');
+  assert.notEqual(start, -1, 'composition actions must exist');
+  const end = studio.indexOf('\n  function refresh()', start);
+  assert.ok(end > start, 'composition action handler must have a clear boundary');
+  const handler = studio.slice(start, end);
+  assert.match(handler, /button\.dataset\.compositionAction !== 'insert'/);
+  assert.match(handler, /pushHistory\(\)/);
+  assert.match(handler, /keyframes: Array\.isArray\(layer\.keyframes\) \? layer\.keyframes\.map\(frame => \(\{ \.\.\.frame \}\)\)/);
+  assert.match(handler, /effects: Array\.isArray\(layer\.effects\) \? layer\.effects\.map\(effect => \(\{ \.\.\.effect \}\)\)/);
+  assert.match(handler, /compositionName: item\.name/);
+});
