@@ -78,7 +78,10 @@ test('Motion FX composition import validates size, format and graphic-layer limi
   assert.match(importer, /candidate\.layers\.length > 30/);
   assert.match(importer, /layer\.type !== 'title'/);
   assert.match(importer, /keyframes\.slice\(0, 1000\)/);
+  assert.match(importer, /!Number\.isFinite\(frame\.time\) \|\| frame\.time < 0/);
+  assert.match(importer, /ongeldige keyframes/);
   assert.match(importer, /effects\.slice\(0, 100\)/);
+  assert.match(importer, /ongeldige effecten/);
 });
 
 test('Inserting a saved Motion FX composition supports undo and clones animated data', () => {
