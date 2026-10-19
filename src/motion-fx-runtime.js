@@ -67,10 +67,17 @@
 
   function interpolateKeyframes(keyframes, frame, fallback = 0) {
     if (!Array.isArray(keyframes)) return finite(fallback);
-    const valid = keyframes
+    const sorted = keyframes
       .filter(item => item && Number.isFinite(item.frame) && Number.isFinite(item.value))
       .map(item => ({ ...item, frame: clamp(item.frame, 0, MAX_FRAME) }))
       .sort((a, b) => a.frame - b.frame);
+    // If multiple keyframes target the same frame, the last one wins.
+    // This avoids zero-length interpolation segments and makes edits predictable.
+    const valid = [];
+    for (const item of sorted) {
+      if (valid.length && valid[valid.length - 1].frame === item.frame) valid[valid.length - 1] = item;
+      else valid.push(item);
+    }
     if (!valid.length) return finite(fallback);
     if (frame <= valid[0].frame) return valid[0].value;
     if (frame >= valid[valid.length - 1].frame) return valid[valid.length - 1].value;

@@ -438,3 +438,17 @@ test('Motion FX composition keeps transformed child coordinates finite', () => {
   assert.ok(Math.abs(child.worldTransform.e - 10) < 1e-9);
   assert.ok(Math.abs(child.worldTransform.f - 25) < 1e-9);
 });
+
+
+test('Motion FX composition resolves duplicate keyframes at the same frame deterministically', () => {
+  const frames = [
+    { frame: 0, property: 'x', value: 0, interpolation: 'linear' },
+    { frame: 5, property: 'x', value: 10, interpolation: 'linear' },
+    { frame: 5, property: 'x', value: 20, interpolation: 'linear' },
+    { frame: 10, property: 'x', value: 30, interpolation: 'linear' }
+  ];
+  assert.equal(runtime.interpolateKeyframes(frames, 5, -1), 20);
+  assert.equal(runtime.interpolateKeyframes(frames, 7.5, -1), 25);
+  assert.equal(runtime.interpolateKeyframes(frames, 0, -1), 0);
+  assert.equal(runtime.interpolateKeyframes(frames, 10, -1), 30);
+});
