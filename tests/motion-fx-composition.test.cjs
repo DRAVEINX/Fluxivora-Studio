@@ -441,3 +441,27 @@ test('cloneComposition houdt namen en laagvolgorde intact', () => {
   assert.notDeepEqual(clone.layers.map(layer => layer.id), composition.layers.map(layer => layer.id));
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('cloneComposition behoudt keyframevolgorde en interpolatie zonder gedeelde data', () => {
+  const composition = MotionFX.createComposition({ name: 'Keyframe copy', fps: 60 });
+  const sourceKeyframes = [
+    { frame: 0, property: 'opacity', value: 0, interpolation: 'linear' },
+    { frame: 12, property: 'opacity', value: 0.5, interpolation: 'ease' },
+    { frame: 24, property: 'opacity', value: 1, interpolation: 'bezier' }
+  ];
+  composition.layers.push(MotionFX.createLayer('shape', {
+    id: 'animated-source',
+    keyframes: sourceKeyframes
+  }));
+
+  const clone = MotionFX.cloneComposition(composition, 'Keyframe copy clone');
+  assert.deepEqual(clone.layers[0].keyframes, sourceKeyframes);
+  assert.deepEqual(clone.layers[0].keyframes.map(frame => frame.interpolation), ['linear', 'ease', 'bezier']);
+  clone.layers[0].keyframes[1].value = 0.25;
+  clone.layers[0].keyframes[2].frame = 30;
+
+  assert.equal(composition.layers[0].keyframes[1].value, 0.5);
+  assert.equal(composition.layers[0].keyframes[2].frame, 24);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
+
