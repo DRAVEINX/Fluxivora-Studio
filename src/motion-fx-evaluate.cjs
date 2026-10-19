@@ -26,8 +26,8 @@ function interpolateKeyframes(keyframes, frame, fallback = 0) {
   if (at <= unique[0].frame) return unique[0].value;
   if (at >= unique[unique.length - 1].frame) return unique[unique.length - 1].value;
 
-  let left = valid[0];
-  let right = valid[1];
+  let left = unique[0];
+  let right = unique[1];
   for (let index = 1; index < unique.length; index += 1) {
     if (at <= unique[index].frame) {
       left = unique[index - 1];
