@@ -425,3 +425,19 @@ test('cloneComposition behoudt enabled en locked status zonder gedeelde lagen', 
   assert.equal(composition.layers[0].locked, true);
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('cloneComposition houdt namen en laagvolgorde intact', () => {
+  const composition = MotionFX.createComposition({ name: 'Order and names' });
+  composition.layers.push(
+    MotionFX.createLayer('text', { id: 'title-source', name: 'Titel' }),
+    MotionFX.createLayer('shape', { id: 'background-source', name: 'Achtergrond' }),
+    MotionFX.createLayer('media', { id: 'footage-source', name: 'Beeldmateriaal' })
+  );
+
+  const clone = MotionFX.cloneComposition(composition, 'Nieuwe montage');
+  assert.equal(clone.name, 'Nieuwe montage');
+  assert.deepEqual(clone.layers.map(layer => layer.name), ['Titel', 'Achtergrond', 'Beeldmateriaal']);
+  assert.deepEqual(clone.layers.map(layer => layer.type), ['text', 'shape', 'media']);
+  assert.notDeepEqual(clone.layers.map(layer => layer.id), composition.layers.map(layer => layer.id));
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
