@@ -371,3 +371,17 @@ test('serialize/parse behoudt ouder-kindrelaties bij opslaan en opnieuw openen',
   assert.deepEqual(reopened.layers.map(layer => layer.parentId), [null, 'root-layer', 'group-layer']);
   assert.deepEqual(MotionFX.validateComposition(reopened), []);
 });
+
+test('validator en parser begrenzen het aantal lagen op de projectlimiet', () => {
+  const atLimit = MotionFX.createComposition({ name: 'Maximum layers' });
+  for (let index = 0; index < MotionFX.MAX_LAYERS; index++) {
+    atLimit.layers.push(MotionFX.createLayer('shape', { id: 'layer-' + index }));
+  }
+  assert.deepEqual(MotionFX.validateComposition(atLimit), []);
+  assert.equal(MotionFX.parseComposition(JSON.stringify(atLimit)).layers.length, MotionFX.MAX_LAYERS);
+
+  const overLimit = MotionFX.createComposition({ name: 'Too many layers' });
+  overLimit.layers = atLimit.layers.concat(MotionFX.createLayer('shape', { id: 'layer-over-limit' }));
+  assert.ok(MotionFX.validateComposition(overLimit).some(error => error.includes('maximaal ' + MotionFX.MAX_LAYERS)));
+  assert.throws(() => MotionFX.parseComposition(JSON.stringify(overLimit)), /maximaal 500 lagen/);
+});
