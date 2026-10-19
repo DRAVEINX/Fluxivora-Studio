@@ -531,3 +531,18 @@ test('Motion FX composition resolves multi-level parent chains independent of in
   assert.equal(grandchild.opacity, 0.2);
   assert.deepEqual(evaluated.map(layer => layer.id), ['root', 'child', 'grandchild']);
 });
+ 
+test('Motion FX composition propagates an inactive ancestor through multiple descendant levels', () => {
+  const evaluated = runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'grandchild-inactive', parentId: 'child-inactive', type: 'shape', enabled: true,
+      transform: { x: 2 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'child-inactive', parentId: 'ancestor-out-of-range', type: 'group', enabled: true,
+      transform: { x: 3 }, timing: { inFrame: 0, outFrame: 20 } },
+    { id: 'ancestor-out-of-range', type: 'group', enabled: true,
+      transform: { x: 10 }, timing: { inFrame: 0, outFrame: 4 } }
+  ] }, 5);
+  assert.equal(evaluated.find(layer => layer.id === 'ancestor-out-of-range').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'child-inactive').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').visible, false);
+  assert.equal(evaluated.find(layer => layer.id === 'grandchild-inactive').worldTransform.e, 15);
+});
