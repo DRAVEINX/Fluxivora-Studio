@@ -93,7 +93,13 @@
     if (!composition || !Array.isArray(composition.layers) || !Number.isFinite(frame)) {
       throw new TypeError('Compositie en een geldig frame zijn vereist.');
     }
-    const byId = new Map(composition.layers.filter(layer => layer && typeof layer.id === 'string').map(layer => [layer.id, layer]));
+    const identifiedLayers = composition.layers.filter(layer => layer && typeof layer.id === 'string');
+    const seenIds = new Set();
+    for (const layer of identifiedLayers) {
+      if (seenIds.has(layer.id)) throw new TypeError(`Dubbele Motion FX-laag-ID: ${layer.id}`);
+      seenIds.add(layer.id);
+    }
+    const byId = new Map(identifiedLayers.map(layer => [layer.id, layer]));
     const ordered = [];
     const visited = new Set();
     const visiting = new Set();

@@ -359,3 +359,11 @@ test('Motion FX interpolation clamps negative playback time and preserves endpoi
   assert.equal(runtime.interpolateProperty(frames, 'opacity', -100, 1), 0.25);
   assert.equal(runtime.interpolateProperty(frames, 'opacity', 100, 1), 0.75);
 });
+
+
+test('Motion FX composition rejects duplicate layer identifiers before evaluation', () => {
+  assert.throws(() => runtime.evaluateCompositionAtFrame({ layers: [
+    { id: 'duplicate', type: 'shape', transform: {}, timing: { inFrame: 0, outFrame: 5 } },
+    { id: 'duplicate', type: 'group', transform: { x: 10 }, timing: { inFrame: 0, outFrame: 5 } }
+  ] }, 2), /Dubbele Motion FX-laag-ID: duplicate/);
+});
