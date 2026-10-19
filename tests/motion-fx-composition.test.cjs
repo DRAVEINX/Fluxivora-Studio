@@ -291,3 +291,25 @@ test('gekopieerde compositie behoudt pixelAspect en krijgt eigen identiteit', ()
   assert.notEqual(clone.layers[0].id, composition.layers[0].id);
   assert.deepEqual(MotionFX.validateComposition(clone), []);
 });
+
+test('kopie behoudt alle compositie-instellingen en is onafhankelijk van het origineel', () => {
+  const composition = MotionFX.createComposition({
+    id: 'settings-source', name: 'Bron', width: 1280, height: 720,
+    fps: 30, durationFrames: 900, background: '#123456', pixelAspect: 1.5
+  });
+  const layer = MotionFX.createLayer('text', {
+    id: 'settings-layer',
+    data: { text: 'Hallo', style: { fill: '#ffffff' } },
+    keyframes: [{ frame: 0, property: 'opacity', value: 1, interpolation: 'linear' }]
+  });
+  composition.layers.push(layer);
+
+  const clone = MotionFX.cloneComposition(composition);
+  assert.deepEqual(clone.settings, composition.settings);
+  clone.layers[0].data.style.fill = '#000000';
+  clone.layers[0].keyframes[0].value = 0;
+
+  assert.equal(composition.layers[0].data.style.fill, '#ffffff');
+  assert.equal(composition.layers[0].keyframes[0].value, 1);
+  assert.deepEqual(MotionFX.validateComposition(clone), []);
+});
