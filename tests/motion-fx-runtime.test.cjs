@@ -276,3 +276,31 @@ test('Motion FX composition builds rotation and scale into the world matrix', ()
   assert.equal(layer.worldTransform.e, 3);
   assert.equal(layer.worldTransform.f, 4);
 });
+
+
+test('Motion FX property interpolation supports ease-in and ease-out curves', () => {
+  const keyframes = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 10, x: 100, ease: 'easeIn' },
+    { time: 20, x: 200, ease: 'easeOut' }
+  ];
+  assert.equal(runtime.interpolateProperty(keyframes, 'x', 5, -1), 25);
+  assert.equal(runtime.interpolateProperty(keyframes, 'x', 15, -1), 175);
+});
+
+test('Motion FX property interpolation uses a supplied Bézier evaluator when available', () => {
+  const keyframes = [
+    { time: 0, x: 0, ease: 'linear' },
+    { time: 10, x: 100, ease: 'bezier' }
+  ];
+  const value = runtime.interpolateProperty(keyframes, 'x', 5, 0, {
+    bezierValue: (left, right, property, progress) => {
+      assert.equal(left.time, 0);
+      assert.equal(right.time, 10);
+      assert.equal(property, 'x');
+      assert.equal(progress, 0.5);
+      return 42;
+    }
+  });
+  assert.equal(value, 42);
+});
